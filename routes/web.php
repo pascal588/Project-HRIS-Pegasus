@@ -39,3 +39,7 @@ Route::get('/karyawan/kpi', function () {
 })->name('karyawan.kpi');
 
 
+// nyoba
+Route::get('/penilai/profile/edit', function () {
+    return view('profile.edit');
+})->name('penilai.profile.edit');

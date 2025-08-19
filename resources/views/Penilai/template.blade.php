@@ -9,6 +9,7 @@
     <!-- project css file  -->
     <link rel="stylesheet" href="{{ asset('assets/css/my-task.style.min.css') }}">
 </head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <body  data-mytask="theme-indigo">
 <div id="mytask-layout">
@@ -30,7 +31,7 @@
 
             <ul class="menu-list flex-grow-1 mt-3">
                 <li class="collapsed">
-                    <a class="m-link"  href="{{ route('penilai.dashboard') }}">
+                    <a class="m-link" href="{{ route('penilai.dashboard') }}">
                     <i class="icofont-home fs-5"></i> <span>Dashboard</span></a>
                 </li>
                 <li class="collapsed">
@@ -38,26 +39,22 @@
                     <i class="icofont-users-alt-5"></i> <span>Karyawan</span></a>
                 </li>
                 <li class="collapsed">
-                    <a class="m-link" data-bs-toggle="collapse" data-bs-target="#absensi-karyawan" href="#"><i
-                            class="icofont-contrast"></i> <span>Absensi</span> <span class="arrow icofont-dotted-down ms-auto text-end fs-5"></span></a>
-                    <ul class="sub-menu collapse" id="absensi-karyawan">
-                        <li><a class="ms-link" href="{{ route('penilai.absensi-karyawan') }}"> <span>Absensi Karyawan</span></a></li>
-
-                    </ul>
+                    <a class="m-link"  href="{{ route('penilai.kpi-karyawan') }}">
+                   <i class="icofont-ui-calculator"></i> <span>KPI Karyawan</span></a>
                 </li>
                 <li class="collapsed">
-                    <a class="m-link" data-bs-toggle="collapse" data-bs-target="#kpi-karyawan" href="#"><i
-                            class="icofont-ui-calculator"></i> <span>Nilai KPI</span> <span class="arrow icofont-dotted-down ms-auto text-end fs-5"></span></a>
-                    <!-- Menu: Sub menu ul -->
-                    <ul class="sub-menu collapse" id="kpi-karyawan">
-                        {{-- <li><a class="ms-link" href="{{ route('penilai.nilai-saya') }}"> <span>Nilai saya</span></a></li> --}}
-                        <li><a class="ms-link" href="{{ route('penilai.kpi-karyawan') }}"> <span>Nilai Karyawan</span></a></li>
+                    <a class="m-link" data-bs-toggle="collapse" data-bs-target="#data-saya"><i
+                            class="icofont-contrast"></i> <span>Data Saya</span> <span class="arrow icofont-dotted-down ms-auto text-end fs-5"></span></a>
+                    <ul class="sub-menu collapse" id="data-saya">
+                        <li><a class="ms-link" href="{{ route('penilai.absensi') }}"> <span>Absensi saya</span></a></li>
+                        <li><a class="ms-link" href="{{ route('penilai.kpi-penilai') }}"> <span>KPI Saya</span></a></li>
+
                     </ul>
                 </li>
                 
             
             <!-- Menu: menu collepce btn -->
-            <button type="button" class="btn btn-link sidebar-mini-btn text-light">
+            <button type="button" class="btn btn-link sidebar-mini-btn text-light order-3 ms-2">
                 <span class="ms-2"><i class="icofont-bubble-right"></i></span>
             </button>
         </div>
@@ -83,8 +80,8 @@
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                                 <img class="avatar lg rounded-circle img-thumbnail" src="assets/images/profile_av.png" alt="profile">
                             </a>
-                            <div class="dropdown-menu rounded-lg shadow border-0 dropdown-animation dropdown-menu-end p-0 m-0">
-                                <div class="card border-0 w280">
+                            <div class="dropdown-menu rounded-lg shadow border-0 dropdown-animation dropdown-menu-sm-start dropdown-menu-md-end">
+                                <div class="card border-0">
                                     <div class="card-body pb-0">
                                         <div class="d-flex py-1">
                                             <img class="avatar rounded-circle" src="assets/images/profile_av.png" alt="profile">
@@ -97,7 +94,7 @@
                                         <div><hr class="dropdown-divider border-dark"></div>
                                     </div>
                                     <div class="list-group m-2 ">
-                                        <a href="ui-elements/auth-signup.html" class="list-group-item list-group-item-action border-0 "><i class="icofont-contact-add fs-5 me-3"></i>Edit profil diri</a>
+                                        <a href="{{ route('profile.edit') }}" class="list-group-item list-group-item-action border-0 "><i class="icofont-contact-add fs-5 me-3"></i>Edit profil diri</a>
                                         <div><hr class="dropdown-divider border-dark"></div>
                                         <a href="ui-elements/auth-signin.html" class="list-group-item list-group-item-action border-0 "><i class="icofont-logout fs-6 me-3"></i>Signout</a>
                                     </div>
@@ -119,10 +116,10 @@
                             <button type="button" class="input-group-text add-member-top" id="addon-wrappingone" data-bs-toggle="modal" data-bs-target="#addUser"><i class="fa fa-plus"></i></button>
                         </div>
                     </div>
-    
                 </div>
             </nav>
         </div>
+    
 
         <!-- Main content-->
         <div class="body d-flex py-3">

@@ -1,13 +1,14 @@
-@extends('karyawan.template')
+@extends('penilai.template')
 
 @section('title', 'Absensi Karyawan')
 
 @section('content')
-    <!-- CSS Tabel -->
+
+   <!-- CSS Tabel -->
     <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/responsive.dataTables.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/dataTables.bootstrap5.min.css') }}">
 
-<!-- Body: Body -->       
+     <!-- Body: Body -->       
         <div class="body d-flex py-lg-3 py-md-2">
             <div class="container-xxl">
                 <div class="row align-items-center">
@@ -105,6 +106,28 @@
                                                 </div>
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="fw-bold">2029</span>
+                                            </td>
+                                           <td>
+                                              <span class="fw-bold ms-1">February</span>
+                                           </td>
+                                           <td>
+                                                <span class="fw-bold ms-1">0</span>
+                                           </td>
+                                             <td>
+                                                    <span class="fw-bold ms-1">3</span>
+                                             </td>
+                                           <td>
+                                                <span class="fw-bold ms-1">1</span>
+                                           </td>
+                                            <td>
+                                                <div class="btn-group" role="group" aria-label="Basic outlined example">
+                                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#showabsen"><i class="icofont-edit text-success"></i></button>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -150,12 +173,13 @@
             </div>
         </div> 
     </div>
- @endsection
+@endsection
 
 @section('script')
+    <!-- Plugin Js tabel-->
 <script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
 
-<script>
+    <script>
     // project data table
     $(document).ready(function() {
         $('#myProjectTable')
@@ -166,6 +190,7 @@
                 { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
             ]
         });
+
         $('.deleterow').on('click',function(){
         var tablename = $(this).closest('table').DataTable();  
         tablename

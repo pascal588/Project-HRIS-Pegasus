@@ -10,8 +10,8 @@ Route::get('/', function () {
 
 // HR
 // Route::get('/hr/dashboard', function () {
-//     return view('hr.dashboard'); // nanti bikin file di resources/views/hr/dashboard.blade.php
-// });
+//     return view('HR.dashboard'); // nanti bikin file di resources/views/hr/dashboard.blade.php
+// })->name('hr.dashboard');
 
 // Penilai
 Route::get('/penilai/dashboard', function () {
@@ -20,12 +20,16 @@ Route::get('/penilai/dashboard', function () {
 Route::get('/penilai/list-karyawan', function () {
     return view('penilai.list-karyawan');
 })->name('penilai.list-karyawan');
-Route::get('/penilai/absensi-karyawan', function () {
-    return view('penilai.absensi-karyawan');
-})->name('penilai.absensi-karyawan');
+Route::get('/penilai/absensi', function () {
+    return view('penilai.absensi');
+})->name('penilai.absensi');
 Route::get('/penilai/kpi-karyawan', function () {
     return view('penilai.kpi-karyawan');
 })->name('penilai.kpi-karyawan');
+Route::get('/penilai/kpi-penilai', function () {
+    return view('penilai.kpi-penilai');
+})->name('penilai.kpi-penilai');
+
 
 // Karyawan
 Route::get('/karyawan/dashboard', function () {
@@ -40,6 +44,6 @@ Route::get('/karyawan/kpi', function () {
 
 
 // nyoba
-Route::get('/penilai/profile/edit', function () {
+Route::get('/profile/edit', function () {
     return view('profile.edit');
-})->name('penilai.profile.edit');
+})->name('profile.edit');

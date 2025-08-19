@@ -1,13 +1,10 @@
-@extends('Karyawan.template')
-
-@section('title', 'KPI Karyawan')
-
+@extends('penilai.template')
+@section('title', 'KPI Penilai')
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/responsive.dataTables.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/dataTables.bootstrap5.min.css') }}">
 
-
-        <!-- Body: Body -->       
+    <!-- Body: Body -->       
         <div class="body d-flex py-lg-3 py-md-2">
             <div class="container-xxl">
                 <div class="row align-items-center">
@@ -16,8 +13,8 @@
                             <h3 class="fw-bold mb-0">Nilai KPI</h3>
                         </div>
                         <div class="card-header py-3 no-bg bg-transparent d-flex align-items-center px-0 justify-content-between flex-wrap">
-                            <h6 class="fw-bold mb-0">Id Karyawan : 019w09102</h6>
                             <h6 class="fw-bold mb-0">Nama : Agusyina</h6>
+                            <h6 class="fw-bold mb-0">Id Karyawan : 019w09102</h6>
                         </div>
                     </div>
                 </div> <!-- Row end  -->
@@ -111,13 +108,10 @@
             </div>
                 </div> 
             </div>  
- @endsection
-
- @section('script')
-<!-- Plugin Js tabel-->
+@endsection
+@section('script')
 <script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
-<script>
-    // project data table
+   <script>
     $(document).ready(function() {
         $('#myProjectTable')
         .addClass( 'nowrap' )
@@ -138,5 +132,5 @@
         } );
     });
 </script>
-
+    
 @endsection

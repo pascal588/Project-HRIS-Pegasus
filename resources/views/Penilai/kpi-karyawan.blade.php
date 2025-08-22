@@ -59,26 +59,26 @@
                         <div class="card-body">
                             <h5 class="fw-bold">Form Nilai</h5>
                             <div class="text-center mb-3">
-                                <img src="assets/images/xs/avatar2.jpg" class="rounded-circle mb-2" alt="Foto Karyawan">
+                                <img src="{{ asset('assets/images/xs/avatar2.jpg') }}" class="rounded-circle mb-2" alt="Foto Karyawan">
                                 <h6 class="mb-0">Nama Karyawan</h6>
                                 <small class="text-muted">ID Karyawan</small>
                             </div>
                             <hr>
                             <div class="form-group mb-2">
                                 <label class="fw-bold">Poin Kehadiran</label>
-                                <div class="form-control">0.40</div>
+                                <div class="form-control">-</div>
                             </div>
                             <div class="form-group mb-2">
                                 <label class="fw-bold">Poin Disiplin</label>
-                                <div class="form-control">0.40</div>
+                                <div class="form-control">-</div>
                             </div>
                             <div class="form-group mb-2">
                                 <label class="fw-bold">Poin Kompetensi Teknis</label>
-                                <div class="form-control">0.40</div>
+                                <div class="form-control">-</div>
                             </div>
                             <div class="form-group mb-2">
                                 <label class="fw-bold">Poin Kompetensi Umum</label>
-                                <div class="form-control">0.40</div>
+                                <div class="form-control">-</div>
                             </div>
                             <button id="btnNilai" class="btn btn-primary w-100 mt-3">Nilai</button>
                         </div>
@@ -103,83 +103,187 @@
       <!-- Step Indicator -->
       <div class="d-flex justify-content-center my-3">
         <div class="step-container">
-        <button class="step-btn active" data-step="1">1</button>
-        <button class="step-btn mx-4" data-step="2">2</button>
-        <button class="step-btn" data-step="3">3</button>
+          <button class="step-btn active" data-step="1">1</button>
+          <button class="step-btn mx-4" data-step="2">2</button>
+          <button class="step-btn" data-step="3">3</button>
         </div>
       </div>
 
+      <!-- Style Step -->
       <style>
-  .step-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 30px 0;
-    position: relative;
-  }
-
-  /* Garis penghubung antar step */
-  .step-container::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 15%;
-    right: 15%;
-    height: 4px;
-    background: linear-gradient(90deg, #6a11cb, #2575fc);
-    z-index: 0;
-  }
-
-  .step-btn {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: white;
-    border: 3px solid #ccc;
-    font-weight: bold;
-    color: #777;
-    z-index: 1;
-    transition: all 0.3s ease;
-  }
-
-  /* Step aktif */
-  .step-btn.active {
-    background: linear-gradient(135deg, #6a11cb, #2575fc);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    transform: scale(1.1);
-  }
-
-  /* Hover effect */
-  .step-btn:hover {
-    transform: scale(1.15);
-    cursor: pointer;
-  }
-</style>
+        .step-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 30px 0;
+          position: relative;
+        }
+        .step-container::before {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 15%;
+          right: 15%;
+          height: 4px;
+          background: linear-gradient(90deg, #6a11cb, #2575fc);
+          z-index: 0;
+        }
+        .step-btn {
+          width: 35px;
+          height: 35px;
+          border-radius: 50%;
+          background: white;
+          border: 3px solid #ccc;
+          font-weight: bold;
+          color: #777;
+          z-index: 1;
+          transition: all 0.3s ease;
+        }
+        .step-btn.active {
+          background: linear-gradient(135deg, #6a11cb, #2575fc);
+          color: white;
+          border-color: transparent;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+          transform: scale(1.1);
+        }
+        .step-btn:hover {
+          transform: scale(1.15);
+          cursor: pointer;
+        }
+      </style>
 
       <!-- Body -->
       <div class="modal-body">
-        <div class="wizard-step" id="step1">Isi Form Step 1</div>
-        <div class="wizard-step d-none" id="step2">Isi Form Step 2</div>
-        <div class="wizard-step d-none" id="step3">Isi Form Step 3</div>
+
+        <!-- Step 1 -->
+        <div class="wizard-step" id="step1">
+        <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
+        <table class="table table-bordered">
+        <thead class="text-center">
+            <tr>
+            <th>No</th>
+            <th>Pertanyaan</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>4</th>
+            </tr>
+        </thead>
+        <tbody class="text-center">
+            <tr>
+            <td>1</td>
+            <td class="text-start">Kehadiran tepat waktu</td>
+            <td><input type="radio" name="disiplin_q1" value="1"></td>
+            <td><input type="radio" name="disiplin_q1" value="2"></td>
+            <td><input type="radio" name="disiplin_q1" value="3"></td>
+            <td><input type="radio" name="disiplin_q1" value="4"></td>
+            </tr>
+            <tr>
+            <td>2</td>
+            <td class="text-start">Mematuhi aturan perusahaan</td>
+            <td><input type="radio" name="disiplin_q2" value="1"></td>
+            <td><input type="radio" name="disiplin_q2" value="2"></td>
+            <td><input type="radio" name="disiplin_q2" value="3"></td>
+            <td><input type="radio" name="disiplin_q2" value="4"></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+
+        <!-- Step 2 -->
+        <div class="wizard-step" id="step2">
+        <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
+        <table class="table table-bordered">
+        <thead class="text-center">
+            <tr>
+            <th>No</th>
+            <th>Pertanyaan</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>4</th>
+            </tr>
+        </thead>
+        <tbody class="text-center">
+            <tr>
+            <td>1</td>
+            <td class="text-start">Kehadiran tepat waktu</td>
+            <td><input type="radio" name="disiplin_q1" value="1"></td>
+            <td><input type="radio" name="disiplin_q1" value="2"></td>
+            <td><input type="radio" name="disiplin_q1" value="3"></td>
+            <td><input type="radio" name="disiplin_q1" value="4"></td>
+            </tr>
+            <tr>
+            <td>2</td>
+            <td class="text-start">Mematuhi aturan perusahaan</td>
+            <td><input type="radio" name="disiplin_q2" value="1"></td>
+            <td><input type="radio" name="disiplin_q2" value="2"></td>
+            <td><input type="radio" name="disiplin_q2" value="3"></td>
+            <td><input type="radio" name="disiplin_q2" value="4"></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="wizard-step" id="step3">
+        <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
+        <table class="table table-bordered">
+        <thead class="text-center">
+            <tr>
+            <th>No</th>
+            <th>Pertanyaan</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>4</th>
+            </tr>
+        </thead>
+        <tbody class="text-center">
+            <tr>
+            <td>1</td>
+            <td class="text-start">Kehadiran tepat waktu</td>
+            <td><input type="radio" name="disiplin_q1" value="1"></td>
+            <td><input type="radio" name="disiplin_q1" value="2"></td>
+            <td><input type="radio" name="disiplin_q1" value="3"></td>
+            <td><input type="radio" name="disiplin_q1" value="4"></td>
+            </tr>
+            <tr>
+            <td>2</td>
+            <td class="text-start">Mematuhi aturan perusahaan</td>
+            <td><input type="radio" name="disiplin_q2" value="1"></td>
+            <td><input type="radio" name="disiplin_q2" value="2"></td>
+            <td><input type="radio" name="disiplin_q2" value="3"></td>
+            <td><input type="radio" name="disiplin_q2" value="4"></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
       </div>
 
       <!-- Footer -->
       <div class="modal-footer">
         <button class="btn btn-secondary" id="prevStep">Kembali</button>
-        <button class="btn btn-primary" id="saveStep">Save</button>
+        <button class="btn btn-success" id="saveStep">Simpan</button>
         <button class="btn btn-primary" id="nextStep">Lanjut</button>
         <button class="btn btn-success d-none" id="finishWizard">Selesai</button>
       </div>
+
     </div>
   </div>
 </div>
-@endsection 
 
-@section('script')
+ 
+<!-- Jquery Core Js -->
+<script src="{{ asset('assets/bundles/libscripts.bundle.js') }}"></script>
+
+<!-- Plugin Js tabel-->
 <script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
 
+<!-- Jquery Page Js -->
+<script src="{{ asset('js/template.js') }}"></script>
 <script>
 let selectedEmployee = {}; // simpan data karyawan yang dipilih
 
@@ -261,27 +365,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // Pertama kali buka modal → tampilkan step 1
     showStep(currentStep);
 });
-
-$(document).ready(function() {
-        $('#myProjectTable')
-        .addClass( 'nowrap' )
-        $('#myProjectTable').DataTable({
-            responsive: true,
-            columnDefs: [
-                { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
-            ]
-        });
-
-        $('.deleterow').on('click',function(){
-        var tablename = $(this).closest('table').DataTable();  
-        tablename
-                .row( $(this)
-                .parents('tr') )
-                .remove()
-                .draw();
-
-        } );
-    });
 </script>
 
 

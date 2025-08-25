@@ -74,8 +74,8 @@
                         </div>
                         <div class="dropdown user-profile ml-2 ml-sm-3 d-flex align-items-center">
                             <div class="u-info me-2">
-                                <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">Dylan Hunter</span></p>
-                                <small>Admin Profile</small>
+                                <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">{{ Auth::user()->name }}</span></p>
+                                <small>{{ Auth::user()->role }}</small>
                             </div>
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                                 <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
@@ -86,8 +86,8 @@
                                         <div class="d-flex py-1">
                                             <img class="avatar rounded-circle" src="assets/images/profile_av.png" alt="profile">
                                             <div class="flex-fill ms-3">
-                                                <p class="mb-0"><span class="font-weight-bold">Dylan Hunter</span></p>
-                                                <small class="">Dylan.hunter@gmail.com</small>
+                                                <p class="mb-0"><span class="font-weight-bold">{{ Auth::user()->name }}</span></p>
+                                                <small class="">{{ Auth::user()->email }}</small>
                                             </div>
                                         </div>
                                         
@@ -96,7 +96,12 @@
                                     <div class="list-group m-2 ">
                                         <a href="{{ route('profile.edit') }}" class="list-group-item list-group-item-action border-0 "><i class="icofont-contact-add fs-5 me-3"></i>Edit profil diri</a>
                                         <div><hr class="dropdown-divider border-dark"></div>
-                                        <a href="ui-elements/auth-signin.html" class="list-group-item list-group-item-action border-0 "><i class="icofont-logout fs-6 me-3"></i>Signout</a>
+                                        <form method="POST" action="{{ route('logout') }}">
+                                            @csrf
+                                            <button type="submit" class="list-group-item list-group-item-action border-0">
+                                                <i class="icofont-logout fs-6 me-3"></i> Signout
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

@@ -1,4 +1,4 @@
-@extends('penilai.template')
+@extends('template.template')
 
 @section('title', 'Dashboard Penilai')
 
@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <div class="row g-3">
+      <div class="row g-2">
   <!-- KIRI -->
   <div class="col-md-8">
     <div class="row g-3">
@@ -100,26 +100,44 @@
   <!-- KANAN -->
  <div class="col-md-4">
   <div class="card shadow-sm h-100 bg-light">
-    <div class="card-body d-flex flex-column justify-content-between">
-      <h5 class="fw-bold mb-3">📢 Informasi</h5>
-      <ul class="list-unstyled flex-grow-1 d-flex flex-column justify-content-around mb-0">
-        <li class="d-flex align-items-center justify-content-between p-3 bg-white rounded shadow-sm mb-3">
-          <div>
-            <h6 class="fw-bold mb-1">Anda harus menilai</h6>
-            <span class="text-muted small">Belum selesai</span>
-          </div>
-          <h4 class="fw-bold text-primary mb-0">20</h4>
-        </li>
-        <li class="d-flex align-items-center justify-content-between p-3 bg-white rounded shadow-sm">
-          <div>
-            <h6 class="fw-bold mb-1">Anda harus menegur</h6>
-            <span class="text-muted small">Segera ditindak</span>
-          </div>
-          <h4 class="fw-bold text-danger mb-0">20</h4>
-        </li>
-      </ul>
+  <div class="card-body d-flex flex-column h-100">
+  <h5 class="fw-bold mb-3">📢 Informasi</h5>
+  <ul class="list-unstyled flex-grow-1 d-flex flex-column justify-content-between mb-0">
+    <li class="d-flex flex-column justify-content-between p-3 bg-white rounded shadow-sm mb-3" style="height: 120px;">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div>
+      <h6 class="fw-bold mb-1">Anda harus menilai</h6>
+      <span class="text-muted small">Belum selesai</span>
     </div>
+    <h4 class="fw-bold text-primary mb-0">20</h4>
   </div>
+  <div class="d-flex justify-content-end mt-auto">
+    <button class="btn btn-primary btn-sm" onclick="scrollToCard('belum-dinilai')">
+      <i class="icofont-eye-alt me-1"></i> Lihat
+    </button>
+  </div>
+</li>
+
+<li class="d-flex flex-column justify-content-between p-3 bg-white rounded shadow-sm mb-3" style="height: 120px;">
+  <div class="d-flex justify-content-between align-items-start mb-2">
+    <div>
+      <h6 class="fw-bold mb-1">Anda harus menegur</h6>
+      <span class="text-muted small">Segera ditindak</span>
+    </div>
+    <h4 class="fw-bold text-danger mb-0">20</h4>
+  </div>
+  <div class="d-flex justify-content-end mt-auto">
+    <button class="btn btn-primary btn-sm" onclick="scrollToCard('perlu-teguran')">
+      <i class="icofont-eye-alt me-1"></i> Lihat
+    </button>
+  </div>
+</li>
+
+  </ul>
+</div>
+
+</div>
+
 </div>
 
 
@@ -156,58 +174,116 @@
 
       <!-- STATISTIK RATA2 DIVISI + LIST KARYAWAN -->
       <div class="col-12">
-        {{-- <div class="card shadow-sm p-3"> --}}
-          {{-- <h6 class="fw-bold mb-3">Statistik Karyawan Divisi Anda</h6> --}}
           <div class="row g-3">
-            
-            <!-- Kiri Donut + Card Jumlah -->
-            <div class="col-md-6">
-              <div class="card shadow-sm mb-3">
-                <div class="card-body text-center">
-                  <h6 class="fw-bold">Jumlah Karyawan Divisi</h6>
-                  <h3 class="fw-bold text-primary">120</h3>
-                </div>
-              </div>
-              <div class="card shadow-sm">
-                <div class="card-body" height="300">
-                  <div id="apex-MainCategories"></div>
-                </div>
-              </div>
-            </div>
+            <div class="card shadow-sm bg-primary p-3 d-flex flex-row align-items-center">
+          <div>
+            <h5 class="mb-1 text-white fw-bold ">Kinerja Karyawan</h5>
+          </div>
+        </div>
+             <!-- Card 1: Jumlah + Donut -->
+    <div class="col-md-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body text-center">
+          <h6 class="fw-bold">Jumlah Karyawan Divisi</h6>
+          <h3 class="fw-bold text-primary">120</h3>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div id="gender-donut"></div>
+        </div>
+      </div>
+    </div>
 
-            <!-- Kanan List Karyawan -->
-            <div class="col-md-6">
-              <div class="card shadow-sm mb-3">
-                <div class="card-body">
-                  <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan Belum Dinilai</h6>
-                  <div style="max-height: 200px; overflow-y: auto;">
-                    <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
-                      <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
-                      <div class="d-flex flex-column ps-3 flex-fill">
-                        <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
-                        <span class="text-muted">ID Karyawan</span>
-                      </div>
-                      <a class="btn btn-outline-warning btn-sm" href="#">Nilai</a>
-                    </div>
-                  </div>
-                </div>
+    <!-- Card 2: Karyawan Belum Dinilai -->
+    <div class="col-md-4">
+      <div class="card shadow-sm" id="belum-dinilai">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan Belum Dinilai</h6>
+          <div style="max-height: 350px; overflow-y: auto; min-height: 350px;">
+            <!-- list karyawan -->
+            <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+              <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+              <div class="d-flex flex-column ps-3 flex-fill">
+                <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+                <span class="text-muted">ID Karyawan</span>
               </div>
-              <div class="card shadow-sm">
-                <div class="card-body bg-primary text-white">
-                  <h6 class="fw-bold mb-0"><i class="icofont-users-alt-2 me-2"></i>Karyawan Perlu Teguran</h6>
-                </div>
-                <div class="card-body" style="max-height: 200px; overflow-y: auto;">
-                  <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
-                    <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
-                    <div class="d-flex flex-column ps-3 flex-fill">
-                      <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
-                      <span class="text-muted">ID Karyawan</span>
-                    </div>
-                    <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
-                  </div>
-                </div>
-              </div>
-            {{-- </div> --}}
+              <a class="btn btn-outline-warning btn-sm" href="#">Nilai</a>
+            </div>
+            <!-- duplikasi item sesuai kebutuhan -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Karyawan Perlu Teguran -->
+    <div class="col-md-4">
+      <div class="card shadow-sm" id="perlu-teguran">
+        <div class="card-body">
+          <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan Perlu Teguran</h6>
+        </div>
+        <div class="card-body" style="max-height: 350px; overflow-y: auto; min-height: 350px;">
+          <!-- list karyawan -->
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+            <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+            <div class="d-flex flex-column ps-3 flex-fill">
+              <h6 class="fw-bold mb-0 small-14">Nama Karyawan</h6>
+              <span class="text-muted">ID Karyawan</span>
+            </div>
+            <a class="btn btn-outline-success btn-sm" href="#"><i class="icofont-brand-whatsapp"></i></a>
+          </div>
+          <!-- duplikasi item sesuai kebutuhan -->
+        </div>
+      </div>
+    </div>
 
           </div>
 
@@ -216,7 +292,7 @@
           <div class="card shadow-sm">
             <div class="card-body">
               <h6 class="fw-bold mb-3" id="judulDivisi">Rata-rata KPI Bulanan — Divisi IT</h6>
-              <canvas id="kpiBarChart" height="120"></canvas>
+              <canvas id="kpiBarChart" height="100"></canvas>
             </div>
           </div>
         </div>
@@ -226,7 +302,7 @@
 
     </div><!-- row end -->
   </div>
-</div>
+  </div>
 
 
 @endsection
@@ -246,11 +322,15 @@ const bobot = { kehadiran: 0.4, disiplin: 0.3, teknis: 0.2, umum: 0.1 };
 
 // Data dummy skala 0–4 per bulan (ganti ke data real kamu)
 const dataKPI = [
-  { bulan: "2025-01", kehadiran: 3.6, disiplin: 3.4, teknis: 3.2, umum: 3.8 },
-  { bulan: "2025-02", kehadiran: 2.7, disiplin: 2.6, teknis: 3.3, umum: 2.9 },
-  { bulan: "2025-03", kehadiran: 1.8, disiplin: 1.6, teknis: 1.5, umum: 1.8 },
-  { bulan: "2025-04", kehadiran: 0.9, disiplin: 0.7, teknis: 0.6, umum: 0.9 },
-  { bulan: "2025-05", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 }
+  { bulan: "Jan", kehadiran: 3.6, disiplin: 3.4, teknis: 3.2, umum: 3.8 },
+  { bulan: "Feb", kehadiran: 2.7, disiplin: 2.6, teknis: 3.3, umum: 2.9 },
+  { bulan: "Mar", kehadiran: 1.8, disiplin: 1.6, teknis: 1.5, umum: 1.8 },
+  { bulan: "Apr", kehadiran: 0.9, disiplin: 0.7, teknis: 0.6, umum: 0.9 },
+  { bulan: "May", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 },
+  { bulan: "jun", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 },
+  { bulan: "jul", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 },
+  { bulan: "aug", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 },
+  { bulan: "sept", kehadiran: 3.7, disiplin: 3.8, teknis: 3.4, umum: 3.9 },
 ];
 
 // ======================
@@ -323,14 +403,54 @@ new Chart(ctx, {
         },
         series: [{
         name: 'Score KPI',
-        data: [78, 82, 85, 90, 87, 92] // contoh data tiap bulan
+        data: [78, 82, 85, 90, 87, 92, 88, 89, 90, 91, 90, 89] // contoh data tiap bulan
         }],
         xaxis: {
-        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun']
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
         }
     };
 
     var chart = new ApexCharts(document.querySelector("#chartKPI"), options);
     chart.render();
-    </script>       
+    </script>
+    
+    <script>
+      var options = {
+      chart: {
+        type: 'donut',
+        height: 300 // sesuaikan tinggi sama seperti div kanan (list)
+      },
+      series: [60, 60],
+      labels: ['Pria', 'Wanita'],
+      colors: ['#007bff', '#ff4081'],
+      legend: {
+        position: 'bottom'
+      },
+      responsive: [{
+        breakpoint: 768,
+        options: {
+          chart: {
+            height: 200
+          },
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }]
+    };
+
+    var chart = new ApexCharts(document.querySelector("#gender-donut"), options);
+    chart.render();
+
+    </script>
+
+    <script>
+      function scrollToCard(cardId) {
+  const el = document.getElementById(cardId);
+  if(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+    </script>
 @endsection

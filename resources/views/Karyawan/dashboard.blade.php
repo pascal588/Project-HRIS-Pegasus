@@ -1,4 +1,4 @@
-@extends('karyawan.template')
+@extends('template.template')
 
 @section('title', 'Dashboard Karyawan')
 

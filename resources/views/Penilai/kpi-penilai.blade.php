@@ -1,4 +1,4 @@
-@extends('penilai.template')
+@extends('template.template')
 
 @section('title', 'KPI Karyawan')
 

@@ -1,4 +1,4 @@
-@extends('penilai.template')
+@extends('template.template')
 
 @section('title', 'KPI Karyawan')
 
@@ -20,7 +20,7 @@
                 </div> 
                 <div class="row clearfix g-3">
                 <!-- Kolom kiri: tabel -->
-                <div class="col-lg-8 col-md-7">
+                <div class="col-12 col-lg-8">
                     <div class="card mb-3">
                         <div class="card-body">
                             <table id="myProjectTable" class="table table-hover align-middle mb-0" style="width:100%">
@@ -41,7 +41,163 @@
                                         <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#absenkaryawan">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
+                                                    <i class="icofont-edit text-success"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold">1</span></td>
+                                        <td><span class="fw-bold ms-1">ui</span></td>
+                                        <td><span class="fw-bold ms-1">Divisi 1</span></td>
+                                        <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
                                                     <i class="icofont-edit text-success"></i>
                                                 </button>
                                             </div>
@@ -54,7 +210,7 @@
                 </div>
 
                 <!-- Kolom kanan: form -->
-                <div class="col-lg-4 col-md-5">
+                <div class="col-12 col-lg-4">
                     <div class="card">
                         <div class="card-body">
                             <h5 class="fw-bold">Form Nilai</h5>
@@ -275,42 +431,59 @@
   </div>
 </div>
 
- 
-<!-- Jquery Core Js -->
-<script src="{{ asset('assets/bundles/libscripts.bundle.js') }}"></script>
-
-<!-- Plugin Js tabel-->
-<script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
-
-<!-- Jquery Page Js -->
-<script src="{{ asset('js/template.js') }}"></script>
+@endsection
+@section('script')
+<script src="{{asset ('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
-let selectedEmployee = {}; // simpan data karyawan yang dipilih
-
-// Klik tombol di tabel → isi form kanan
-document.querySelectorAll("#myProjectTable .btn-outline-secondary").forEach(function (button) {
-    button.addEventListener("click", function () {
-        let row = this.closest("tr");
-        selectedEmployee.nama = row.cells[1].innerText.trim();
-        selectedEmployee.divisi = row.cells[2].innerText.trim();
-        selectedEmployee.status = row.cells[3].innerText.trim();
-
-        // Isi form kanan
-        document.querySelector(".card-body h6").innerText = selectedEmployee.nama;
-        document.querySelector(".card-body small").innerText = selectedEmployee.divisi;
+$(document).ready(function() {
+    $('#myProjectTable')
+    .addClass('nowrap')
+    .DataTable({
+        responsive: true,
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        columnDefs: [
+            { targets: -1, searchable: false, className: 'dt-body-right all' }, 
+            { responsivePriority: 1, targets: 0 }, // # (selalu tampil)
+            { responsivePriority: 2, targets: 1 }, // Nama (prioritas tinggi)
+            { responsivePriority: 3, targets: 3 }, // Status KPI
+            { responsivePriority: 10001, targets: 2 } // Divisi (paling rendah → ilang di HP)
+        ]
     });
 });
+</script>
 
-// Klik tombol Nilai → buka modal wizard
-document.getElementById("btnNilai").addEventListener("click", function () {
-    if (!selectedEmployee.nama) {
-        alert("Pilih karyawan dulu!");
-        return;
-    }
-    let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
-    modal.show();
-}); 
+
+
+<script>
 document.addEventListener("DOMContentLoaded", function () {
+    let selectedEmployee = {}; // simpan data karyawan yang dipilih
+
+    // Klik tombol di tabel → isi form kanan
+    document.querySelectorAll("#myProjectTable .btn-outline-secondary").forEach(function (button) {
+        button.addEventListener("click", function () {
+            let row = this.closest("tr");
+            selectedEmployee.nama = row.cells[1].innerText.trim();
+            selectedEmployee.divisi = row.cells[2].innerText.trim();
+            selectedEmployee.status = row.cells[3].innerText.trim();
+
+            // Isi form kanan
+            document.querySelector(".card-body h6").innerText = selectedEmployee.nama;
+            document.querySelector(".card-body small").innerText = selectedEmployee.divisi;
+        });
+    });
+
+    // Klik tombol Nilai → buka modal wizard
+    document.getElementById("btnNilai").addEventListener("click", function () {
+        if (!selectedEmployee.nama) {
+            alert("Pilih karyawan dulu!");
+            return;
+        }
+        let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
+        modal.show();
+    }); 
+
+    // Wizard stepper
     let currentStep = 1;
     const totalSteps = 3;
 
@@ -322,23 +495,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const finishBtn = document.getElementById("finishWizard");
 
     function showStep(step) {
-        // Tampilkan step yang aktif
         steps.forEach((el, index) => {
             el.classList.toggle("d-none", index + 1 !== step);
         });
 
-        // Update warna tombol step
         stepButtons.forEach((btn, index) => {
             btn.classList.toggle("active", index + 1 === step);
         });
 
-        // Atur visibility tombol
         prevBtn.style.display = step === 1 ? "none" : "inline-block";
         nextBtn.style.display = step === totalSteps ? "none" : "inline-block";
         finishBtn.classList.toggle("d-none", step !== totalSteps);
     }
 
-    // Tombol step angka
     stepButtons.forEach(btn => {
         btn.addEventListener("click", () => {
             currentStep = parseInt(btn.dataset.step);
@@ -346,7 +515,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Tombol Lanjut
     nextBtn.addEventListener("click", () => {
         if (currentStep < totalSteps) {
             currentStep++;
@@ -354,7 +522,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // Tombol Kembali
     prevBtn.addEventListener("click", () => {
         if (currentStep > 1) {
             currentStep--;
@@ -366,6 +533,5 @@ document.addEventListener("DOMContentLoaded", function () {
     showStep(currentStep);
 });
 </script>
-
-
 @endsection
+

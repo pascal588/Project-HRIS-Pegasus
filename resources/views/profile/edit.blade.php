@@ -1,6 +1,6 @@
-@extends('penilai.template')
+@extends('template.template')
 
-@section('title', 'Dashboard Penilai') {{-- sesuaikan sama template kamu --}}
+@section('title', 'edit profile') {{-- sesuaikan sama template kamu --}}
 
 @section('content')
    
@@ -89,17 +89,43 @@
     </div>
 
     <!-- Ganti Password -->
-    <div class="card p-4 d-none shadow" id="passwordCard">
+    <div class="card p-4 shadow d-none" id="passwordCard">
+    <form method="POST" action="{{ route('password.update') }}">
+        @csrf
+        @method('PUT')
+
         <div class="mb-3">
-            <label>Password Baru</label>
-            <input type="password" class="form-control" placeholder="Masukkan password baru">
+            <label for="current_password" class="form-label">Password Lama</label>
+            <input type="password" id="current_password" name="current_password" class="form-control" autocomplete="current-password">
+            @error('current_password')
+                <div class="text-danger small">{{ $message }}</div>
+            @enderror
         </div>
+
         <div class="mb-3">
-            <label>Konfirmasi Password</label>
-            <input type="password" class="form-control" placeholder="Konfirmasi password baru">
+            <label for="password" class="form-label">Password Baru</label>
+            <input type="password" id="password" name="password" class="form-control" autocomplete="new-password">
+            @error('password')
+                <div class="text-danger small">{{ $message }}</div>
+            @enderror
         </div>
-        <button class="btn btn-primary ms-auto w-auto px-3 px-sm-4"  style="width: 20%;">Simpan Password</button>
-    </div>
+
+        <div class="mb-3">
+            <label for="password_confirmation" class="form-label">Konfirmasi Password</label>
+            <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" autocomplete="new-password">
+            @error('password_confirmation')
+                <div class="text-danger small">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <button type="submit" class="btn btn-primary">Simpan Password</button>
+
+        @if (session('status') === 'password-updated')
+            <p class="text-success mt-2">Password berhasil diperbarui!</p>
+        @endif
+    </form>
+</div>
+
 </div>
 
 <script>

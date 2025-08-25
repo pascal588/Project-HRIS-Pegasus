@@ -15,26 +15,49 @@
 
             <ul class="menu-list flex-grow-1 mt-3">
                 <li class="collapsed">
-                    <a class="m-link" href="{{ route('penilai.dashboard') }}">
-                    <i class="icofont-home fs-5"></i> <span>Dashboard</span></a>
+                    <a class="m-link {{ request()->routeIs('penilai.dashboard') ? 'active' : '' }}" 
+                    href="{{ route('penilai.dashboard') }}">
+                        <i class="icofont-home fs-5"></i> <span>Dashboard</span>
+                    </a>
                 </li>
-                <li class="collapsed">
-                    <a class="m-link"  href="{{ route('penilai.list-karyawan') }}">
-                    <i class="icofont-users-alt-5"></i> <span>Karyawan</span></a>
-                </li>
-                <li class="collapsed">
-                    <a class="m-link"  href="{{ route('penilai.kpi-karyawan') }}">
-                   <i class="icofont-ui-calculator"></i> <span>KPI Karyawan</span></a>
-                </li>
-                <li class="collapsed">
-                    <a class="m-link" data-bs-toggle="collapse" data-bs-target="#data-saya"><i
-                            class="icofont-contrast"></i> <span>Data Saya</span> <span class="arrow icofont-dotted-down ms-auto text-end fs-5"></span></a>
-                    <ul class="sub-menu collapse" id="data-saya">
-                        <li><a class="ms-link" href="{{ route('penilai.absensi') }}"> <span>Absensi saya</span></a></li>
-                        <li><a class="ms-link" href="{{ route('penilai.kpi-penilai') }}"> <span>KPI Saya</span></a></li>
 
+                <li class="collapsed">
+                    <a class="m-link {{ request()->routeIs('penilai.list-karyawan') ? 'active' : '' }}" 
+                    href="{{ route('penilai.list-karyawan') }}">
+                        <i class="icofont-users-alt-5"></i> <span>Karyawan</span>
+                    </a>
+                </li>
+
+                <li class="collapsed">
+                    <a class="m-link {{ request()->routeIs('penilai.kpi-karyawan') ? 'active' : '' }}" 
+                    href="{{ route('penilai.kpi-karyawan') }}">
+                        <i class="icofont-ui-calculator"></i> <span>KPI Karyawan</span>
+                    </a>
+                </li>
+
+                <li class="collapsed">
+                    <a class="m-link {{ request()->routeIs('penilai.absensi','penilai.kpi-penilai') ? '' : 'collapsed' }}" 
+                    data-bs-toggle="collapse" data-bs-target="#data-saya" href="#">
+                        <i class="icofont-contrast"></i> <span>Data Saya</span> 
+                        <span class="arrow icofont-dotted-down ms-auto text-end fs-5"></span>
+                    </a>
+                    <ul class="sub-menu collapse {{ request()->routeIs('penilai.absensi','penilai.kpi-penilai') ? 'show' : '' }}" id="data-saya">
+                        <li>
+                            <a class="ms-link {{ request()->routeIs('penilai.absensi') ? 'active' : '' }}" 
+                            href="{{ route('penilai.absensi') }}">
+                            <span>Absensi saya</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="ms-link {{ request()->routeIs('penilai.kpi-penilai') ? 'active' : '' }}" 
+                            href="{{ route('penilai.kpi-penilai') }}">
+                            <span>KPI Saya</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
+            </ul>
+
                 
             
             <!-- Menu: menu collepce btn -->

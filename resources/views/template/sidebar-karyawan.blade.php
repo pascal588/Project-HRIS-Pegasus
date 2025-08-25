@@ -14,17 +14,25 @@
 
             <ul class="menu-list flex-grow-1 mt-3">
                 <li class="collapsed">
-                    <a class="m-link"  href="{{ route('karyawan.dashboard') }}">
-                    <i class="icofont-home fs-5"></i> <span>Dashboard</span></a>
+                    <a class="m-link {{ request()->routeIs('karyawan.dashboard') ? 'active' : '' }}"  
+                    href="{{ route('karyawan.dashboard') }}">
+                    <i class="icofont-home fs-5"></i> <span>Dashboard</span>
+                    </a>
                 </li>
                 <li class="collapsed">
-                    <a class="m-link"  href="{{ route('karyawan.kpi') }}">
-                    <i class="icofont-ui-calculator"></i> <span>Nilai KPI</span></a>
+                    <a class="m-link {{ request()->routeIs('karyawan.kpi') ? 'active' : '' }}"  
+                    href="{{ route('karyawan.kpi') }}">
+                    <i class="icofont-ui-calculator"></i> <span>Nilai KPI</span>
+                    </a>
                 </li>
                 <li class="collapsed">
-                    <a class="m-link"  href="{{ route('karyawan.absen') }}">
-                    <i class="icofont-contrast"></i> <span>Absensi</span></a>
+                    <a class="m-link {{ request()->routeIs('karyawan.absen') ? 'active' : '' }}"  
+                    href="{{ route('karyawan.absen') }}">
+                    <i class="icofont-contrast"></i> <span>Absensi</span>
+                    </a>
                 </li>
+            </ul>
+
                 
             
             <!-- Menu: menu collepce btn -->

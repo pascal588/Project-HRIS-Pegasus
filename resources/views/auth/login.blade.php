@@ -27,7 +27,7 @@
                                 </svg>
                             </div>
                             <div class="mb-5">
-                                <h2 class="color-900 text-center">My-Task Let's Management Better</h2>
+                                <h2 class="color-900 text-center">Hrris Pegasus Website</h2>
                             </div>
                             <div>
                                 <img src="{{ asset('assets/images/login-img.svg') }}" alt="login-img">

@@ -22,6 +22,30 @@ Route::middleware(['auth', 'role:hr'])->group(function () {
     Route::get('/dashboard-hr', function() {
         return view('hr.dashboard');
     })->name('hr.dashboard');
+    Route::get('/penilaian', function() {
+        return view('hr.penilaian');
+    })->name('hr.penilaian');
+    Route::get('/absensi', function() {
+        return view('hr.absensi');
+    })->name('hr.absensi');
+    Route::get('/detail-absensi', function() {
+        return view('hr.detail-absensi');
+    })->name('hr.detail-absensi');
+    Route::get('/kpi-karyawan', function() {
+        return view('hr.kpi-karyawan');
+    })->name('hr.kpi-karyawan');
+    Route::get('/detail-kpi', function() {
+        return view('hr.detail-kpi');
+    })->name('hr.detail-kpi');
+    Route::get('/karyawan', function() {
+        return view('hr.karyawan');
+    })->name('hr.karyawan');
+    Route::get('/divisi', function() {
+        return view('hr.divisi');
+    })->name('hr.divisi');
+    Route::get('/kpi', function() {
+        return view('hr.kpi');
+    })->name('hr.kpi');
 });
 
 Route::middleware(['auth', 'role:penilai'])->group(function () {

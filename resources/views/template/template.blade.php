@@ -16,11 +16,11 @@
     
     <!-- sidebar -->
             {{-- Disini kita include sidebar sesuai role --}}
-            @if(Auth::user()->role === 'penilai')
+            @if(Auth::user()->Employee->role === 'Kepala-divisi')
                 @include('template.sidebar-penilai')
-            @elseif(Auth::user()->role === 'hr')
+            @elseif(Auth::user()->Employee->role === 'HR')
                 @include('template.sidebar-hr')
-            @elseif(Auth::user()->role === 'karyawan')
+            @elseif(Auth::user()->Employee->role === 'Karyawan')
                 @include('template.sidebar-karyawan')
             @endif
             
@@ -38,20 +38,20 @@
                         </div>
                         <div class="dropdown user-profile ml-2 ml-sm-3 d-flex align-items-center">
                             <div class="u-info me-2">
-                                <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">{{ Auth::user()->name }}</span></p>
-                                <small>{{ Auth::user()->role }}</small>
+                                <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">{{ Auth::user()->Employee->nama }}</span></p>
+                                <small>{{ Auth::user()->Employee->role }}</small>
                             </div>
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                                 <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
                             </a>
-                            <div class="dropdown-menu rounded-lg shadow border-0 dropdown-animation dropdown-menu-sm-start dropdown-menu-md-end">
+                            <div class="dropdown-menu rounded-lg shadow border-0 dropdown-animation dropdown-menu-sm-start dropdown-menu-md-end" style=" width: max-content;">
                                 <div class="card border-0">
                                     <div class="card-body pb-0">
                                         <div class="d-flex py-1">
                                             <img class="avatar rounded-circle" src="assets/images/profile_av.png" alt="profile">
                                             <div class="flex-fill ms-3">
-                                                <p class="mb-0"><span class="font-weight-bold">{{ Auth::user()->name }}</span></p>
-                                                <small class="">{{ Auth::user()->email }}</small>
+                                                <p class="mb-0"><span class="font-weight-bold">{{ Auth::user()->Employee->nama }}</span></p>
+                                                <small class="">{{Auth::user()->email}}</small>
                                             </div>
                                         </div>
                                         

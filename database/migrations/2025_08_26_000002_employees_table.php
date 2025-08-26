@@ -18,11 +18,11 @@ return new class extends Migration
             $table->string('no_telp', 15);
             $table->enum('gender', ['Pria', 'Wanita']); 
             $table->string('foto', 255)->nullable();
-            $table->enum('role', ['HR', 'Kepala Divisi', 'Karyawan']); //Role
+            $table->enum('role', ['HR', 'Kepala-divisi', 'Karyawan']); //Role
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('usersfix_id_user')->references('id')->on('usersfix')->onDelete('cascade');
+            $table->foreign('usersfix_id_user')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

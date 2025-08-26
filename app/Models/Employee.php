@@ -2,12 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Employee extends Model
 {
-     protected $fillable = [
-        'usersfix_id_user', 'nama', 'no_telp', 'gender', 'foto', 'role'
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'employees';
+    protected $primaryKey = 'id_karyawan';
+
+    protected $fillable = [
+        'usersfix_id_user',
+        'nama',
+        'no_telp',
+        'gender',
+        'foto',
+        'role'
     ];
 
     public function user()

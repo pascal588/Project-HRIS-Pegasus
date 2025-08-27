@@ -14,6 +14,12 @@ class Division extends Model
     protected $primaryKey = 'id_divisi'; // primary key
 
     protected $fillable = [
-        'nama_divisi'
+        'nama_divisi',
+        
     ];
+
+    public function roles()
+    {
+        return $this->hasMany(Role::class, 'divisions_id_divisi', 'id_divisi');
+    }
 }

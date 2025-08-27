@@ -174,77 +174,13 @@
                       <th style="min-width: 130px">Kepala Divisi</th>
                       <th style="width: 90px">KPI Lalu</th>
                       <th style="width: 90px">KPI Kini</th>
-                      <th style="min-width: 200px">Deskripsi</th>
                       <th style="width: 100px" class="text-center">
                         Aksi
                       </th>
                     </tr>
                   </thead>
                   <tbody id="divisiTableBody">
-                    <!-- Data akan diisi oleh JavaScript -->
-                    <tr>
-                      <td data-label="No">1</td>
-                      <td data-label="Nama">Marketing</td>
-                      <td data-label="Jumlah Karyawan">20</td>
-                      <td data-label="Kepala Divisi">Herlambang</td>
-                      <td data-label="KPI Lalu">81</td>
-                      <td data-label="KPI Ini">85</td>
-                      <td data-label="Deskripsi" class="deskripsi-cell">
-                        Lorem ipsum dolor sit amet consectetur
-                        adipisicing elit. Aspernatur sed minus
-                        repellendus doloribus cupiditate tenetur illum,
-                        culpa nemo laborum, eligendi praesentium quaerat
-                        perspiciatis hic dolorem? Impedit aliquid saepe
-                        tenetur ipsum.
-                      </td>
-                      <td data-label="Aksi" class="text-center">
-                        <div class="action-buttons">
-                          <button
-                            type="button"
-                            class="btn btn-outline-primary edit-btn"
-                            data-id="1"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            type="button"
-                            class="btn btn-outline-danger deleterow"
-                            data-id="1"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td data-label="No">2</td>
-                      <td data-label="Nama">IT</td>
-                      <td data-label="Jumlah Karyawan">15</td>
-                      <td data-label="Kepala Divisi">Budi Santoso</td>
-                      <td data-label="KPI Lalu">78</td>
-                      <td data-label="KPI Ini">82</td>
-                      <td data-label="Deskripsi" class="deskripsi-cell">
-                        Lorem ipsum dolor, sit amet consectetur adipisicing elit. Iure numquam laudantium sequi unde labore amet facere culpa porro nobis natus quidem distinctio, ipsum suscipit voluptatum vitae veniam quisquam aliquid in.
-                      </td>
-                      <td data-label="Aksi" class="text-center">
-                        <div class="action-buttons">
-                          <button
-                            type="button"
-                            class="btn btn-outline-primary edit-btn"
-                            data-id="2"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            type="button"
-                            class="btn btn-outline-danger deleterow"
-                            data-id="2"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                    {{-- isi tabel --}}
                   </tbody>
                 </table>
               </div>
@@ -293,14 +229,6 @@
               class="form-control"
               id="kepalaDivisi"
               placeholder="Kepala Divisi" />
-          </div>
-          <div class="mb-3">
-            <label for="deskripsiDivisi" class="form-label">Deskripsi</label>
-            <textarea
-              class="form-control"
-              id="deskripsiDivisi"
-              rows="3"
-              placeholder="Deskripsi Divisi"></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -361,198 +289,132 @@
     </div>
   </div>
 </div>
+
 @endsection
 
 @section('script')
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
-  $(document).ready(function() {
-    // Data contoh divisi
-    let divisiData = [{
-        id: 1,
-        nama: "Marketing",
-        jumlahKaryawan: 20,
-        kepalaDivisi: "Herlambang",
-        kpiBulanLalu: 81,
-        kpiBulanIni: 85,
-        deskripsi: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Aspernatur sed minus repellendus doloribus cupiditate tenetur illum, culpa nemo laborum, eligendi praesentium quaerat perspiciatis hic dolorem? Impedit aliquid saepe tenetur ipsum.",
-      },
-      {
-        id: 2,
-        nama: "IT",
-        jumlahKaryawan: 15,
-        kepalaDivisi: "Budi Santoso",
-        kpiBulanLalu: 78,
-        kpiBulanIni: 82,
-        deskripsi: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Aspernatur sed minus repellendus doloribus cupiditate tenetur illum, culpa nemo laborum, eligendi praesentium quaerat perspiciatis hic dolorem? Impedit aliquid saepe tenetur ipsum.",
-      },
-    ];
+document.addEventListener("DOMContentLoaded", function () {
+    fetchDivisions();
 
-    let currentEditId = null;
-    let currentDeleteId = null;
-    let dataTable = null;
+    let editId = null;
+    let deleteId = null;
 
-    // Fungsi untuk memuat data ke tabel
-    function loadDataToTable() {
-      const tbody = document.getElementById("divisiTableBody");
-      tbody.innerHTML = "";
-
-      divisiData.forEach((divisi, index) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-              <td>${index + 1}</td>
-              <td>${divisi.nama}</td>
-              <td>${divisi.jumlahKaryawan}</td>
-              <td>${divisi.kepalaDivisi}</td>
-              <td>${divisi.kpiBulanLalu}</td>
-              <td>${divisi.kpiBulanIni}</td>
-              <td class="deskripsi-cell">${divisi.deskripsi}</td>
-              <td class="aksi-cell">
-                <div class="btn-group" role="group">
-                  <button type="button" class="btn btn-outline-secondary edit-btn" data-id="${
-                    divisi.id
-                  }">
-                    <i class="icofont-edit text-success"></i>
-                  </button>
-                  <button type="button" class="btn btn-outline-secondary delete-btn" data-id="${
-                    divisi.id
-                  }">
-                    <i class="icofont-ui-delete text-danger"></i>
-                  </button>
-                </div>
-              </td>
-            `;
-        tbody.appendChild(row);
-      });
-
-      // Inisialisasi ulang DataTable setelah data dimuat
-      initDataTable();
+    // ambil semua divisi
+    function fetchDivisions() {
+        fetch("/api/divisions")
+            .then(res => res.json())
+            .then(data => {
+                let tbody = document.getElementById("divisiTableBody");
+                tbody.innerHTML = "";
+                data.forEach((divisi, index) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${divisi.nama_divisi}</td>
+                            <td>${divisi.jumlah_karyawan}</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning editBtn" 
+                                    data-id="${divisi.id_divisi}" 
+                                    data-nama="${divisi.nama_divisi}" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#addDivisiModal">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-danger deleteBtn" 
+                                    data-id="${divisi.id_divisi}" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#confirmDeleteModal">
+                                    Hapus
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            });
     }
 
-    // Fungsi untuk mendapatkan ID berikutnya
-    function getNextId() {
-      return divisiData.length > 0 ?
-        Math.max(...divisiData.map((d) => d.id)) + 1 :
-        1;
-    }
-
-    // Event untuk tombol Tambah Divisi
-    $(".btn-set-task").click(function() {
-      currentEditId = null;
-      $("#addDivisiModalLabel").text("Tambah Divisi");
-      $("#namaDivisi").val("");
-      $("#kepalaDivisi").val("");
-      $("#deskripsiDivisi").val("");
-      $("#addDivisiModal").modal("show");
+    // RESET modal saat klik tombol Tambah
+    document.querySelector("[data-bs-target='#addDivisiModal']").addEventListener("click", function () {
+        editId = null;
+        document.getElementById("namaDivisi").value = "";
+        document.getElementById("kepalaDivisi").value = "";
+        document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
     });
 
-    // Event untuk tombol Simpan (Tambah/Edit)
-    $("#saveDivisiBtn").click(function() {
-      const nama = $("#namaDivisi").val().trim();
-      const kepala = $("#kepalaDivisi").val().trim();
-      const deskripsi = $("#deskripsiDivisi").val().trim();
+    // klik simpan (tambah/edit)
+    document.getElementById("saveDivisiBtn").addEventListener("click", function () {
+        let nama = document.getElementById("namaDivisi").value;
 
-      if (!nama) {
-        alert("Nama Divisi harus diisi!");
-        return;
-      }
+        if(!nama) return alert("Nama divisi wajib diisi!");
 
-      if (currentEditId) {
-        // Edit data existing
-        const index = divisiData.findIndex((d) => d.id === currentEditId);
-        if (index !== -1) {
-          divisiData[index] = {
-            ...divisiData[index],
-            nama: nama,
-            kepalaDivisi: kepala || "-",
-            deskripsi: deskripsi || "-",
-          };
+        if(editId){ // mode edit
+            fetch(`/api/divisions/${editId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                body: JSON.stringify({ nama_divisi: nama }),
+            })
+            .then(res => res.json())
+            .then(() => {
+                fetchDivisions();
+                editId = null;
+                document.getElementById("namaDivisi").value = "";
+                document.getElementById("kepalaDivisi").value = "";
+                document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
+            });
+        } else { // mode tambah
+            fetch("/api/divisions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                body: JSON.stringify({ nama_divisi: nama }),
+            })
+            .then(res => res.json())
+            .then(() => {
+                fetchDivisions();
+                document.getElementById("namaDivisi").value = "";
+                document.getElementById("kepalaDivisi").value = "";
+            });
         }
-      } else {
-        // Tambah data baru
-        const newDivisi = {
-          id: getNextId(),
-          nama: nama,
-          jumlahKaryawan: 0,
-          kepalaDivisi: kepala || "-",
-          kpiBulanLalu: 0,
-          kpiBulanIni: 0,
-          deskripsi: deskripsi || "-",
-        };
-        divisiData.push(newDivisi);
-      }
-
-      loadDataToTable();
-      $("#addDivisiModal").modal("hide");
     });
 
-    // Event untuk tombol Edit (menggunakan event delegation)
-    $(document).on("click", ".edit-btn", function() {
-      const id = $(this).data("id");
-      const divisi = divisiData.find((d) => d.id === id);
-
-      if (divisi) {
-        currentEditId = id;
-        $("#addDivisiModalLabel").text("Edit Divisi");
-        $("#namaDivisi").val(divisi.nama);
-        $("#kepalaDivisi").val(divisi.kepalaDivisi);
-        $("#deskripsiDivisi").val(divisi.deskripsi);
-        $("#addDivisiModal").modal("show");
-      }
-    });
-
-    // Event untuk tombol Hapus (menggunakan event delegation)
-    $(document).on("click", ".delete-btn", function() {
-      currentDeleteId = $(this).data("id");
-      $("#confirmDeleteModal").modal("show");
-    });
-
-    // Event untuk tombol Konfirmasi Hapus
-    $("#confirmDeleteBtn").click(function() {
-      if (currentDeleteId) {
-        divisiData = divisiData.filter((d) => d.id !== currentDeleteId);
-        loadDataToTable();
-        $("#confirmDeleteModal").modal("hide");
-        currentDeleteId = null;
-      }
-    });
-
-    // Fungsi untuk menutup modal dengan tombol Enter pada form
-    $("#namaDivisi, #kepalaDivisi, #deskripsiDivisi").on(
-      "keydown",
-      function(event) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          $("#saveDivisiBtn").click();
+    // klik edit
+    document.addEventListener("click", function(e){
+        if(e.target.classList.contains("editBtn")){
+            editId = e.target.dataset.id;
+            document.getElementById("namaDivisi").value = e.target.dataset.nama;
+            document.getElementById("addDivisiModalLabel").innerText = "Edit Divisi";
         }
-      }
-    );
-
-    // Fungsi untuk tombol Cancel/Batal
-    $('.btn-secondary[data-bs-dismiss="modal"]').on("click", function() {
-      $(this).closest(".modal").modal("hide");
     });
 
-    // Fungsi untuk menutup modal ketika klik di luar area modal
-    $(document).on("click", function(event) {
-      if ($(event.target).hasClass("modal")) {
-        $(".modal").modal("hide");
-      }
+    // klik hapus
+    document.addEventListener("click", function(e){
+        if(e.target.classList.contains("deleteBtn")){
+            deleteId = e.target.dataset.id;
+        }
     });
 
-    // Mencegah modal tertutup saat mengklik di dalam area modal
-    $(".modal-content").on("click", function(event) {
-      event.stopPropagation();
+    document.getElementById("confirmDeleteBtn").addEventListener("click", function(){
+        if(deleteId){
+            fetch(`/api/divisions/${deleteId}`, {
+                method: "DELETE",
+                headers: { "Accept": "application/json" }
+            }).then(() => {
+                fetchDivisions();
+                deleteId = null;
+            });
+        }
     });
 
-    // Fungsi untuk menutup modal dengan tombol Escape
-    $(document).on("keydown", function(event) {
-      if (event.key === "Escape") {
-        $(".modal").modal("hide");
-      }
-    });
-    // Muat data awal ke tabel
-    loadDataToTable();
-  });
+});
 </script>
+
 @endsection

@@ -168,13 +168,14 @@
                   style="width: 100%">
                   <thead>
                     <tr>
-                      <th style="width: 30px">No</th>
-                      <th style="min-width: 100px">Nama</th>
-                      <th style="width: 100px">Jumlah Karyawan</th>
-                      <th style="min-width: 130px">Kepala Divisi</th>
-                      <th style="width: 90px">KPI Lalu</th>
-                      <th style="width: 90px">KPI Kini</th>
-                      <th style="width: 100px" class="text-center">
+                      <th>No</th>
+                      <th>ID divisi</th>
+                      <th>Nama</th>
+                      <th>Jumlah Karyawan</th>
+                      <th>Kepala Divisi</th>
+                      <th>KPI Lalu</th>
+                      <th>KPI Kini</th>
+                      <th class="text-center">
                         Aksi
                       </th>
                     </tr>
@@ -213,6 +214,15 @@
             aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div class="mb-3">
+            <label for="idDivisiInput" class="form-label">ID Divisi</label>
+            <input
+              type="text"
+              class="form-control"
+              id="idDivisiInput"
+              placeholder="ID Divisi"
+              required />
+          </div>
           <div class="mb-3">
             <label for="namaDivisi" class="form-label">Nama Divisi</label>
             <input
@@ -301,26 +311,38 @@ document.addEventListener("DOMContentLoaded", function () {
     let editId = null;
     let deleteId = null;
 
-    // ambil semua divisi
+// Inisialisasi DataTable sekali
+    let table = $('#divisiDataTable').DataTable({
+        responsive: true,
+        columnDefs: [
+            { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
+        ]
+    });
+
+    // fetchDivisions cuma untuk update row
     function fetchDivisions() {
         fetch("/api/divisions")
             .then(res => res.json())
             .then(data => {
                 let tbody = document.getElementById("divisiTableBody");
                 tbody.innerHTML = "";
+
                 data.forEach((divisi, index) => {
+                    let nomorUrut = index + 1;
                     tbody.innerHTML += `
                         <tr>
-                            <td>${index + 1}</td>
+                            <td class="no-urut">${nomorUrut}</td>
+                            <td class="id-divisi">${divisi.id_divisi}</td>
                             <td>${divisi.nama_divisi}</td>
-                            <td>${divisi.jumlah_karyawan}</td>
-                            <td>-</td>
+                            <td>${divisi.jumlah_karyawan || 0}</td>
+                            <td>${divisi.kepala_divisi || '-'}</td>
                             <td>-</td>
                             <td>-</td>
                             <td class="text-center">
                                 <button class="btn btn-sm btn-warning editBtn" 
                                     data-id="${divisi.id_divisi}" 
                                     data-nama="${divisi.nama_divisi}" 
+                                    data-kepala="${divisi.kepala_divisi || ''}" 
                                     data-bs-toggle="modal" 
                                     data-bs-target="#addDivisiModal">
                                     Edit
@@ -334,13 +356,20 @@ document.addEventListener("DOMContentLoaded", function () {
                             </td>
                         </tr>`;
                 });
-            });
+
+                // Update DataTable tanpa destroy/re-init
+                table.clear().rows.add($('#divisiTableBody tr')).draw();
+            })
+            .catch(err => console.error("Error fetch divisions:", err));
     }
+
+    fetchDivisions(); // panggil awal
 
     // RESET modal saat klik tombol Tambah
     document.querySelector("[data-bs-target='#addDivisiModal']").addEventListener("click", function () {
         editId = null;
         document.getElementById("namaDivisi").value = "";
+        document.getElementById("idDivisiInput").value = "";
         document.getElementById("kepalaDivisi").value = "";
         document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
     });
@@ -348,39 +377,39 @@ document.addEventListener("DOMContentLoaded", function () {
     // klik simpan (tambah/edit)
     document.getElementById("saveDivisiBtn").addEventListener("click", function () {
         let nama = document.getElementById("namaDivisi").value;
+        let idDivisi = document.getElementById("idDivisiInput").value;
+        let kepala = document.getElementById("kepalaDivisi").value;
 
-        if(!nama) return alert("Nama divisi wajib diisi!");
+        if (!nama || !idDivisi) return alert("ID dan Nama divisi wajib diisi!");
 
-        if(editId){ // mode edit
+        let payload = { nama_divisi: nama, id_divisi: idDivisi, kepala_divisi: kepala };
+
+        if (editId) { // mode edit
             fetch(`/api/divisions/${editId}`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({ nama_divisi: nama }),
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(() => {
                 fetchDivisions();
                 editId = null;
                 document.getElementById("namaDivisi").value = "";
+                document.getElementById("idDivisiInput").value = "";
                 document.getElementById("kepalaDivisi").value = "";
                 document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
             });
         } else { // mode tambah
             fetch("/api/divisions", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({ nama_divisi: nama }),
+                headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(() => {
                 fetchDivisions();
                 document.getElementById("namaDivisi").value = "";
+                document.getElementById("idDivisiInput").value = "";
                 document.getElementById("kepalaDivisi").value = "";
             });
         }
@@ -391,6 +420,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if(e.target.classList.contains("editBtn")){
             editId = e.target.dataset.id;
             document.getElementById("namaDivisi").value = e.target.dataset.nama;
+            document.getElementById("idDivisiInput").value = e.target.dataset.id;
+            document.getElementById("kepalaDivisi").value = e.target.dataset.kepala;
             document.getElementById("addDivisiModalLabel").innerText = "Edit Divisi";
         }
     });
@@ -404,10 +435,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.getElementById("confirmDeleteBtn").addEventListener("click", function(){
         if(deleteId){
-            fetch(`/api/divisions/${deleteId}`, {
-                method: "DELETE",
-                headers: { "Accept": "application/json" }
-            }).then(() => {
+            fetch(`/api/divisions/${deleteId}`, { method: "DELETE", headers: { "Accept": "application/json" }})
+            .then(() => {
                 fetchDivisions();
                 deleteId = null;
             });
@@ -416,5 +445,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 </script>
+<script>
+    $(document).ready(function() {
+        $('#myProjectTable')
+        .addClass( 'nowrap' )
+        $('#myProjectTable').DataTable({
+            responsive: true,
+            columnDefs: [
+                { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
+            ]
+        });
+        $('.deleterow').on('click',function(){
+        var tablename = $(this).closest('table').DataTable();  
+        tablename
+                .row( $(this)
+                .parents('tr') )
+                .remove()
+                .draw();
 
+        } );
+    });
+</script>
 @endsection

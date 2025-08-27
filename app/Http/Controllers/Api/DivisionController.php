@@ -33,10 +33,12 @@ class DivisionController extends Controller
     {
         $request->validate([
             'nama_divisi' => 'required|string|max:45',
+            'id_divisi' => 'required|integer|unique:divisions,id_divisi'
         ]);
 
         $division = Division::create([
             'nama_divisi' => $request->nama_divisi,
+            'id_divisi' => $request->id_divisi
         ]);
 
         return response()->json(['message' => 'Divisi berhasil ditambahkan', 'data' => $division]);
@@ -56,10 +58,12 @@ class DivisionController extends Controller
 
         $request->validate([
             'nama_divisi' => 'required|string|max:45',
+            'id_divisi' => 'required|integer|unique:divisions,id_divisi,'.$division->id_divisi
         ]);
 
         $division->update([
             'nama_divisi' => $request->nama_divisi,
+            'id_divisi' => $request->id_divisi
         ]);
 
         return response()->json(['message' => 'Divisi berhasil diperbarui', 'data' => $division]);

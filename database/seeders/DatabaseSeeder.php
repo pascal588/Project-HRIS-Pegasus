@@ -37,8 +37,8 @@ class DatabaseSeeder extends Seeder
 
         // Divisions
         DB::table('divisions')->insert([
-            ['nama_divisi' => 'IT', 'created_at' => now(), 'updated_at' => now()],
-            ['nama_divisi' => 'Finance', 'created_at' => now(), 'updated_at' => now()],
+            ['id_divisi' => 1, 'nama_divisi' => 'IT', 'created_at' => now(), 'updated_at' => now()],
+            ['id_divisi' => 2, 'nama_divisi' => 'Finance', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // Employees

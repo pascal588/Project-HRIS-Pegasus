@@ -15,7 +15,7 @@ class Division extends Model
 
     protected $fillable = [
         'nama_divisi',
-        
+        'id_divisi'
     ];
 
     public function roles()

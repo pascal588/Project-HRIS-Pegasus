@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('divisions', function (Blueprint $table) {
-            $table->id('id_divisi');
+            $table->unsignedBigInteger('id_divisi')->primary();
             $table->string('nama_divisi', 45);
             $table->timestamps();
             $table->softDeletes();

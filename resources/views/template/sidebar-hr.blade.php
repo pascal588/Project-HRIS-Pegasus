@@ -24,19 +24,19 @@
     <!-- Menu: main ul -->
     <ul class="menu-list flex-grow-1 mt-3">
       <li class="collapsed">
-        <a class="m-link" href="{{ route('hr.dashboard')}}">
+        <a class="m-link {{ request()->routeIs('hr.dashboard') ? 'active' : '' }}" href="{{ route('hr.dashboard')}}">
           <i class="icofont-home fs-5"></i> <span>Dashboard</span>
         </a>
       </li>
       <li class="collapsed">
-        <a class="m-link" href="{{ route('hr.penilaian')}}">
+        <a class="m-link {{ request()->routeIs('hr.penilaian') ? 'active' : '' }}" href="{{ route('hr.penilaian')}}">
           <i class="icofont-users-alt-5"></i>
           <span>Penilaian Karyawan</span>
         </a>
       </li>
       <li class="collapsed">
         <a
-          class="m-link"
+          class="m-link {{ request()->routeIs('hr.absensi','hr.kpi-karyawan') ? '' : 'collapsed' }}"
           data-bs-toggle="collapse"
           data-bs-target="#history-components"
           href="#">
@@ -46,21 +46,21 @@
         </a>
         <!-- Menu: Sub menu ul -->
         <ul
-          class="sub-menu collapse"
+        class="sub-menu collapse {{ request()->routeIs('hr.absensi','hr.kpi-karyawan') ? 'show' : '' }}"
           id="history-components"
           style="transition: all 0.3s ease">
           <li>
-            <a class="ms-link" href="{{ route('hr.absensi')}}"><span>Laporan Hasil Absensi</span></a>
+            <a class="ms-link {{ request()->routeIs('hr.absensi') ? 'active' : '' }}" href="{{ route('hr.absensi')}}"><span>Laporan Hasil Absensi</span></a>
           </li>
           <li>
-            <a class="ms-link" href="{{route ('hr.kpi-karyawan')}}"><span>Laporan Hasil KPI</span></a>
+            <a class="ms-link {{ request()->routeIs('hr.kpi-karyawan') ? 'active' : '' }}" href="{{route ('hr.kpi-karyawan')}}"><span>Laporan Hasil KPI</span></a>
           </li>
         </ul>
       </li>
 
       <li class="collapsed">
         <a
-          class="m-link"
+          class="m-link {{ request()->routeIs('hr.karyawan','hr.divisi', 'hr.kpi') ? '' : 'collapsed' }}"
           data-bs-toggle="collapse"
           data-bs-target="#masterdata-components"
           href="#">
@@ -70,17 +70,17 @@
         </a>
         <!-- Menu: Sub menu ul -->
         <ul
-          class="sub-menu collapse"
+          class="sub-menu collapse {{ request()->routeIs('hr.karyawan','hr.divisi', 'hr.kpi') ? 'show' : '' }}"
           id="masterdata-components"
           style="transition: all 0.3s ease">
           <li>
-            <a class="ms-link" href="{{route('hr.karyawan')}}"><span>Karyawan</span></a>
+            <a class="ms-link {{ request()->routeIs('hr.karyawan') ? 'active' : '' }}" href="{{route('hr.karyawan')}}"><span>Karyawan</span></a>
           </li>
           <li>
-            <a class="ms-link" href="{{route('hr.divisi')}}"><span>Divisi</span></a>
+            <a class="ms-link {{ request()->routeIs('hr.divisi') ? 'active' : '' }}" href="{{route('hr.divisi')}}"><span>Divisi</span></a>
           </li>
           <li>
-            <a class="ms-link" href="{{route('hr.kpi')}}">
+            <a class="ms-link {{ request()->routeIs('hr.kpi') ? 'active' : '' }}" href="{{route('hr.kpi')}}">
               <span>Penilaian KPI</span></a>
           </li>
         </ul>

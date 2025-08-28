@@ -17,5 +17,4 @@ class Role extends Model
         return $this->belongsTo(Division::class, 'division_id', 'id_divisi');
     }
 
-
 }

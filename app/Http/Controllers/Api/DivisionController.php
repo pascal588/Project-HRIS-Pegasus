@@ -11,22 +11,30 @@ class DivisionController extends Controller
     // GET semua divisi
     public function index()
     {
-        $divisions = Division::with('roles.roles')->get();
+        $divisions = Division::with('roles.employees')->get();
 
         $data = $divisions->map(function($division) {
             $jumlah_karyawan = $division->roles->flatMap(function($role){
-                return $role->roles;
+                return $role->employees;
             })->count();
+
+            // Kepala divisi bisa ambil dari role tertentu, misal 'Kepala-divisi'
+            $kepala = $division->roles->flatMap(fn($role) => $role->employees)
+                        ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan','Kepala-divisi')->first()?->id_jabatan);
+
+            $kepala_nama = $kepala?->nama ?? '-';
 
             return [
                 'id_divisi' => $division->id_divisi,
                 'nama_divisi' => $division->nama_divisi,
-                'jumlah_karyawan' => $jumlah_karyawan
+                'jumlah_karyawan' => $jumlah_karyawan,
+                'kepala_divisi' => $kepala_nama
             ];
         });
 
         return response()->json($data);
     }
+
 
     // POST tambah divisi
     public function store(Request $request)

@@ -104,7 +104,7 @@
                       <i
                         class="bi bi-list-ol text-primary fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Jumlah Topik</small>
+                        <small class="text-muted">Jumlah aspek</small>
                         <div id="infoTopicCount" class="fw-semibold">
                           0
                         </div>
@@ -124,7 +124,7 @@
                     <button
                       id="addTopicBtn"
                       class="btn btn-light btn-sm">
-                      + Tambah Topik
+                      + Tambah aspek
                     </button>
                     <button
                       id="saveKPIBtn"
@@ -219,7 +219,7 @@
             <button class="nav-link ${index === 1 ? "active" : ""}" 
               id="${tabId}-tab" data-bs-toggle="tab" data-bs-target="#${tabId}" 
               type="button" role="tab">
-              ${topicName || `Topik ${index}`}
+              ${topicName || `aspek ${index}`}
             </button>
           </li>`;
     document
@@ -236,12 +236,12 @@
             index === 1 ? "show active" : ""
           }" id="${tabId}" role="tabpanel">
             <div class="mb-3">
-              <label class="form-label">Nama Topik</label>
+              <label class="form-label">Nama aspek</label>
               <input type="text" class="form-control topic-name" value="${topicName}" 
                 oninput="updateTabTitle(${index}, this.value)">
             </div>
             <div class="mb-3">
-              <label class="form-label">Bobot Topik (%)</label>
+              <label class="form-label">Bobot aspek (%)</label>
               <input type="number" class="form-control topic-weight" value="${topicWeight}" min="0" max="100" 
                 oninput="updateInfo()">
             </div>
@@ -250,7 +250,7 @@
               ${questionsHTML}
             </div>
             <button class="btn btn-outline-primary btn-sm mt-3" onclick="addQuestion('${tabId}')">+ Tambah Pertanyaan</button>
-            <button class="btn btn-danger btn-sm mt-3" onclick="confirmRemoveTopic(${index})">Hapus Topik</button>
+            <button class="btn btn-danger btn-sm mt-3" onclick="confirmRemoveTopic(${index})">Hapus aspek</button>
           </div>`;
     document
       .getElementById("topicContents")
@@ -267,7 +267,7 @@
 
   function updateTabTitle(index, value) {
     const btn = document.querySelector(`#tab-btn-${index} button`);
-    btn.textContent = value || `Topik ${index}`;
+    btn.textContent = value || `aspek ${index}`;
   }
 
   function addQuestion(tabId) {
@@ -284,7 +284,7 @@
   }
 
   function confirmRemoveTopic(index) {
-    if (confirm("Yakin hapus topik ini?")) {
+    if (confirm("Yakin hapus aspek ini?")) {
       removeTopic(index);
     }
   }
@@ -336,7 +336,7 @@
         });
 
         if (!topicName) {
-          alert("Nama topik tidak boleh kosong!");
+          alert("Nama aspek tidak boleh kosong!");
           valid = false;
         }
         totalWeight += topicWeight;

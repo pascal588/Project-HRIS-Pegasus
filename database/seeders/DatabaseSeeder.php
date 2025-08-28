@@ -44,32 +44,32 @@ class DatabaseSeeder extends Seeder
         // Employees
         DB::table('employees')->insert([
             [
-                'usersfix_id_user' => 1,
+                'user_id' => 1,
                 'nama' => 'Budi HR',
                 'no_telp' => '0811111111',
                 'gender' => 'Pria',
                 'foto' => null,
-                'role' => 'HR',
+                // 'role' => 'HR',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'usersfix_id_user' => 2,
+                'user_id' => 2,
                 'nama' => 'Sinta Kepala',
                 'no_telp' => '0822222222',
                 'gender' => 'Wanita',
                 'foto' => null,
-                'role' => 'Kepala-divisi',
+                // 'role' => 'Kepala-divisi',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'usersfix_id_user' => 3,
+                'user_id' => 3,
                 'nama' => 'Andi Karyawan',
                 'no_telp' => '0833333333',
                 'gender' => 'Pria',
                 'foto' => null,
-                'role' => 'Karyawan',
+                // 'role' => 'Karyawan',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -79,19 +79,19 @@ class DatabaseSeeder extends Seeder
         DB::table('roles')->insert([
             [
                 'nama_jabatan' => 'HR',
-                'divisions_id_divisi' => 1, // IT
+                'division_id' => 1, // IT
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'nama_jabatan' => 'Kepala-divisi',
-                'divisions_id_divisi' => 1, // IT
+                'division_id' => 1, // IT
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'nama_jabatan' => 'Karyawan',
-                'divisions_id_divisi' => 2, // Finance
+                'division_id' => 2, // Finance
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -100,20 +100,20 @@ class DatabaseSeeder extends Seeder
         // Roles_has_employees (pivot)
         DB::table('roles_has_employees')->insert([
             [
-                'roles_id_jabatan' => 1, // HR
-                'employees_id_karyawan' => 1, // Budi HR
+                'role_id' => 1, // HR
+                'employee_id' => 1, // Budi HR
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'roles_id_jabatan' => 2, // Kepala Divisi
-                'employees_id_karyawan' => 2, // Sinta Kepala
+                'role_id' => 2, // Kepala Divisi
+                'employee_id' => 2, // Sinta Kepala
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
-                'roles_id_jabatan' => 3, // Karyawan
-                'employees_id_karyawan' => 3, // Andi Karyawan
+                'role_id' => 3, // Karyawan
+                'employee_id' => 3, // Andi Karyawan
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->id('id_jabatan');
-            $table->string('nama_jabatan', 50);
-            $table->unsignedBigInteger('divisions_id_divisi'); // FK ke divisions
+            $table->string('nama_jabatan', 50)->default('Karyawan');
+            $table->unsignedBigInteger('division_id'); // FK ke divisions
             $table->timestamps();
 
-            $table->foreign('divisions_id_divisi')->references('id_divisi')->on('divisions')->onDelete('cascade');
+            $table->foreign('division_id')->references('id_divisi')->on('divisions')->onDelete('cascade');
         });
     }
 

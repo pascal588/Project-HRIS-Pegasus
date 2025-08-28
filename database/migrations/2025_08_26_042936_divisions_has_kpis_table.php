@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('divisions_has_kpis', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('divisions_id_divisi');
+            $table->unsignedBigInteger('division_id');
             $table->unsignedBigInteger('kpis_id_kpi');
             $table->timestamps();
 
-            $table->foreign('divisions_id_divisi')->references('id_divisi')->on('divisions')->onDelete('cascade');
+            $table->foreign('division_id')->references('id_divisi')->on('divisions')->onDelete('cascade');
             $table->foreign('kpis_id_kpi')->references('id_kpi')->on('kpis')->onDelete('cascade');
-            $table->unique(['divisions_id_divisi', 'kpis_id_kpi']);
+            $table->unique(['division_id', 'kpis_id_kpi']);
         });
     }
 

@@ -11,11 +11,11 @@ class DivisionController extends Controller
     // GET semua divisi
     public function index()
     {
-        $divisions = Division::with('roles.employees')->get();
+        $divisions = Division::with('roles.roles')->get();
 
         $data = $divisions->map(function($division) {
             $jumlah_karyawan = $division->roles->flatMap(function($role){
-                return $role->employees;
+                return $role->roles;
             })->count();
 
             return [

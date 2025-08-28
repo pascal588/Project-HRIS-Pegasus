@@ -15,15 +15,18 @@
 <div id="mytask-layout">
     
     <!-- sidebar -->
-            {{-- Disini kita include sidebar sesuai role --}}
-            @if(Auth::user()->Employee->role === 'Kepala-divisi')
-                @include('template.sidebar-penilai')
-            @elseif(Auth::user()->Employee->role === 'HR')
-                @include('template.sidebar-hr')
-            @elseif(Auth::user()->Employee->role === 'Karyawan')
-                @include('template.sidebar-karyawan')
-            @endif
-            
+          @php
+    $role = Auth::user()?->employee?->roles->first()?->nama_jabatan ?? '';
+    @endphp
+
+    @if($role === 'Kepala-divisi')
+        @include('template.sidebar-penilai')
+    @elseif($role === 'HR')
+        @include('template.sidebar-hr')
+    @elseif($role === 'Karyawan')
+        @include('template.sidebar-karyawan')
+    @endif
+                
     <!-- main body area -->
     <div class="main px-lg-4 px-md-4">
 
@@ -39,7 +42,7 @@
                         <div class="dropdown user-profile ml-2 ml-sm-3 d-flex align-items-center">
                             <div class="u-info me-2">
                                 <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">{{ Auth::user()->Employee->nama }}</span></p>
-                                <small>{{ Auth::user()->Employee->role }}</small>
+                                <small>{{ Auth::user()?->employee?->roles->first()?->nama_jabatan ?? 'Role tidak tersedia' }}</small>
                             </div>
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                                 <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">

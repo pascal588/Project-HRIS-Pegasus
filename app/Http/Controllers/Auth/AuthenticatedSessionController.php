@@ -39,13 +39,12 @@ class AuthenticatedSessionController extends Controller
 
         // Ambil role dari employees
         $user = Auth::user();
-        $role = $user->employee?->role; // bisa HR / kepala-divisi / Karyawan
-
-        if ($role === 'HR') {
+        $roles = $user->employee?->roles->pluck('nama_jabatan')->toArray() ?? [];
+        if (in_array('HR', $roles)) {
             return redirect()->route('hr.dashboard');
-        } elseif ($role === 'Kepala-divisi') {
+        } elseif (in_array('Kepala-divisi', $roles)) {
             return redirect()->route('penilai.dashboard');
-        } elseif ($role === 'Karyawan') {
+        } elseif (in_array('Karyawan', $roles)) {
             return redirect()->route('karyawan.dashboard');
         }
 

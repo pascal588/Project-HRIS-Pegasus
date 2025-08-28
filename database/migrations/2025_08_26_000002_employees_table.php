@@ -13,16 +13,15 @@ return new class extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id('id_karyawan');
-            $table->unsignedBigInteger('usersfix_id_user'); // FK ke tabel users
+            $table->unsignedBigInteger('user_id'); // FK ke tabel users
             $table->string('nama', 100);
             $table->string('no_telp', 15);
             $table->enum('gender', ['Pria', 'Wanita']); 
             $table->string('foto', 255)->nullable();
-            $table->enum('role', ['HR', 'Kepala-divisi', 'Karyawan']); //Role
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('usersfix_id_user')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

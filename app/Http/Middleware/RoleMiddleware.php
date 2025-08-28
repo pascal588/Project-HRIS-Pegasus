@@ -13,12 +13,15 @@ class RoleMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $role): Response
+    public function handle(Request $request, Closure $next, ...$roles)
     {
-        if ($request->user()->employee && $request->user()->employee->role === $role) {
-            return $next($request);
+        $userRoles = $request->user()?->employee?->roles->pluck('nama_jabatan')->toArray() ?? [];
+
+        if (empty(array_intersect($roles, $userRoles))) {
+            abort(403, 'Unauthorized');
         }
 
-        abort(403, 'Unauthorized');
+        return $next($request);
     }
+
 }

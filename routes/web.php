@@ -18,7 +18,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth', 'role:HR'])->group(function () {
+Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
     Route::get('/dashboard-hr', function() {
         return view('hr.dashboard');
     })->name('hr.dashboard');
@@ -48,7 +48,7 @@ Route::middleware(['auth', 'role:HR'])->group(function () {
     })->name('hr.kpi');
 });
 
-Route::middleware(['auth', 'role:Kepala-divisi'])->group(function () {
+Route::middleware(['auth', 'nama_jabatan:Kepala-divisi'])->group(function () {
     Route::get('/dashboard-penilai', function() {
         return view('penilai.dashboard');
     })->name('penilai.dashboard');
@@ -66,7 +66,7 @@ Route::middleware(['auth', 'role:Kepala-divisi'])->group(function () {
     })->name('penilai.kpi-penilai');
 });
 
-Route::middleware(['auth', 'role:Karyawan'])->group(function () {
+Route::middleware(['auth', 'nama_jabatan:Karyawan'])->group(function () {
     Route::get('/dashboard-karyawan', function() {
         return view('karyawan.dashboard');
     })->name('karyawan.dashboard');
@@ -77,10 +77,6 @@ Route::middleware(['auth', 'role:Karyawan'])->group(function () {
         return view('karyawan.kpi');
     })->name('karyawan.kpi');
 });
-
-// Route::get('/profile/edit', function () {
-//     return view('profile.edit');
-// })->name('profile.edit');
 
 
 require __DIR__.'/auth.php';

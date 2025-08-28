@@ -12,16 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('roles_has_employees', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('roles_id_jabatan');
-            $table->unsignedBigInteger('employees_id_karyawan');
-            $table->timestamps();
+        $table->id();
+        $table->unsignedBigInteger('role_id'); // FK ke roles
+        $table->unsignedBigInteger('employee_id'); // FK ke employees
+        $table->timestamps();
 
-            $table->foreign('roles_id_jabatan')->references('id_jabatan')->on('roles')->onDelete('cascade');
-            $table->foreign('employees_id_karyawan')->references('id_karyawan')->on('employees')->onDelete('cascade');
-            $table->unique(['roles_id_jabatan', 'employees_id_karyawan'], 'role_employee_unique');
+        $table->foreign('role_id')->references('id_jabatan')->on('roles')->onDelete('cascade');
+        $table->foreign('employee_id')->references('id_karyawan')->on('employees')->onDelete('cascade');
+        $table->unique(['role_id', 'employee_id']);
+    });
 
-        });
     }
 
     /**

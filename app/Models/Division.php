@@ -20,6 +20,6 @@ class Division extends Model
 
     public function roles()
     {
-        return $this->hasMany(Role::class, 'divisions_id_divisi', 'id_divisi');
+        return $this->hasMany(Role::class, 'division_id', 'id_divisi');
     }
 }

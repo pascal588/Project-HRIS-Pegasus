@@ -54,16 +54,18 @@ class DivisionController extends Controller
         return response()->json($division);
     }
 
-    // PUT update divisi (id_divisi tidak bisa diubah)
+    // PUT update divisi (id_divisi bisa ikut diubah)
     public function update(Request $request, $id)
     {
         $division = Division::findOrFail($id);
 
         $request->validate([
+            'id_divisi' => 'required|integer|unique:divisions,id_divisi,' . $division->id_divisi . ',id_divisi',
             'nama_divisi' => 'required|string|max:45',
         ]);
 
         $division->update([
+            'id_divisi' => $request->id_divisi,
             'nama_divisi' => $request->nama_divisi,
         ]);
 
@@ -78,7 +80,7 @@ class DivisionController extends Controller
     {
         $division = Division::findOrFail($id);
         $division->forceDelete(); // hard delete
-        // $division->delete(); // soft delete (kalau mau pakai soft delete)
+        // $division->delete(); // soft delete (Data kesimpen di database)
         return response()->json(['message' => 'Division deleted']);
     }
 }

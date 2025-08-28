@@ -32,16 +32,19 @@ class DivisionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'id_divisi' => 'required|integer|unique:divisions,id_divisi',
             'nama_divisi' => 'required|string|max:45',
-            'id_divisi' => 'required|integer|unique:divisions,id_divisi'
         ]);
 
         $division = Division::create([
+            'id_divisi' => $request->id_divisi,
             'nama_divisi' => $request->nama_divisi,
-            'id_divisi' => $request->id_divisi
         ]);
 
-        return response()->json(['message' => 'Divisi berhasil ditambahkan', 'data' => $division]);
+        return response()->json([
+            'message' => 'Divisi berhasil ditambahkan',
+            'data' => $division
+        ]);
     }
 
     // GET detail divisi
@@ -51,22 +54,23 @@ class DivisionController extends Controller
         return response()->json($division);
     }
 
-    // PUT update divisi
+    // PUT update divisi (id_divisi tidak bisa diubah)
     public function update(Request $request, $id)
     {
         $division = Division::findOrFail($id);
 
         $request->validate([
             'nama_divisi' => 'required|string|max:45',
-            'id_divisi' => 'required|integer|unique:divisions,id_divisi,'.$division->id_divisi
         ]);
 
         $division->update([
             'nama_divisi' => $request->nama_divisi,
-            'id_divisi' => $request->id_divisi
         ]);
 
-        return response()->json(['message' => 'Divisi berhasil diperbarui', 'data' => $division]);
+        return response()->json([
+            'message' => 'Divisi berhasil diperbarui',
+            'data' => $division
+        ]);
     }
 
     // DELETE hapus divisi
@@ -74,7 +78,7 @@ class DivisionController extends Controller
     {
         $division = Division::findOrFail($id);
         $division->forceDelete(); // hard delete
-        // $division->delete(); // soft delete msih kesimpen di db
+        // $division->delete(); // soft delete (kalau mau pakai soft delete)
         return response()->json(['message' => 'Division deleted']);
     }
 }

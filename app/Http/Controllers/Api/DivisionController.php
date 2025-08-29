@@ -13,14 +13,14 @@ class DivisionController extends Controller
     {
         $divisions = Division::with('roles.employees')->get();
 
-        $data = $divisions->map(function($division) {
-            $jumlah_karyawan = $division->roles->flatMap(function($role){
+        $data = $divisions->map(function ($division) {
+            $jumlah_karyawan = $division->roles->flatMap(function ($role) {
                 return $role->employees;
             })->count();
 
             // Kepala divisi bisa ambil dari role tertentu, misal 'Kepala-divisi'
             $kepala = $division->roles->flatMap(fn($role) => $role->employees)
-                        ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan','Kepala-divisi')->first()?->id_jabatan);
+                ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan', 'Kepala-divisi')->first()?->id_jabatan);
 
             $kepala_nama = $kepala?->nama ?? '-';
 
@@ -32,7 +32,9 @@ class DivisionController extends Controller
             ];
         });
 
-        return response()->json($data);
+        return response()->json([
+            'data' => $data
+        ]);
     }
 
 

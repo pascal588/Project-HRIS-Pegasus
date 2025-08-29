@@ -2,12 +2,18 @@
 
 use Illuminate\Support\Facades\Route;
 // routes/api.php
-use App\Http\Controllers\DivisionController;
+use App\Http\Controllers\Api\DivisionController;
+use App\Http\Controllers\Api\EmployeeApiController;
+use App\Http\Controllers\Api\RoleApiController;
+use App\Http\Controllers\Api\Rolecontroller;
 
-// Gunakan full namespace dengan method array
-Route::apiResource('/Division', DivisionController::class);
-Route::get('/Division', [DivisionController::class, 'index']);
+// api divisi
+Route::apiResource('divisions', DivisionController::class);
 
-// Atau gunakan string syntax
-Route::apiResource('divisions', 'App\Http\Controllers\Api\DivisionController');
+//api karyawan
+Route::apiResource('employees', EmployeeApiController::class);
+
+//api jabatan
+route::apiResource('role', RoleApiController::class );
+
 

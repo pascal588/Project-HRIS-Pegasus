@@ -238,158 +238,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td data-label="No">01</td>
-                      <td data-label="ID">001</td>
-                      <td data-label="Nama">Bambang</td>
-                      <td data-label="Divisi">Pemasaran</td>
-                      <td data-label="Jabatan">Karyawan</td>
-                      <td data-label="Status">
-                        <span class="badge bg-success">Aktif</span>
-                      </td>
-                      <td data-label="Email">bambang@example.com</td>
-                      <td data-label="Tanggal Masuk">Agustus 2025</td>
-                      <td data-label="Aksi">
-                        <div class="action-buttons">
-                          <button
-                            class="btn btn-outline-info btn-detail"
-                            data-bs-toggle="modal"
-                            data-bs-target="#detailkaryawan"
-                            data-id="001"
-                            title="Detail">
-                            <i class="icofont-eye-alt"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-primary edit-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editkaryawan"
-                            data-id="001"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-danger deleterow"
-                            data-id="001"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td data-label="No">02</td>
-                      <td data-label="ID">002</td>
-                      <td data-label="Nama">Siti</td>
-                      <td data-label="Divisi">Keuangan</td>
-                      <td data-label="Jabatan">Kepala Divisi</td>
-                      <td data-label="Status">
-                        <span class="badge bg-success">Aktif</span>
-                      </td>
-                      <td data-label="Email">siti@example.com</td>
-                      <td data-label="Tanggal Masuk">Agustus 2025</td>
-                      <td data-label="Aksi">
-                        <div class="action-buttons">
-                          <button
-                            class="btn btn-outline-info btn-detail"
-                            data-bs-toggle="modal"
-                            data-bs-target="#detailkaryawan"
-                            data-id="002"
-                            title="Detail">
-                            <i class="icofont-eye-alt"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-primary edit-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editkaryawan"
-                            data-id="002"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-danger deleterow"
-                            data-id="002"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td data-label="No">03</td>
-                      <td data-label="ID">003</td>
-                      <td data-label="Nama">Andi</td>
-                      <td data-label="Divisi">Pemasaran</td>
-                      <td data-label="Jabatan">Karyawan</td>
-                      <td data-label="Status">
-                        <span class="badge bg-success">Aktif</span>
-                      </td>
-                      <td data-label="Email">andi@example.com</td>
-                      <td data-label="Tanggal Masuk">Agustus 2025</td>
-                      <td data-label="Aksi">
-                        <div class="action-buttons">
-                          <button
-                            class="btn btn-outline-info btn-detail"
-                            data-bs-toggle="modal"
-                            data-bs-target="#detailkaryawan"
-                            data-id="003"
-                            title="Detail">
-                            <i class="icofont-eye-alt"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-primary edit-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editkaryawan"
-                            data-id="003"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-danger deleterow"
-                            data-id="003"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td data-label="No">04</td>
-                      <td data-label="ID">004</td>
-                      <td data-label="Nama">Dewi</td>
-                      <td data-label="Divisi">Keuangan</td>
-                      <td data-label="Jabatan">Karyawan</td>
-                      <td data-label="Status">
-                        <span class="badge bg-success">Aktif</span>
-                      </td>
-                      <td data-label="Email">dewi@example.com</td>
-                      <td data-label="Tanggal Masuk">Agustus 2024</td>
-                      <td data-label="Aksi">
-                        <div class="action-buttons">
-                          <button
-                            class="btn btn-outline-info btn-detail"
-                            data-bs-toggle="modal"
-                            data-bs-target="#detailkaryawan"
-                            data-id="004"
-                            title="Detail">
-                            <i class="icofont-eye-alt"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-primary edit-btn"
-                            data-bs-toggle="modal"
-                            data-bs-target="#editkaryawan"
-                            data-id="004"
-                            title="Edit">
-                            <i class="icofont-edit"></i>
-                          </button>
-                          <button
-                            class="btn btn-outline-danger deleterow"
-                            data-id="004"
-                            title="Hapus">
-                            <i class="icofont-ui-delete"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+
                   </tbody>
                 </table>
               </div>
@@ -403,134 +252,72 @@
 @endsection
 
 <!-- Modal Tambah Karyawan -->
-<div
-  class="modal fade"
-  id="addkaryawan"
-  tabindex="-1"
-  aria-labelledby="addkaryawanLabel"
-  aria-hidden="true">
+<div class="modal fade" id="addkaryawan" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="addkaryawanLabel">
-          Tambah Karyawan Baru
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"></button>
+        <h5 class="modal-title">Tambah Karyawan Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <form id="formTambahKaryawan">
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="namaKaryawan" class="form-label">Nama Lengkap</label>
-              <input
-                type="text"
-                class="form-control"
-                id="namaKaryawan"
-                required />
+              <label class="form-label">Nama Lengkap</label>
+              <input type="text" class="form-control" id="namaKaryawan" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="divisiKaryawan" class="form-label">Divisi</label>
-              <select class="form-select" id="divisiKaryawan" required>
-                <option value="" selected disabled>Pilih Divisi</option>
-                <option value="Pemasaran">Pemasaran</option>
-                <option value="Keuangan">Keuangan</option>
-                <option value="IT">IT</option>
-                <option value="HR">HR</option>
-                <option value="Operasional">Operasional</option>
-              </select>
+              <label class="form-label">Divisi</label>
+              <select class="form-select" id="divisiKaryawan" required></select>
             </div>
           </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="jabatanKaryawan" class="form-label">Jabatan</label>
-              <input
-                type="text"
-                class="form-control"
-                id="jabatanKaryawan"
-                required />
+              <label class="form-label">Jabatan</label>
+              <select class="form-select" id="jabatanKaryawan" required></select>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="genderKaryawan" class="form-label">Jenis Kelamin</label>
+              <label class="form-label">Jenis Kelamin</label>
               <select class="form-select" id="genderKaryawan" required>
-                <option value="" selected disabled>
-                  Pilih Jenis Kelamin
-                </option>
-                <option value="Laki-laki">Laki-laki</option>
-                <option value="Perempuan">Perempuan</option>
+                <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                <option value="Pria">Pria</option>
+                <option value="Wanita">Wanita</option>
               </select>
             </div>
           </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="telpKaryawan" class="form-label">No. Telepon</label>
-              <input
-                type="tel"
-                class="form-control"
-                id="telpKaryawan"
-                required />
+              <label class="form-label">No. Telepon</label>
+              <input type="tel" class="form-control" id="telpKaryawan" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="emailKaryawan" class="form-label">Email</label>
-              <input
-                type="email"
-                class="form-control"
-                id="emailKaryawan"
-                required />
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="emailKaryawan" required>
             </div>
           </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="passwordKaryawan" class="form-label">Password</label>
-              <input
-                type="password"
-                class="form-control"
-                id="passwordKaryawan"
-                required />
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" id="passwordKaryawan" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="confirmPasswordKaryawan" class="form-label">Konfirmasi Password</label>
-              <input
-                type="password"
-                class="form-control"
-                id="confirmPasswordKaryawan"
-                required />
+              <label class="form-label">Konfirmasi Password</label>
+              <input type="password" class="form-control" id="confirmPasswordKaryawan" required>
             </div>
           </div>
-
           <div class="mb-3">
-            <label for="alamatKaryawan" class="form-label">Alamat</label>
-            <textarea
-              class="form-control"
-              id="alamatKaryawan"
-              rows="3"></textarea>
+            <label class="form-label">Alamat</label>
+            <textarea class="form-control" id="alamatKaryawan" rows="3"></textarea>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal">
-          Batal
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          id="tambahKaryawanBtn">
-          Simpan
-        </button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button class="btn btn-primary" id="tambahKaryawanBtn">Simpan</button>
       </div>
     </div>
   </div>
 </div>
-
 <!-- Modal Detail Karyawan -->
 <div
   class="modal fade"
@@ -626,105 +413,55 @@
 </div>
 
 <!-- Modal Edit Karyawan -->
-<div
-  class="modal fade"
-  id="editkaryawan"
-  tabindex="-1"
-  aria-labelledby="editkaryawanLabel"
-  aria-hidden="true">
+<div class="modal fade" id="editkaryawan" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="editkaryawanLabel">
-          Edit Data Karyawan
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"></button>
+        <h5 class="modal-title">Edit Karyawan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <form id="formEditKaryawan">
+          <input type="hidden" id="editId">
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="editId" class="form-label">ID Karyawan</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editId"
-                readonly />
+              <label class="form-label">Nama Lengkap</label>
+              <input type="text" class="form-control" id="editNama" required>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="editNama" class="form-label">Nama Lengkap</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editNama"
-                required />
+              <label class="form-label">Divisi</label>
+              <select class="form-select" id="editDivisi" required></select>
             </div>
           </div>
-
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="editDivisi" class="form-label">Divisi</label>
-              <select class="form-select" id="editDivisi" required>
-                <option value="Pemasaran">Pemasaran</option>
-                <option value="Keuangan">Keuangan</option>
-                <option value="IT">IT</option>
-                <option value="HR">HR</option>
-                <option value="Operasional">Operasional</option>
-              </select>
+              <label class="form-label">Jabatan</label>
+              <select class="form-select" id="editJabatan" required></select>
             </div>
             <div class="col-md-6 mb-3">
-              <label for="editJabatan" class="form-label">Jabatan</label>
-              <input
-                type="text"
-                class="form-control"
-                id="editJabatan"
-                required />
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="editStatus" class="form-label">Status</label>
+              <label class="form-label">Status</label>
               <select class="form-select" id="editStatus" required>
                 <option value="Aktif">Aktif</option>
                 <option value="Non-Aktif">Non-Aktif</option>
                 <option value="Cuti">Cuti</option>
               </select>
             </div>
-            <div class="col-md-6 mb-3">
-              <label for="editTelp" class="form-label">No. Telepon</label>
-              <input
-                type="tel"
-                class="form-control"
-                id="editTelp"
-                required />
-            </div>
           </div>
-
-          <div class="mb-3">
-            <label for="editEmail" class="form-label">Email</label>
-            <input
-              type="email"
-              class="form-control"
-              id="editEmail"
-              required />
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">No. Telepon</label>
+              <input type="tel" class="form-control" id="editTelp" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" required>
+            </div>
           </div>
         </form>
       </div>
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal">
-          Batal
-        </button>
-        <button type="button" class="btn btn-primary" id="simpanEditBtn">
-          Simpan Perubahan
-        </button>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button class="btn btn-primary" id="simpanEditBtn">Simpan Perubahan</button>
       </div>
     </div>
   </div>
@@ -733,387 +470,185 @@
 @section('script')
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
-  // Data contoh untuk simulasi
-  const employeeData = {
-    "001": {
-      nama: "Bambang",
-      gender: "Laki-laki",
-      divisi: "Pemasaran",
-      jabatan: "Karyawan",
-      status: "Aktif",
-      email: "bambang@example.com",
-      telp: "08123456789",
-      alamat: "Jl. Merdeka No. 123, Jakarta",
-      joinDate: "Agustus 2025",
-    },
-    "002": {
-      nama: "Siti",
-      gender: "Perempuan",
-      divisi: "Keuangan",
-      jabatan: "Kepala Divisi",
-      status: "Aktif",
-      email: "siti@example.com",
-      telp: "08129876543",
-      alamat: "Jl. Sudirman No. 456, Jakarta",
-      joinDate: "Agustus 2025",
-    },
-    "003": {
-      nama: "Andi",
-      gender: "Laki-laki",
-      divisi: "Pemasaran",
-      jabatan: "Karyawan",
-      status: "Aktif",
-      email: "andi@example.com",
-      telp: "08111222333",
-      alamat: "Jl. Thamrin No. 789, Jakarta",
-      joinDate: "Agustus 2025",
-    },
-    "004": {
-      nama: "Dewi",
-      gender: "Perempuan",
-      divisi: "Keuangan",
-      jabatan: "Karyawan",
-      status: "Aktif",
-      email: "dewi@example.com",
-      telp: "08144555666",
-      alamat: "Jl. Gatot Subroto No. 101, Jakarta",
-      joinDate: "Agustus 2024",
-    },
-  };
-
   $(document).ready(function() {
-    // Inisialisasi DataTable dengan opsi yang lebih lengkap
+
+    // --- Inisialisasi DataTable ---
     var table = $("#myProjectTable").DataTable({
-      responsive: false, // jangan collapse
-      autoWidth: false,
-      scrollX: true,
-      dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"i><"col-sm-12 col-md-6"p>>',
-      language: {
-        search: "Cari:",
-        searchPlaceholder: "Masukkan kata kunci...",
-        lengthMenu: "Tampilkan _MENU_ data per halaman",
-        info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-        infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
-        infoFiltered: "(disaring dari _MAX_ total data)",
-        paginate: {
-          first: "Pertama",
-          last: "Terakhir",
-          next: "Selanjutnya",
-          previous: "Sebelumnya",
-        },
+      ajax: {
+        url: '/api/employees',
+        dataSrc: 'data'
       },
-      columnDefs: [{
-          responsivePriority: 1,
-          targets: 0
-        }, // No
+      columns: [{
+          data: null,
+          render: (data, type, row, meta) => meta.row + 1
+        },
         {
-          responsivePriority: 2,
-          targets: 2
-        }, // Nama
+          data: 'id_karyawan'
+        },
         {
-          responsivePriority: 3,
-          targets: -1
-        }, // Aksi
+          data: 'nama'
+        },
         {
-          orderable: false,
-          targets: -1
-        }, // Non-orderable untuk kolom aksi
-      ],
-      order: [
-        [0, "asc"]
-      ], // Urutkan berdasarkan kolom pertama (No)
+          data: 'roles.0.division.nama_divisi',
+          defaultContent: '-'
+        },
+        {
+          data: 'roles.0.nama_jabatan',
+          defaultContent: '-'
+        },
+        {
+          data: null,
+          render: () => '<span class="badge bg-success">Aktif</span>'
+        },
+        {
+          data: 'user.email'
+        },
+        {
+          data: 'created_at',
+          render: d => new Date(d).toLocaleDateString('id-ID')
+        },
+        {
+          data: null,
+          render: (data, type, row) => `
+                <div class="action-buttons">
+                  <button class="btn btn-outline-info btn-detail" data-id="${row.id_karyawan}"><i class="icofont-eye-alt"></i></button>
+                  <button class="btn btn-outline-primary edit-btn" data-id="${row.id_karyawan}"><i class="icofont-edit"></i></button>
+                  <button class="btn btn-outline-danger deleterow" data-id="${row.id_karyawan}"><i class="icofont-ui-delete"></i></button>
+                </div>`
+        }
+      ]
     });
 
-    // Variabel untuk menyimpan data yang sedang diedit
-    var editingRow = null;
-
-    // Fungsi untuk menampilkan detail karyawan
-    $("#myProjectTable").on("click", ".btn-detail", function() {
-      const id = $(this).data("id");
-      const data = employeeData[id];
-
-      if (data) {
-        $("#detailId").text(id);
-        $("#detailNama").text(data.nama);
-        $("#detailGender").text(data.gender);
-        $("#detailEmail").text(data.email);
-        $("#detailTelp").text(data.telp);
-        $("#detailAlamat").text(data.alamat);
-        $("#detailDivisi").text(data.divisi);
-        $("#detailJabatan").text(data.jabatan);
-        $("#detailStatus").text(data.status);
-        $("#detailJoinDate").text(data.joinDate);
-      }
+    // --- Ambil data Divisi dan Jabatan via AJAX ---
+    function loadDivisi() {
+    $.ajax({
+        url: '/api/divisions',
+        method: 'GET',
+        success: function(res) {
+            let options = '<option value="" disabled selected>Pilih Divisi</option>';
+            res.data.forEach(d => {
+                options += `<option value="${d.id_divisi}">${d.nama_divisi}</option>`;
+            });
+            $('#divisiKaryawan, #editDivisi').html(options);
+        },
+        error: function(err) {
+            console.error('Gagal load divisi:', err);
+            alert('Gagal mengambil data divisi');
+        }
     });
+}
 
-    // Fungsi untuk menambahkan karyawan
-    $("#tambahKaryawanBtn").click(function() {
-      // Ambil nilai dari input
-      const nama = $("#namaKaryawan").val();
-      const divisi = $("#divisiKaryawan").val();
-      const jabatan = $("#jabatanKaryawan").val();
-      const gender = $("#genderKaryawan").val();
-      const notelp = $("#telpKaryawan").val();
-      const email = $("#emailKaryawan").val();
-      const password = $("#passwordKaryawan").val();
-      const confirmPassword = $("#confirmPasswordKaryawan").val();
-      const alamat = $("#alamatKaryawan").val();
+function loadJabatan() {
+    $.ajax({
+        url: '/api/role',
+        method: 'GET',
+        success: function(res) {
+            let options = '<option value="" disabled selected>Pilih Jabatan</option>';
+            res.data.forEach(d => {
+                options += `<option value="${d.id_jabatan}">${d.nama_jabatan}</option>`;
+            });
+            $('#jabatanKaryawan, #editJabatan').html(options);
+        },
+        error: function(err) {
+            console.error('Gagal load jabatan:', err);
+            alert('Gagal mengambil data jabatan');
+        }
+    });
+}
 
-      // Validasi input
-      if (
-        !nama ||
-        !divisi ||
-        !jabatan ||
-        !gender ||
-        !notelp ||
-        !email ||
-        !password ||
-        !confirmPassword
-      ) {
-        alert("Harap isi semua field yang diperlukan!");
-        return;
-      }
 
-      // Validasi password
-      if (password !== confirmPassword) {
-        alert("Password dan konfirmasi password tidak cocok!");
-        return;
-      }
+    loadJabatan();
+    loadDivisi();
 
-      // Generate ID baru (contoh sederhana)
-      const newId = "00" + (table.rows().count() + 1);
-      const currentDate = new Date();
-      const monthNames = [
-        "Januari",
-        "Februari",
-        "Maret",
-        "April",
-        "Mei",
-        "Juni",
-        "Juli",
-        "Agustus",
-        "September",
-        "Oktober",
-        "November",
-        "Desember",
-      ];
-      const joinDate =
-        monthNames[currentDate.getMonth()] +
-        " " +
-        currentDate.getFullYear();
-
-      // Tambahkan baris baru ke tabel
-      table.row
-        .add([
-          table.rows().count() + 1,
-          newId,
-          nama,
-          divisi,
-          jabatan,
-          '<span class="badge bg-success">Aktif</span>',
-          email,
-          joinDate,
-          `<div class="action-buttons">
-              <button class="btn btn-outline-info btn-detail" data-bs-toggle="modal" data-bs-target="#detailkaryawan" data-id="${newId}" title="Detail">
-                <i class="icofont-eye-alt"></i>
-              </button>
-              <button class="btn btn-outline-primary edit-btn" data-bs-toggle="modal" data-bs-target="#editkaryawan" data-id="${newId}" title="Edit">
-                <i class="icofont-edit"></i>
-              </button>
-              <button class="btn btn-outline-danger deleterow" data-id="${newId}" title="Hapus">
-                <i class="icofont-ui-delete"></i>
-              </button>
-            </div>`,
-        ])
-        .draw();
-
-      // Simpan data karyawan baru
-      employeeData[newId] = {
-        nama: nama,
-        gender: gender,
-        divisi: divisi,
-        jabatan: jabatan,
-        status: "Aktif",
-        email: email,
-        telp: notelp,
-        alamat: alamat,
-        joinDate: joinDate,
+    // --- Tambah Karyawan ---
+    $('#tambahKaryawanBtn').click(function() {
+      const payload = {
+        nama: $('#namaKaryawan').val(),
+        gender: $('#genderKaryawan').val(),
+        no_telp: $('#telpKaryawan').val(),
+        email: $('#emailKaryawan').val(),
+        password: $('#passwordKaryawan').val(),
+        password_confirmation: $('#confirmPasswordKaryawan').val(),
+        role_id: $('#jabatanKaryawan').val(),
+        division_id: $('#divisiKaryawan').val(),
+        alamat: $('#alamatKaryawan').val()
       };
-
-      // Reset form dan tutup modal
-      $("#formTambahKaryawan")[0].reset();
-      $("#addkaryawan").modal("hide");
-
-      // Untuk koneksi backend, kita bisa mengirim data ke server di sini
-      sendDataToBackend({
-        id: newId,
-        nama: nama,
-        divisi: divisi,
-        jabatan: jabatan,
-        gender: gender,
-        notelp: notelp,
-        email: email,
-        password: password,
-        alamat: alamat,
-        status: "Aktif",
-        joinDate: joinDate,
-      });
+      $.post('/api/employees', payload)
+        .done(() => {
+          $('#formTambahKaryawan')[0].reset();
+          $('#addkaryawan').modal('hide');
+          table.ajax.reload();
+        }).fail(err => alert('Gagal tambah karyawan: ' + err.responseText));
     });
 
-    // Fungsi untuk mengisi form edit saat tombol edit diklik
-    $("#myProjectTable").on("click", ".edit-btn", function() {
-      const row = $(this).closest("tr");
-      const rowData = table.row(row).data();
-      const id = $(this).data("id");
-      const data = employeeData[id];
-
-      // Simpan referensi baris yang sedang diedit
-      editingRow = row;
-
-      // Isi form edit dengan data dari baris yang dipilih
-      $("#editId").val(id);
-      $("#editNama").val(data.nama);
-      $("#editDivisi").val(data.divisi);
-      $("#editJabatan").val(data.jabatan);
-      $("#editStatus").val(data.status);
-      $("#editTelp").val(data.telp);
-      $("#editEmail").val(data.email);
+    // --- Edit Karyawan (tampilkan modal) ---
+    $('#myProjectTable').on('click', '.edit-btn', function() {
+      const rowData = table.row($(this).closest('tr')).data();
+      $('#editId').val(rowData.id_karyawan);
+      $('#editNama').val(rowData.nama);
+      $('#editDivisi').val(rowData.roles[0]?.division.id_divisi || '');
+      $('#editJabatan').val(rowData.roles[0]?.id_jabatan || '');
+      $('#editStatus').val('Aktif');
+      $('#editTelp').val(rowData.no_telp);
+      $('#editEmail').val(rowData.user.email);
+      $('#editkaryawan').modal('show');
     });
 
-    // Fungsi untuk menyimpan perubahan edit
-    $("#simpanEditBtn").click(function() {
-      if (!editingRow) return;
-
-      const id = $("#editId").val();
-
-      // Update data di objek employeeData
-      employeeData[id].nama = $("#editNama").val();
-      employeeData[id].divisi = $("#editDivisi").val();
-      employeeData[id].jabatan = $("#editJabatan").val();
-      employeeData[id].status = $("#editStatus").val();
-      employeeData[id].telp = $("#editTelp").val();
-      employeeData[id].email = $("#editEmail").val();
-
-      // Update data di tabel
-      const newStatus = $("#editStatus").val();
-      const newDivisi = $("#editDivisi").val();
-
-      table.cell(editingRow, 2).data($("#editNama").val());
-      table.cell(editingRow, 3).data(newDivisi);
-      table.cell(editingRow, 4).data($("#editJabatan").val());
-      table
-        .cell(editingRow, 5)
-        .data(
-          '<span class="badge bg-' +
-          (newStatus === "Aktif" ?
-            "success" :
-            newStatus === "Non-Aktif" ?
-            "danger" :
-            "warning") +
-          '">' +
-          newStatus +
-          "</span>"
-        );
-      table.cell(editingRow, 6).data($("#editEmail").val());
-
-      // Untuk koneksi backend, kita bisa mengirim data yang diupdate ke server di sini
-      updateDataInBackend({
-        id: id,
-        nama: $("#editNama").val(),
-        divisi: newDivisi,
-        jabatan: $("#editJabatan").val(),
-        status: newStatus,
-        notelp: $("#editTelp").val(),
-        email: $("#editEmail").val(),
-      });
-
-      // Tutup modal edit
-      $("#editkaryawan").modal("hide");
-      editingRow = null;
+    // --- Simpan Edit ---
+    $('#simpanEditBtn').click(function() {
+      const id = $('#editId').val();
+      const payload = {
+        nama: $('#editNama').val(),
+        no_telp: $('#editTelp').val(),
+        email: $('#editEmail').val(),
+        role_id: $('#editJabatan').val(),
+        division_id: $('#editDivisi').val()
+      };
+      $.ajax({
+        url: '/api/employees/' + id,
+        type: 'PUT',
+        data: payload
+      }).done(() => {
+        $('#editkaryawan').modal('hide');
+        table.ajax.reload();
+      }).fail(err => alert('Gagal update: ' + err.responseText));
     });
 
-    // Fungsi untuk menghapus baris
-    $("#myProjectTable").on("click", ".deleterow", function() {
-      const row = $(this).closest("tr");
-      const rowData = table.row(row).data();
-      const id = $(this).data("id");
-
-      if (
-        confirm(
-          "Apakah Anda yakin ingin menghapus karyawan " + rowData[2] + "?"
-        )
-      ) {
-        // Hapus data dari objek employeeData
-        delete employeeData[id];
-
-        // Untuk koneksi backend, kita bisa mengirim permintaan hapus ke server di sini
-        deleteDataInBackend(id);
-
-        table.row(row).remove().draw();
+    // --- Hapus ---
+    $('#myProjectTable').on('click', '.deleterow', function() {
+      const id = $(this).data('id');
+      if (confirm('Apakah yakin ingin menghapus?')) {
+        $.ajax({
+            url: '/api/employees/' + id,
+            type: 'DELETE'
+          }).done(() => table.ajax.reload())
+          .fail(err => alert('Gagal hapus: ' + err.responseText));
       }
     });
 
-    // Fungsi untuk mengirim data ke backend (contoh implementasi)
-    function sendDataToBackend(data) {
-      console.log("Mengirim data ke backend:", data);
-      // Implementasi AJAX ke endpoint backend
-      /*
-      $.ajax({
-        url: '/api/karyawan',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(data),
-        success: function(response) {
-          console.log('Data berhasil disimpan:', response);
-          // Anda bisa refresh tabel atau tambahkan baris baru berdasarkan response
-        },
-        error: function(xhr, status, error) {
-          console.error('Gagal menyimpan data:', error);
-          alert('Gagal menyimpan data karyawan');
-        }
-      });
-      */
-    }
+    // --- Tampilkan Detail Karyawan ---
+    $('#myProjectTable').on('click', '.btn-detail', function() {
+      const rowData = table.row($(this).closest('tr')).data();
 
-    // Fungsi untuk update data di backend
-    function updateDataInBackend(data) {
-      console.log("Memperbarui data di backend:", data);
-      // Implementasi AJAX ke endpoint backend
-      /*
-      $.ajax({
-        url: '/api/karyawan/' + data.id,
-        type: 'PUT',
-        contentType: 'application/json',
-        data: JSON.stringify(data),
-        success: function(response) {
-          console.log('Data berhasil diperbarui:', response);
-        },
-        error: function(xhr, status, error) {
-          console.error('Gagal memperbarui data:', error);
-          alert('Gagal memperbarui data karyawan');
-        }
-      });
-      */
-    }
+      // Set data ke modal
+      $('#detailId').text(rowData.id_karyawan);
+      $('#detailNama').text(rowData.nama);
+      $('#detailGender').text(rowData.gender);
+      $('#detailEmail').text(rowData.user.email);
+      $('#detailTelp').text(rowData.no_telp);
+      $('#detailAlamat').text(rowData.alamat || '-');
+      $('#detailDivisi').text(rowData.roles[0]?.division.nama_divisi || '-');
+      $('#detailJabatan').text(rowData.roles[0]?.nama_jabatan || '-');
+      $('#detailStatus').text('Aktif'); // Jika status belum ada di data
+      $('#detailJoinDate').text(new Date(rowData.created_at).toLocaleDateString('id-ID'));
 
-    // Fungsi untuk hapus data di backend
-    function deleteDataInBackend(id) {
-      console.log("Menghapus data di backend dengan ID:", id);
-      // Implementasi AJAX ke endpoint backend
-      /*
-      $.ajax({
-        url: '/api/karyawan/' + id,
-        type: 'DELETE',
-        success: function(response) {
-          console.log('Data berhasil dihapus:', response);
-        },
-        error: function(xhr, status, error) {
-          console.error('Gagal menghapus data:', error);
-          alert('Gagal menghapus data karyawan');
-        }
-      });
-      */
-    }
+      // Optional: Jika ada foto
+      $('#detailPhoto').attr('src', rowData.photo_url || 'https://via.placeholder.com/150');
+
+      // Tampilkan modal
+      $('#detailkaryawan').modal('show');
+    });
+
   });
 </script>
 @endsection

@@ -14,7 +14,7 @@ class Employee extends Model
     protected $primaryKey = 'id_karyawan';
 
     protected $fillable = [
-        'usersfix_id_user',
+        'user_id',
         'nama',
         'no_telp',
         'gender',
@@ -22,10 +22,12 @@ class Employee extends Model
         'role'
     ];
 
+        //relasi ke users
     public function user() {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    //relasi ke roles
     public function roles() {
         return $this->belongsToMany(Role::class, 'roles_has_employees', 'employee_id', 'role_id');
     }

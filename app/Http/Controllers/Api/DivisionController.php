@@ -26,7 +26,7 @@ class DivisionController extends Controller
 
             return [
                 'id_divisi' => $division->id_divisi,
-                'nama_divisi' => $division->nama_divisi,
+                'nama_divisi' => $division->nama_divisi, 
                 'jumlah_karyawan' => $jumlah_karyawan,
                 'kepala_divisi' => $kepala_nama
             ];

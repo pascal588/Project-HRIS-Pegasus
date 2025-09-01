@@ -220,10 +220,7 @@
           <div class="card mb-3">
             <div class="card-body">
               <div class="table-responsive">
-                <table
-                  id="myProjectTable"
-                  class="table table-hover align-middle mb-0"
-                  style="width: 100%">
+                <table id="myProjectTable" class="table table-hover align-middle mb-0">
                   <thead>
                     <tr>
                       <th>No</th>
@@ -237,9 +234,7 @@
                       <th>Aksi</th>
                     </tr>
                   </thead>
-                  <tbody>
-
-                  </tbody>
+                  <tbody></tbody>
                 </table>
               </div>
             </div>
@@ -471,8 +466,20 @@
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
   $(document).ready(function() {
+    // Utility function untuk load select option
+    function loadOptions(url, target, placeholder, key = 'id', value = 'nama') {
+      $.get(url)
+        .done(res => {
+          let opts = `<option value="" disabled selected>${placeholder}</option>`;
+          res.data.forEach(d => {
+            opts += `<option value="${d[key]}">${d[value]}</option>`;
+          });
+          $(target).html(opts);
+        })
+        .fail(err => alert(`Gagal load data: ${err.responseJSON?.message || err.statusText}`));
+    }
 
-    // --- Inisialisasi DataTable ---
+    // Inisialisasi DataTable
     var table = $("#myProjectTable").DataTable({
       ajax: {
         url: '/api/employees',
@@ -480,7 +487,7 @@
       },
       columns: [{
           data: null,
-          render: (data, type, row, meta) => meta.row + 1
+          render: (d, t, r, m) => m.row + 1
         },
         {
           data: 'id_karyawan'
@@ -497,8 +504,12 @@
           defaultContent: '-'
         },
         {
-          data: null,
-          render: () => '<span class="badge bg-success">Aktif</span>'
+          data: 'status',
+          render: d => {
+            if (d === 'Aktif') return '<span class="badge bg-success">Aktif</span>';
+            if (d === 'Cuti') return '<span class="badge bg-warning">Cuti</span>';
+            return '<span class="badge bg-danger">Aktif</span>';
+          }
         },
         {
           data: 'user.email'
@@ -510,58 +521,30 @@
         {
           data: null,
           render: (data, type, row) => `
-                <div class="action-buttons">
-                  <button class="btn btn-outline-info btn-detail" data-id="${row.id_karyawan}"><i class="icofont-eye-alt"></i></button>
-                  <button class="btn btn-outline-primary edit-btn" data-id="${row.id_karyawan}"><i class="icofont-edit"></i></button>
-                  <button class="btn btn-outline-danger deleterow" data-id="${row.id_karyawan}"><i class="icofont-ui-delete"></i></button>
-                </div>`
+          <div class="action-buttons">
+            <button class="btn btn-outline-info btn-detail" data-id="${row.id_karyawan}">
+              <i class="icofont-eye-alt"></i>
+            </button>
+            <button class="btn btn-outline-primary edit-btn" data-id="${row.id_karyawan}">
+              <i class="icofont-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger deleterow" data-id="${row.id_karyawan}">
+              <i class="icofont-ui-delete"></i>
+            </button>
+          </div>`
         }
       ]
     });
 
-    // --- Ambil data Divisi dan Jabatan via AJAX ---
-    function loadDivisi() {
-    $.ajax({
-        url: '/api/divisions',
-        method: 'GET',
-        success: function(res) {
-            let options = '<option value="" disabled selected>Pilih Divisi</option>';
-            res.data.forEach(d => {
-                options += `<option value="${d.id_divisi}">${d.nama_divisi}</option>`;
-            });
-            $('#divisiKaryawan, #editDivisi').html(options);
-        },
-        error: function(err) {
-            console.error('Gagal load divisi:', err);
-            alert('Gagal mengambil data divisi');
-        }
-    });
-}
+    // Load dropdown data
+    loadOptions('/api/divisions', '#divisiKaryawan, #editDivisi', 'Pilih Divisi', 'id_divisi', 'nama_divisi');
+    loadOptions('/api/role', '#jabatanKaryawan, #editJabatan', 'Pilih Jabatan', 'id_jabatan', 'nama_jabatan');
 
-function loadJabatan() {
-    $.ajax({
-        url: '/api/role',
-        method: 'GET',
-        success: function(res) {
-            let options = '<option value="" disabled selected>Pilih Jabatan</option>';
-            res.data.forEach(d => {
-                options += `<option value="${d.id_jabatan}">${d.nama_jabatan}</option>`;
-            });
-            $('#jabatanKaryawan, #editJabatan').html(options);
-        },
-        error: function(err) {
-            console.error('Gagal load jabatan:', err);
-            alert('Gagal mengambil data jabatan');
-        }
-    });
-}
-
-
-    loadJabatan();
-    loadDivisi();
-
-    // --- Tambah Karyawan ---
+    // Tambah Karyawan
     $('#tambahKaryawanBtn').click(function() {
+      if ($('#passwordKaryawan').val() !== $('#confirmPasswordKaryawan').val()) {
+        return alert('Password tidak sama!');
+      }
       const payload = {
         nama: $('#namaKaryawan').val(),
         gender: $('#genderKaryawan').val(),
@@ -577,24 +560,24 @@ function loadJabatan() {
         .done(() => {
           $('#formTambahKaryawan')[0].reset();
           $('#addkaryawan').modal('hide');
-          table.ajax.reload();
-        }).fail(err => alert('Gagal tambah karyawan: ' + err.responseText));
+          table.ajax.reload(null, false);
+        })
+        .fail(err => alert('Gagal tambah karyawan: ' + (err.responseJSON?.message || err.statusText)));
     });
 
-    // --- Edit Karyawan (tampilkan modal) ---
+    // Edit Karyawan
     $('#myProjectTable').on('click', '.edit-btn', function() {
       const rowData = table.row($(this).closest('tr')).data();
       $('#editId').val(rowData.id_karyawan);
       $('#editNama').val(rowData.nama);
       $('#editDivisi').val(rowData.roles[0]?.division.id_divisi || '');
       $('#editJabatan').val(rowData.roles[0]?.id_jabatan || '');
-      $('#editStatus').val('Aktif');
+      $('#editStatus').val(rowData.status);
       $('#editTelp').val(rowData.no_telp);
       $('#editEmail').val(rowData.user.email);
       $('#editkaryawan').modal('show');
     });
 
-    // --- Simpan Edit ---
     $('#simpanEditBtn').click(function() {
       const id = $('#editId').val();
       const payload = {
@@ -602,35 +585,37 @@ function loadJabatan() {
         no_telp: $('#editTelp').val(),
         email: $('#editEmail').val(),
         role_id: $('#editJabatan').val(),
-        division_id: $('#editDivisi').val()
+        division_id: $('#editDivisi').val(),
+        status: $('#editStatus').val()
       };
       $.ajax({
-        url: '/api/employees/' + id,
-        type: 'PUT',
-        data: payload
-      }).done(() => {
-        $('#editkaryawan').modal('hide');
-        table.ajax.reload();
-      }).fail(err => alert('Gagal update: ' + err.responseText));
+          url: '/api/employees/' + id,
+          type: 'PUT',
+          data: payload
+        })
+        .done(() => {
+          $('#editkaryawan').modal('hide');
+          table.ajax.reload(null, false);
+        })
+        .fail(err => alert('Gagal update: ' + (err.responseJSON?.message || err.statusText)));
     });
 
-    // --- Hapus ---
+    // Hapus Karyawan
     $('#myProjectTable').on('click', '.deleterow', function() {
       const id = $(this).data('id');
       if (confirm('Apakah yakin ingin menghapus?')) {
         $.ajax({
             url: '/api/employees/' + id,
             type: 'DELETE'
-          }).done(() => table.ajax.reload())
-          .fail(err => alert('Gagal hapus: ' + err.responseText));
+          })
+          .done(() => table.ajax.reload(null, false))
+          .fail(err => alert('Gagal hapus: ' + (err.responseJSON?.message || err.statusText)));
       }
     });
 
-    // --- Tampilkan Detail Karyawan ---
+    // Detail Karyawan
     $('#myProjectTable').on('click', '.btn-detail', function() {
       const rowData = table.row($(this).closest('tr')).data();
-
-      // Set data ke modal
       $('#detailId').text(rowData.id_karyawan);
       $('#detailNama').text(rowData.nama);
       $('#detailGender').text(rowData.gender);
@@ -639,16 +624,11 @@ function loadJabatan() {
       $('#detailAlamat').text(rowData.alamat || '-');
       $('#detailDivisi').text(rowData.roles[0]?.division.nama_divisi || '-');
       $('#detailJabatan').text(rowData.roles[0]?.nama_jabatan || '-');
-      $('#detailStatus').text('Aktif'); // Jika status belum ada di data
+      $('#detailStatus').text(rowData.status || '-');
       $('#detailJoinDate').text(new Date(rowData.created_at).toLocaleDateString('id-ID'));
-
-      // Optional: Jika ada foto
       $('#detailPhoto').attr('src', rowData.photo_url || 'https://via.placeholder.com/150');
-
-      // Tampilkan modal
       $('#detailkaryawan').modal('show');
     });
-
   });
 </script>
 @endsection

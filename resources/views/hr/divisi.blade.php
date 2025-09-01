@@ -305,165 +305,149 @@
 @section('script')
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    fetchDivisions();
-
+  document.addEventListener("DOMContentLoaded", function() {
     let editId = null;
     let deleteId = null;
 
-// Inisialisasi DataTable sekali
+    // Inisialisasi DataTable langsung ambil dari API
     let table = $('#divisiDataTable').DataTable({
-        responsive: true,
-        columnDefs: [
-            { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
-        ]
-    });
-
-    // fetchDivisions cuma untuk update row
-    function fetchDivisions() {
-        fetch("/api/divisions")
-            .then(res => res.json())
-            .then(data => {
-                let tbody = document.getElementById("divisiTableBody");
-                tbody.innerHTML = "";
-
-                data.forEach((divisi, index) => {
-                    let nomorUrut = index + 1;
-                    tbody.innerHTML += `
-                        <tr>
-                            <td class="no-urut">${nomorUrut}</td>
-                            <td class="id-divisi">${divisi.id_divisi}</td>
-                            <td>${divisi.nama_divisi}</td>
-                            <td>${divisi.jumlah_karyawan || 0}</td>
-                            <td>${divisi.kepala_divisi || '-'}</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-warning editBtn" 
-                                    data-id="${divisi.id_divisi}" 
-                                    data-nama="${divisi.nama_divisi}" 
-                                    data-kepala="${divisi.kepala_divisi || ''}" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#addDivisiModal">
-                                    Edit
-                                </button>
-                                <button class="btn btn-sm btn-danger deleteBtn" 
-                                    data-id="${divisi.id_divisi}" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#confirmDeleteModal">
-                                    Hapus
-                                </button>
-                            </td>
-                        </tr>`;
-                });
-
-                // Update DataTable tanpa destroy/re-init
-                table.clear().rows.add($('#divisiTableBody tr')).draw();
-            })
-            .catch(err => console.error("Error fetch divisions:", err));
-    }
-
-    fetchDivisions(); // panggil awal
-
-    // RESET modal saat klik tombol Tambah
-    document.querySelector("[data-bs-target='#addDivisiModal']").addEventListener("click", function () {
-        editId = null;
-        document.getElementById("namaDivisi").value = "";
-        document.getElementById("idDivisiInput").value = "";
-        document.getElementById("kepalaDivisi").value = "";
-        document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
-    });
-
-    // klik simpan (tambah/edit)
-    document.getElementById("saveDivisiBtn").addEventListener("click", function () {
-        let nama = document.getElementById("namaDivisi").value;
-        let idDivisi = document.getElementById("idDivisiInput").value;
-        let kepala = document.getElementById("kepalaDivisi").value;
-
-        if (!nama || !idDivisi) return alert("ID dan Nama divisi wajib diisi!");
-
-        let payload = { nama_divisi: nama, id_divisi: idDivisi, kepala_divisi: kepala };
-
-        if (editId) { // mode edit
-            fetch(`/api/divisions/${editId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(() => {
-                fetchDivisions();
-                editId = null;
-                document.getElementById("namaDivisi").value = "";
-                document.getElementById("idDivisiInput").value = "";
-                document.getElementById("kepalaDivisi").value = "";
-                document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
-            });
-        } else { // mode tambah
-            fetch("/api/divisions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(() => {
-                fetchDivisions();
-                document.getElementById("namaDivisi").value = "";
-                document.getElementById("idDivisiInput").value = "";
-                document.getElementById("kepalaDivisi").value = "";
-            });
+      responsive: true,
+      ajax: {
+        url: "/api/divisions",
+        dataSrc: "data" // karena response dari API ada di dalam { data: [...] }
+      },
+      columns: [{
+          data: null,
+          render: (data, type, row, meta) => meta.row + 1 // nomor urut
+        },
+        {
+          data: "id_divisi"
+        },
+        {
+          data: "nama_divisi"
+        },
+        {
+          data: "jumlah_karyawan",
+          defaultContent: "0"
+        },
+        {
+          data: "kepala_divisi",
+          defaultContent: "-"
+        },
+        {
+          data: null,
+          defaultContent: "-"
+        }, // KPI Lalu
+        {
+          data: null,
+          defaultContent: "-"
+        }, // KPI Kini
+        {
+          data: null,
+          className: "text-center",
+          render: (data) => `
+            <button class="btn btn-sm btn-warning editBtn"
+              data-id="${data.id_divisi}"
+              data-nama="${data.nama_divisi}"
+              data-kepala="${data.kepala_divisi || ''}"
+              data-bs-toggle="modal"
+              data-bs-target="#addDivisiModal">
+              Edit
+            </button>
+            <button class="btn btn-sm btn-danger deleteBtn"
+              data-id="${data.id_divisi}"
+              data-bs-toggle="modal"
+              data-bs-target="#confirmDeleteModal">
+              Hapus
+            </button>
+          `
         }
+      ],
+      columnDefs: [{
+        targets: -1,
+        orderable: false,
+        searchable: false
+      }]
     });
 
-    // klik edit
-    document.addEventListener("click", function(e){
-        if(e.target.classList.contains("editBtn")){
-            editId = e.target.dataset.id;
-            document.getElementById("namaDivisi").value = e.target.dataset.nama;
-            document.getElementById("idDivisiInput").value = e.target.dataset.id;
-            document.getElementById("kepalaDivisi").value = e.target.dataset.kepala;
-            document.getElementById("addDivisiModalLabel").innerText = "Edit Divisi";
-        }
+    // Klik tambah → reset form
+    document.querySelector("[data-bs-target='#addDivisiModal']").addEventListener("click", function() {
+      editId = null;
+      document.getElementById("namaDivisi").value = "";
+      document.getElementById("idDivisiInput").value = "";
+      document.getElementById("kepalaDivisi").value = "";
+      document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
     });
 
-    // klik hapus
-    document.addEventListener("click", function(e){
-        if(e.target.classList.contains("deleteBtn")){
-            deleteId = e.target.dataset.id;
-        }
-    });
+    // Simpan data
+    document.getElementById("saveDivisiBtn").addEventListener("click", function() {
+      let nama = document.getElementById("namaDivisi").value;
+      let idDivisi = document.getElementById("idDivisiInput").value;
+      let kepala = document.getElementById("kepalaDivisi").value;
 
-    document.getElementById("confirmDeleteBtn").addEventListener("click", function(){
-        if(deleteId){
-            fetch(`/api/divisions/${deleteId}`, { method: "DELETE", headers: { "Accept": "application/json" }})
-            .then(() => {
-                fetchDivisions();
-                deleteId = null;
-            });
-        }
-    });
+      if (!nama || !idDivisi) return alert("ID dan Nama divisi wajib diisi!");
 
-});
-</script>
-<script>
-    $(document).ready(function() {
-        $('#myProjectTable')
-        .addClass( 'nowrap' )
-        $('#myProjectTable').DataTable({
-            responsive: true,
-            columnDefs: [
-                { targets: -1, orderable: false, searchable: false, className: 'dt-body-right all' }
-            ]
+      let payload = {
+        nama_divisi: nama,
+        id_divisi: idDivisi,
+        kepala_divisi: kepala
+      };
+
+      let method = editId ? "PUT" : "POST";
+      let url = editId ? `/api/divisions/${editId}` : "/api/divisions";
+
+      fetch(url, {
+          method: method,
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(() => {
+          table.ajax.reload(); // refresh dataTable
+          editId = null;
+          document.getElementById("namaDivisi").value = "";
+          document.getElementById("idDivisiInput").value = "";
+          document.getElementById("kepalaDivisi").value = "";
+          document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
         });
-        $('.deleterow').on('click',function(){
-        var tablename = $(this).closest('table').DataTable();  
-        tablename
-                .row( $(this)
-                .parents('tr') )
-                .remove()
-                .draw();
-
-        } );
     });
+
+    // Klik edit
+    document.addEventListener("click", function(e) {
+      if (e.target.classList.contains("editBtn")) {
+        editId = e.target.dataset.id;
+        document.getElementById("namaDivisi").value = e.target.dataset.nama;
+        document.getElementById("idDivisiInput").value = e.target.dataset.id;
+        document.getElementById("kepalaDivisi").value = e.target.dataset.kepala;
+        document.getElementById("addDivisiModalLabel").innerText = "Edit Divisi";
+      }
+    });
+
+    // Klik hapus
+    document.addEventListener("click", function(e) {
+      if (e.target.classList.contains("deleteBtn")) {
+        deleteId = e.target.dataset.id;
+      }
+    });
+
+    document.getElementById("confirmDeleteBtn").addEventListener("click", function() {
+      if (deleteId) {
+        fetch(`/api/divisions/${deleteId}`, {
+            method: "DELETE",
+            headers: {
+              "Accept": "application/json"
+            }
+          })
+          .then(() => {
+            table.ajax.reload();
+            deleteId = null;
+          });
+      }
+    });
+
+  });
 </script>
 @endsection

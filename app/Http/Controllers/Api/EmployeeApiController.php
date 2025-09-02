@@ -20,7 +20,6 @@ class EmployeeApiController extends Controller
             'success' => true,
             'data' => $employees
         ], 200);
-        
     }
 
     // POST /api/employees
@@ -32,6 +31,7 @@ class EmployeeApiController extends Controller
             'gender' => 'required',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
+            'email_verified_at' => now(),
             'role_id' => 'required|exists:roles,id_jabatan'
         ]);
 
@@ -98,11 +98,16 @@ class EmployeeApiController extends Controller
     // DELETE /api/employees/{id}
     public function destroy(Employee $employee)
     {
-        $employee->delete();
+        DB::transaction(function () use ($employee) {
+            // hapus user terkait
+            $employee->user()->delete();
+            // hapus employee
+            $employee->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Karyawan berhasil dihapus'
+            'message' => 'Karyawan & user berhasil dihapus'
         ], 200);
     }
 }

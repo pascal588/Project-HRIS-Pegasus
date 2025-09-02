@@ -418,22 +418,44 @@
       <div class="modal-body">
         <form id="formEditKaryawan">
           <input type="hidden" id="editId">
-          <div class="row">
-            <div class="col-md-6 mb-3">
+
+          <div class="row g-3">
+            <!-- Nama & Email -->
+            <div class="col-md-6">
               <label class="form-label">Nama Lengkap</label>
               <input type="text" class="form-control" id="editNama" required>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" required>
+            </div>
+
+            <!-- Telepon & Gender -->
+            <div class="col-md-6">
+              <label class="form-label">No. Telepon</label>
+              <input type="tel" class="form-control" id="editTelp" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Jenis Kelamin</label>
+              <select class="form-select" id="editGender" required>
+                <option value="" disabled selected>Pilih...</option>
+                <option value="Pria">Pria</option>
+                <option value="Wanita">Wanita</option>
+              </select>
+            </div>
+
+            <!-- Divisi & Jabatan -->
+            <div class="col-md-6">
               <label class="form-label">Divisi</label>
               <select class="form-select" id="editDivisi" required></select>
             </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-6">
               <label class="form-label">Jabatan</label>
               <select class="form-select" id="editJabatan" required></select>
             </div>
-            <div class="col-md-6 mb-3">
+
+            <!-- Status -->
+            <div class="col-md-6">
               <label class="form-label">Status</label>
               <select class="form-select" id="editStatus" required>
                 <option value="Aktif">Aktif</option>
@@ -442,17 +464,8 @@
               </select>
             </div>
           </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">No. Telepon</label>
-              <input type="tel" class="form-control" id="editTelp" required>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Email</label>
-              <input type="email" class="form-control" id="editEmail" required>
-            </div>
-          </div>
         </form>
+
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -572,6 +585,7 @@
       $('#editNama').val(rowData.nama);
       $('#editDivisi').val(rowData.roles[0]?.division.id_divisi || '');
       $('#editJabatan').val(rowData.roles[0]?.id_jabatan || '');
+      $('#editGender').val(rowData.gender);
       $('#editStatus').val(rowData.status);
       $('#editTelp').val(rowData.no_telp);
       $('#editEmail').val(rowData.user.email);
@@ -585,6 +599,7 @@
         no_telp: $('#editTelp').val(),
         email: $('#editEmail').val(),
         role_id: $('#editJabatan').val(),
+        gender: $('#editGender').val(),
         division_id: $('#editDivisi').val(),
         status: $('#editStatus').val()
       };

@@ -346,19 +346,19 @@
           data: null,
           className: "text-center",
           render: (data) => `
-            <button class="btn btn-sm btn-warning editBtn"
+            <button class="btn btn-outline-info btn-edit"
               data-id="${data.id_divisi}"
               data-nama="${data.nama_divisi}"
               data-kepala="${data.kepala_divisi || ''}"
               data-bs-toggle="modal"
               data-bs-target="#addDivisiModal">
-              Edit
+              <i class="icofont-edit"></i>
             </button>
-            <button class="btn btn-sm btn-danger deleteBtn"
+            <button button class="btn btn-outline-danger deleterow""
               data-id="${data.id_divisi}"
               data-bs-toggle="modal"
               data-bs-target="#confirmDeleteModal">
-              Hapus
+              <i class="icofont-ui-delete"></i>
             </button>
           `
         }

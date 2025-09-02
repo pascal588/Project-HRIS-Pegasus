@@ -32,4 +32,10 @@ class Employee extends Model
         return $this->belongsToMany(Role::class, 'roles_has_employees', 'employee_id', 'role_id');
     }
 
+    public function kpiPoints()
+    {
+        return $this->belongsToMany(KpiPoint::class, 'kpi_points_has_employees', 'employees_id_karyawan', 'KPI_Points_id_poin')
+                    ->withPivot('nilai')
+                    ->withTimestamps();
+    }
 }

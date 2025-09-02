@@ -22,4 +22,10 @@ class Division extends Model
     {
         return $this->hasMany(Role::class, 'division_id', 'id_divisi');
     }
+    
+    public function kpis()
+    {
+        return $this->belongsToMany(Kpi::class, 'divisions_has_kpis', 'division_id', 'kpis_id_kpi')
+                    ->withTimestamps();
+    }
 }

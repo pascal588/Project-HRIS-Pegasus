@@ -19,4 +19,8 @@ class Role extends Model
     {
         return $this->belongsTo(Division::class, 'division_id', 'id_divisi');
     }
+    public function kpis()
+    {
+        return $this->hasMany(Kpi::class, 'role_id', 'id_jabatan');
+    }
 }

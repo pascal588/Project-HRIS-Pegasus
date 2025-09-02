@@ -40,12 +40,12 @@
                             <form method="POST" action="{{ route('login') }}" class="row g-1 p-3 p-md-4">
                                 @csrf
                                 <div class="col-12 text-center mb-1 mb-lg-5">
-                                    <h1>Login</h1>
+                                    <h1>Masuk</h1>
                                     <span>Masukkan Akun dan Password untuk masuk</span>
                                 </div>
                                 <div class="col-12">
                                     <div class="mb-2">
-                                        <label class="form-label">Email address</label>
+                                        <label class="form-label">Alamat Email</label>
                                         <input type="email" name="email" class="form-control form-control-lg" placeholder="name@example.com" required>
                                     </div>
                                 </div>
@@ -54,7 +54,7 @@
                                         <div class="form-label">
                                             <span class="d-flex justify-content-between align-items-center">
                                                 Password
-                                                <a class="text-secondary" href="{{ route('password.request') }}">Forgot Password?</a>
+                                                <a class="text-secondary" href="{{ route('password.request') }}">Lupa Sandi?</a>
                                             </span>
                                         </div>
                                         <input type="password" name="password" class="form-control form-control-lg" placeholder="***************" required>
@@ -64,12 +64,12 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="remember" id="flexCheckDefault">
                                         <label class="form-check-label" for="flexCheckDefault">
-                                            Remember me
+                                            Ingat Saya
                                         </label>
                                     </div>
                                 </div>
                                 <div class="col-12 text-center mt-4">
-                                    <button type="submit" class="btn btn-lg btn-block btn-light lift text-uppercase">{{ __('Log in') }}</button>
+                                    <button type="submit" class="btn btn-lg btn-block btn-light lift text-uppercase">{{ __('Masuk') }}</button>
                                 </div>
                             </form>
                             <!-- End Form -->

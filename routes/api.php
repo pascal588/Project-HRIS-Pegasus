@@ -8,8 +8,16 @@ use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\Rolecontroller;
 use App\Http\Controllers\Api\KpiController;
 
-// api divisi
-Route::apiResource('divisions', DivisionController::class);
+// routes/api.php
+Route::get('/divisions', [DivisionController::class, 'index']);
+Route::post('/divisions', [DivisionController::class, 'store']);
+Route::get('/divisions/{division}', [DivisionController::class, 'show']);
+Route::put('/divisions/{division}', [DivisionController::class, 'update']);
+Route::delete('/divisions/{division}', [DivisionController::class, 'destroy']);
+
+// Tambahkan routes untuk karyawan divisi
+Route::get('/divisions/{division}/employees', [DivisionController::class, 'getEmployees']);
+Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead']);
 
 //api karyawan
 Route::apiResource('employees', EmployeeApiController::class);

@@ -175,56 +175,8 @@
             <h6 class="mb-0 fw-bold">Karyawan Terbaik</h6>
           </div>
           <div class="card-body p-0">
-            <div class="flex-grow-1">
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar2.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">
-                      Natalie Gibson
-                    </h6>
-                    <span class="text-muted">Ui/UX Designer</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 1.30
-                </div>
-              </div>
-
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar3.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">Youn Bel</h6>
-                    <span class="text-muted">Unity 3d</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 7.00
-                </div>
-              </div>
-
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar2.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">Gibson Butler</h6>
-                    <span class="text-muted">Networking</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 8.00
-                </div>
-              </div>
+            <div class="flex-grow-1" id="best-employees-list">
+              <!-- Data akan diisi oleh JavaScript -->
             </div>
           </div>
         </div>
@@ -238,7 +190,7 @@
           </div>
           <div class="card-body stat-card">
             <img src="user.png" alt="User Icon" />
-            <h4 class="fw-bold">120</h4>
+            <h4 class="fw-bold" id="total-employees">0</h4>
             <span class="text-muted">Total</span>
           </div>
         </div>
@@ -252,7 +204,7 @@
           </div>
           <div class="card-body stat-card">
             <img src="employment.png" alt="Divisi Icon" />
-            <h4 class="fw-bold">8</h4>
+            <h4 class="fw-bold" id="total-divisions">0</h4>
             <span class="text-muted">Total</span>
           </div>
         </div>
@@ -277,56 +229,8 @@
             <h6 class="mb-0 fw-bold">Perlu Perhatian</h6>
           </div>
           <div class="card-body p-0">
-            <div class="flex-grow-1">
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar2.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">
-                      Natalie Gibson
-                    </h6>
-                    <span class="text-muted">Ui/UX Designer</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 1.30
-                </div>
-              </div>
-
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar3.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">Youn Bel</h6>
-                    <span class="text-muted">Unity 3d</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 7.00
-                </div>
-              </div>
-
-              <div class="employee-item">
-                <div class="d-flex align-items-center flex-fill">
-                  <img
-                    class="avatar rounded-circle img-thumbnail"
-                    src="assets/images/lg/avatar2.jpg"
-                    alt="profile" />
-                  <div class="employee-info">
-                    <h6 class="fw-bold mb-0 small-14">Gibson Butler</h6>
-                    <span class="text-muted">Networking</span>
-                  </div>
-                </div>
-                <div class="employee-time">
-                  <i class="icofont-clock-time"></i> 8.00
-                </div>
-              </div>
+            <div class="flex-grow-1" id="worst-employees-list">
+              <!-- Data akan diisi oleh JavaScript -->
             </div>
           </div>
         </div>
@@ -346,8 +250,149 @@
     </div>
   </div>
 </div>
-@endsection
 
-@section('script')
-<script src="{{asset('assets/bundles/apexcharts.bundle.js')}}"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+$(document).ready(function() {
+    // Fungsi untuk mengambil data karyawan
+    function fetchEmployees() {
+        $.ajax({
+            url: '/api/employees',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    processEmployeeData(response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching employees:', error);
+            }
+        });
+    }
+
+    // Fungsi untuk mengambil data divisi
+    function fetchDivisions() {
+        $.ajax({
+            url: '/api/divisions',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    $('#total-divisions').text(response.data.length);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching divisions:', error);
+            }
+        });
+    }
+
+    // Fungsi untuk memproses data karyawan
+    function processEmployeeData(employees) {
+        // Update total karyawan
+        $('#total-employees').text(employees.length);
+        
+        // Hitung distribusi gender berdasarkan nilai 'Pria' dan 'Wanita'
+        let priaCount = 0;
+        let wanitaCount = 0;
+        
+        employees.forEach(employee => {
+            if (employee.gender === 'Pria') {
+                priaCount++;
+            } else if (employee.gender === 'Wanita') {
+                wanitaCount++;
+            }
+        });
+        
+        // Render chart gender
+        renderGenderChart(priaCount, wanitaCount);
+        
+        // Tampilkan karyawan terbaik (contoh: 3 karyawan pertama)
+        const bestEmployees = employees.slice(0, 3);
+        renderEmployeeList('#best-employees-list', bestEmployees, 'Karyawan Terbaik');
+        
+        // Tampilkan karyawan yang perlu perhatian (contoh: 3 karyawan terakhir)
+        const worstEmployees = employees.slice(-3);
+        renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
+    }
+
+    // Fungsi untuk merender chart gender
+    function renderGenderChart(priaCount, wanitaCount) {
+        const options = {
+            align: 'center',
+            chart: {
+                height: 250,
+                type: 'donut',
+                align: 'center',
+            },
+            labels: ['Pria', 'Wanita'],
+            dataLabels: {
+                enabled: false,
+            },
+            legend: {
+                position: 'bottom',
+                horizontalAlign: 'center',
+                show: true,
+            },
+            colors: ['#4361ee', '#f72585'],
+            series: [priaCount, wanitaCount],
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: {
+                        width: 200
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }]
+        };
+        
+        const chart = new ApexCharts(document.querySelector("#apex-MainCategories"), options);
+        chart.render();
+    }
+
+    // Fungsi untuk merender daftar karyawan
+    function renderEmployeeList(selector, employees, title) {
+        const listElement = $(selector);
+        listElement.empty();
+        
+        if (employees.length === 0) {
+            listElement.append('<div class="employee-item text-center text-muted">Tidak ada data</div>');
+            return;
+        }
+        
+        employees.forEach(employee => {
+            const genderIcon = employee.gender === 'Pria' ? '♂' : '♀';
+            const roleName = employee.roles && employee.roles.length > 0 
+                ? employee.roles[0].nama_jabatan 
+                : 'Tidak ada jabatan';
+                
+            const employeeItem = `
+                <div class="employee-item">
+                    <div class="d-flex align-items-center flex-fill">
+                        <div class="avatar rounded-circle img-thumbnail d-flex align-items-center justify-content-center bg-light">
+                            ${genderIcon}
+                        </div>
+                        <div class="employee-info">
+                            <h6 class="fw-bold mb-0 small-14">${employee.nama}</h6>
+                            <span class="text-muted">${roleName}</span>
+                        </div>
+                    </div>
+                    <div class="employee-time">
+                        <i class="icofont-clock-time"></i> ${employee.no_telp || '-'}
+                    </div>
+                </div>
+            `;
+            
+            listElement.append(employeeItem);
+        });
+    }
+
+    // Jalankan fungsi untuk mengambil data
+    fetchEmployees();
+    fetchDivisions();
+});
+</script>
 @endsection

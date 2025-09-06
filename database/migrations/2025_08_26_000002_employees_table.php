@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('no_telp', 15);
             $table->enum('gender', ['Pria', 'Wanita']); 
             $table->string('foto', 255)->nullable();
+            $table->enum('status', ['Aktif', 'Non-Aktif', 'Cuti'])->default('Aktif');
             $table->timestamps();
             $table->softDeletes();
 

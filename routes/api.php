@@ -1,11 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-// routes/api.php
+// routes/api.php - Perbaikan route untuk roles
 use App\Http\Controllers\Api\DivisionController;
 use App\Http\Controllers\Api\EmployeeApiController;
 use App\Http\Controllers\Api\RoleApiController;
-use App\Http\Controllers\Api\Rolecontroller;
 use App\Http\Controllers\Api\KpiController;
 
 // routes/api.php
@@ -21,9 +19,9 @@ Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead
 
 //api karyawan
 Route::apiResource('employees', EmployeeApiController::class);
-
-//api jabatan
-route::apiResource('role', RoleApiController::class );
+Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
+//api jabatan - PERBAIKAN: gunakan 'roles' bukan 'role'
+Route::apiResource('roles', RoleApiController::class);
 
 // KPI routes
 Route::get('/roles-by-division/{divisionId}', [KpiController::class, 'getRolesByDivision']);

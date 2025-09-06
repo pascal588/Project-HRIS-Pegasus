@@ -8,41 +8,41 @@ $(function() {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
 
-    // Employees Data
-    $(document).ready(function() {
-        var options = {
-            align: 'center',
-            chart: {
-                height: 250,
-                type: 'donut',
-                align: 'center',
-            },
-            labels: ['Man', 'Women'],
-            dataLabels: {
-                enabled: false,
-            },
-            legend: {
-                position: 'bottom',
-                horizontalAlign: 'center',
-                show: true,
-            },
-            colors: ['var(--chart-color4)', 'var(--chart-color3)'],
-            series: [44, 55],
-            responsive: [{
-                breakpoint: 480,
-                options: {
-                    chart: {
-                        width: 200
-                    },
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }]
-        }
-        var chart = new ApexCharts( document.querySelector("#apex-MainCategories"),options);        
-        chart.render();
-    }); 
+    // // Employees Data
+    // $(document).ready(function() {
+    //     var options = {
+    //         align: 'center',
+    //         chart: {
+    //             height: 250,
+    //             type: 'donut',
+    //             align: 'center',
+    //         },
+    //         labels: ['Man', 'Women'],
+    //         dataLabels: {
+    //             enabled: false,
+    //         },
+    //         legend: {
+    //             position: 'bottom',
+    //             horizontalAlign: 'center',
+    //             show: true,
+    //         },
+    //         colors: ['var(--chart-color4)', 'var(--chart-color3)'],
+    //         series: [44, 55],
+    //         responsive: [{
+    //             breakpoint: 480,
+    //             options: {
+    //                 chart: {
+    //                     width: 200
+    //                 },
+    //                 legend: {
+    //                     position: 'bottom'
+    //                 }
+    //             }
+    //         }]
+    //     }
+    //     var chart = new ApexCharts( document.querySelector("#apex-MainCategories"),options);        
+    //     chart.render();
+    // }); 
 
     // Employees Analytics
     $(document).ready(function() { 

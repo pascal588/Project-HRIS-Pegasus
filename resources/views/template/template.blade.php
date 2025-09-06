@@ -15,16 +15,45 @@
 <div id="mytask-layout">
     
     <!-- sidebar -->
-          @php
-    $role = Auth::user()?->employee?->roles->first()?->nama_jabatan ?? '';
+    @php
+    // Perbaiki logic untuk mendapatkan role
+    $user = Auth::user();
+    $isHead = false;
+    $isHR = false;
+    $isEmployee = false;
+    
+    if ($user && $user->employee && $user->employee->roles) {
+        foreach ($user->employee->roles as $role) {
+            if ($role->nama_jabatan === 'Kepala-divisi') {
+                $isHead = true;
+            } elseif ($role->nama_jabatan === 'HR') {
+                $isHR = true;
+            } elseif ($role->nama_jabatan === 'Karyawan') {
+                $isEmployee = true;
+            }
+        }
+    }
+    
+    // Tentukan role utama (prioritas: HR > Kepala-divisi > Karyawan)
+    if ($isHR) {
+        $mainRole = 'HR';
+    } elseif ($isHead) {
+        $mainRole = 'Kepala-divisi';
+    } elseif ($isEmployee) {
+        $mainRole = 'Karyawan';
+    } else {
+        $mainRole = '';
+    }
     @endphp
 
-    @if($role === 'Kepala-divisi')
+    @if($mainRole === 'Kepala-divisi')
         @include('template.sidebar-penilai')
-    @elseif($role === 'HR')
+    @elseif($mainRole === 'HR')
         @include('template.sidebar-hr')
-    @elseif($role === 'Karyawan')
+    @elseif($mainRole === 'Karyawan')
         @include('template.sidebar-karyawan')
+    @else
+        @include('template.sidebar-karyawan') <!-- Fallback default -->
     @endif
                 
     <!-- main body area -->
@@ -42,7 +71,7 @@
                         <div class="dropdown user-profile ml-2 ml-sm-3 d-flex align-items-center">
                             <div class="u-info me-2">
                                 <p class="mb-0 text-end line-height-sm "><span class="font-weight-bold">{{ Auth::user()->Employee->nama }}</span></p>
-                                <small>{{ Auth::user()?->employee?->roles->first()?->nama_jabatan ?? 'Role tidak tersedia' }}</small>
+                                <small>{{ $mainRole ?? 'Role tidak tersedia' }}</small>
                             </div>
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                                 <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
@@ -107,4 +136,4 @@
 @yield('script')
 
 </body>
-</html> 
+</html>

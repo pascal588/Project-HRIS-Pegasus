@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PenilaiController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -15,6 +16,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.update.photo');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
@@ -52,9 +54,7 @@ Route::middleware(['auth', 'nama_jabatan:Kepala-divisi'])->group(function () {
     Route::get('/dashboard-penilai', function() {
         return view('penilai.dashboard');
     })->name('penilai.dashboard');
-    Route::get('/penilai/list-karyawan', function () {
-    return view('penilai.list-karyawan');
-    })->name('penilai.list-karyawan');
+    Route::get('/penilai/list-karyawan', [PenilaiController::class, 'listKaryawan'])->name('penilai.list-karyawan');
     Route::get('/penilai/absensi', function () {
         return view('penilai.absensi');
     })->name('penilai.absensi');

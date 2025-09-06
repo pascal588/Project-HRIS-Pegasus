@@ -17,6 +17,11 @@ Route::delete('/divisions/{division}', [DivisionController::class, 'destroy']);
 Route::get('/divisions/{division}/employees', [DivisionController::class, 'getEmployees']);
 Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead']);
 
+Route::get('/divisions/{divisionId}/employee-count', [DivisionController::class, 'getEmployeeCount']);
+Route::get('/divisions/{divisionId}/kpi-data', [DivisionController::class, 'getKpiData']); // Anda perlu membuat method ini
+Route::get('/divisions/{divisionId}/employee-count', [DivisionController::class, 'getEmployeeCount']);
+Route::get('/divisions/{divisionId}/gender-data', [DivisionController::class, 'getGenderData']);
+
 //api karyawan
 Route::apiResource('employees', EmployeeApiController::class);
 Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);

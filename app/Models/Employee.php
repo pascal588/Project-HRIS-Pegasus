@@ -40,4 +40,6 @@ class Employee extends Model
                     ->withPivot('nilai')
                     ->withTimestamps();
     }
+
+    
 }

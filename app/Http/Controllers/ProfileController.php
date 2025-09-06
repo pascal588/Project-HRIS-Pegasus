@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -17,8 +18,33 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $request->user()->load('employee.roles.division'),
         ]);
+    }
+
+    /**
+     * Update the user's profile photo.
+     */
+    public function updatePhoto(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'foto' => ['required', 'image', 'max:2048'] // Max 2MB
+        ]);
+        
+        // Hapus foto lama jika ada
+        if ($request->user()->employee->foto) {
+            Storage::delete('public/' . $request->user()->employee->foto);
+        }
+        
+        // Simpan foto baru
+        $path = $request->file('foto')->store('profile-photos', 'public');
+        
+        // Update database
+        $request->user()->employee->update([
+            'foto' => $path
+        ]);
+
+        return Redirect::route('profile.edit')->with('status', 'photo-updated');
     }
 
     /**
@@ -26,6 +52,7 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
+        // Update user data
         $request->user()->fill($request->validated());
 
         if ($request->user()->isDirty('email')) {
@@ -47,6 +74,11 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        // Hapus foto profil jika ada
+        if ($user->employee->foto) {
+            Storage::delete('public/' . $user->employee->foto);
+        }
 
         Auth::logout();
 

@@ -232,6 +232,52 @@ public function updateHead(Request $request, $divisionId)
         ], 500);
     }
 }
+// GET jumlah karyawan by divisi
+public function getEmployeeCount($divisionId)
+{
+    try {
+        $employeeCount = Employee::join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+            ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+            ->where('roles.division_id', $divisionId)
+            ->distinct('employees.id_karyawan')
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => $employeeCount
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memuat jumlah karyawan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// GET data gender karyawan by divisi
+public function getGenderData($divisionId)
+{
+    try {
+        $genderData = Employee::select('gender', DB::raw('COUNT(DISTINCT employees.id_karyawan) as count'))
+            ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+            ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+            ->where('roles.division_id', $divisionId)
+            ->groupBy('gender')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $genderData
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memuat data gender: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     // DELETE hapus divisi
     public function destroy($id)

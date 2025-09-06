@@ -11,8 +11,9 @@
       <div class="col-12">
         <div class="card shadow-sm p-3 d-flex flex-row align-items-center">
           <img class="rounded-circle img-thumbnail me-3" 
-               src="{{asset('assets/images/lg/avatar8.jpg')}}" 
-               alt="profile" style="width: 60px; height: 60px;">
+               src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.pngassets/images/xs/avatar2.jpg') }}" 
+              alt="profile" style="width: 60px; height: 60px;"
+              onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
           <div>
             <h4 class="mb-1">Hai, Ketua divisi 👋</h4>
             <small class="text-muted">Score terbaru kamu: <span class="fw-bold text-primary">B+</span></small>
@@ -182,18 +183,18 @@
         </div>
              <!-- Card 1: Jumlah + Donut -->
     <div class="col-md-4">
-      <div class="card shadow-sm mb-3">
+    <div class="card shadow-sm mb-3">
         <div class="card-body text-center">
-          <h6 class="fw-bold">Jumlah Karyawan Divisi</h6>
-          <h3 class="fw-bold text-primary">120</h3>
+            <h6 class="fw-bold">Jumlah Karyawan Divisi</h6>
+            <h3 class="fw-bold text-primary" id="employee-count">0</h3>
         </div>
-      </div>
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div id="gender-donut"></div>
-        </div>
-      </div>
     </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div id="gender-donut"></div>
+        </div>
+    </div>
+</div>
 
     <!-- Card 2: Karyawan Belum Dinilai -->
     <div class="col-md-4">
@@ -396,6 +397,104 @@ new Chart(ctx, {
 </script>
 
 <script>
+// Fungsi untuk mengambil data divisi
+async function loadDivisionData() {
+    try {
+        // Ganti dengan ID divisi user yang login
+        const divisionId = {{ Auth::user()->employee->roles->first()->division_id ?? 0 }};
+        
+        if (divisionId === 0) {
+            console.error('Divisi tidak ditemukan');
+            return;
+        }
+
+        // Ambil jumlah karyawan
+        const countResponse = await fetch(`/api/divisions/${divisionId}/employee-count`);
+        const countData = await countResponse.json();
+        
+        if (countData.success) {
+            document.getElementById('employee-count').textContent = countData.data;
+        }
+
+        // Ambil data gender untuk donut chart
+        const genderResponse = await fetch(`/api/divisions/${divisionId}/gender-data`);
+        const genderData = await genderResponse.json();
+        
+        if (genderData.success) {
+            renderGenderDonutChart(genderData.data);
+        }
+
+    } catch (error) {
+        console.error('Error loading division data:', error);
+    }
+}
+
+// Fungsi untuk render donut chart gender
+function renderGenderDonutChart(genderData) {
+    // Siapkan data untuk chart
+    const series = [];
+    const labels = [];
+    const colors = ['#007bff', '#ff4081']; // Warna untuk Pria dan Wanita
+
+    // Process data dari API
+    genderData.forEach(item => {
+        labels.push(item.gender);
+        series.push(item.count);
+    });
+
+    // Konfigurasi donut chart
+    var options = {
+        chart: {
+            type: 'donut',
+            height: 300
+        },
+        series: series,
+        labels: labels,
+        colors: colors,
+        legend: {
+            position: 'bottom'
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '65%',
+                    labels: {
+                        show: true,
+                        total: {
+                            show: true,
+                            label: 'Total',
+                            color: '#373d3f',
+                            formatter: function (w) {
+                                return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        responsive: [{
+            breakpoint: 768,
+            options: {
+                chart: {
+                    height: 200
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }]
+    };
+
+    // Render chart
+    var chart = new ApexCharts(document.querySelector("#gender-donut"), options);
+    chart.render();
+}
+
+// Panggil fungsi saat halaman dimuat
+document.addEventListener('DOMContentLoaded', loadDivisionData);
+</script>
+
+<script>
     var options = {
         chart: {
         type: 'line',
@@ -412,45 +511,5 @@ new Chart(ctx, {
 
     var chart = new ApexCharts(document.querySelector("#chartKPI"), options);
     chart.render();
-    </script>
-    
-    <script>
-      var options = {
-      chart: {
-        type: 'donut',
-        height: 300 // sesuaikan tinggi sama seperti div kanan (list)
-      },
-      series: [60, 60],
-      labels: ['Pria', 'Wanita'],
-      colors: ['#007bff', '#ff4081'],
-      legend: {
-        position: 'bottom'
-      },
-      responsive: [{
-        breakpoint: 768,
-        options: {
-          chart: {
-            height: 200
-          },
-          legend: {
-            position: 'bottom'
-          }
-        }
-      }]
-    };
-
-    var chart = new ApexCharts(document.querySelector("#gender-donut"), options);
-    chart.render();
-
-    </script>
-
-    <script>
-      function scrollToCard(cardId) {
-  const el = document.getElementById(cardId);
-  if(el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
     </script>
 @endsection

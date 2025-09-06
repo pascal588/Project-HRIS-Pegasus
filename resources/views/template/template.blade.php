@@ -74,13 +74,19 @@
                                 <small>{{ $mainRole ?? 'Role tidak tersedia' }}</small>
                             </div>
                             <a class="nav-link dropdown-toggle pulse p-0" href="#" role="button" data-bs-toggle="dropdown" data-bs-display="static">
-                                <img class="avatar lg rounded-circle img-thumbnail" src="{{ asset('assets/images/xs/avatar2.jpg') }}" alt="profile">
+                                <img class="avatar lg rounded-circle img-thumbnail" 
+                                     src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.pngassets/images/xs/avatar2.jpg') }}" 
+                                     alt="profile" 
+                                     onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
                             </a>
                             <div class="dropdown-menu rounded-lg shadow border-0 dropdown-animation dropdown-menu-sm-start dropdown-menu-md-end" style=" width: max-content;">
                                 <div class="card border-0">
                                     <div class="card-body pb-0">
                                         <div class="d-flex py-1">
-                                            <img class="avatar rounded-circle" src="assets/images/profile_av.png" alt="profile">
+                                            <img class="avatar rounded-circle" 
+                                                 src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.png') }}" 
+                                                 alt="profile"
+                                                 onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
                                             <div class="flex-fill ms-3">
                                                 <p class="mb-0"><span class="font-weight-bold">{{ Auth::user()->Employee->nama }}</span></p>
                                                 <small class="">{{Auth::user()->email}}</small>

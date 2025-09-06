@@ -23,7 +23,7 @@ class EmployeeApiController extends Controller
         ], 200);
     }
 
-    // POST /api/employees
+    
     // Di method store(), ubah validasi password
     public function store(Request $request)
     {

@@ -11,10 +11,11 @@
       <div class="col-12">
         <div class="card shadow-sm p-3 d-flex flex-row align-items-center">
           <img class="rounded-circle img-thumbnail me-3" 
-               src="{{asset('assets/images/lg/avatar8.jpg')}}" 
-               alt="profile" style="width: 60px; height: 60px;">
+               src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.pngassets/images/xs/avatar2.jpg') }}" 
+              alt="profile" style="width: 60px; height: 60px;"
+              onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
           <div>
-            <h4 class="mb-1">Hai, Karyawan 👋</h4>
+            <h4 class="mb-1">Hai, {{ Auth::user()->Employee->nama }} 👋</h4>
             <small class="text-muted">Score terbaru kamu: <span class="fw-bold text-primary">B+</span></small>
           </div>
         </div>

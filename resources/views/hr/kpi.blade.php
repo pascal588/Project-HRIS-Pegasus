@@ -175,25 +175,31 @@
   });
 
   // Load divisions from API
-  function loadDivisions() {
+function loadDivisions() {
     $.ajax({
-      url: '/api/divisions',
-      method: 'GET',
-      success: function(response) {
-        divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-        response.forEach(division => {
-          const option = document.createElement('option');
-          option.value = division.id_divisi;
-          option.textContent = division.nama_divisi;
-          divisionSelect.appendChild(option);
-        });
-      },
-      error: function(xhr) {
-        console.error('Error loading divisions:', xhr.responseText);
-        alert('Gagal memuat data divisi');
-      }
+        url: '/api/divisions',
+        method: 'GET',
+        success: function(response) {
+            // Pastikan response memiliki struktur yang benar
+            if (response.success && response.data) {
+                divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+                response.data.forEach(division => {
+                    const option = document.createElement('option');
+                    option.value = division.id_divisi;
+                    option.textContent = division.nama_divisi;
+                    divisionSelect.appendChild(option);
+                });
+            } else {
+                console.error('Invalid response structure:', response);
+                alert('Format data divisi tidak valid');
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading divisions:', xhr.responseText);
+            alert('Gagal memuat data divisi');
+        }
     });
-  }
+}
 
   // Load roles based on selected division
   function loadRoles(divisionId) {

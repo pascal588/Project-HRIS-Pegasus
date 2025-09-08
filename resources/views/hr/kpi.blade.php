@@ -165,7 +165,7 @@
   // Initialize on page load
   $(document).ready(function() {
     loadDivisions();
-    
+
     divisionSelect.addEventListener("change", changeDivision);
     positionSelect.addEventListener("change", changePosition);
     document
@@ -175,31 +175,31 @@
   });
 
   // Load divisions from API
-function loadDivisions() {
+  function loadDivisions() {
     $.ajax({
-        url: '/api/divisions',
-        method: 'GET',
-        success: function(response) {
-            // Pastikan response memiliki struktur yang benar
-            if (response.success && response.data) {
-                divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-                response.data.forEach(division => {
-                    const option = document.createElement('option');
-                    option.value = division.id_divisi;
-                    option.textContent = division.nama_divisi;
-                    divisionSelect.appendChild(option);
-                });
-            } else {
-                console.error('Invalid response structure:', response);
-                alert('Format data divisi tidak valid');
-            }
-        },
-        error: function(xhr) {
-            console.error('Error loading divisions:', xhr.responseText);
-            alert('Gagal memuat data divisi');
+      url: '/api/divisions',
+      method: 'GET',
+      success: function(response) {
+        // Pastikan response memiliki struktur yang benar
+        if (response.success && response.data) {
+          divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+          response.data.forEach(division => {
+            const option = document.createElement('option');
+            option.value = division.id_divisi;
+            option.textContent = division.nama_divisi;
+            divisionSelect.appendChild(option);
+          });
+        } else {
+          console.error('Invalid response structure:', response);
+          alert('Format data divisi tidak valid');
         }
+      },
+      error: function(xhr) {
+        console.error('Error loading divisions:', xhr.responseText);
+        alert('Gagal memuat data divisi');
+      }
     });
-}
+  }
 
   // Load roles based on selected division
   function loadRoles(divisionId) {
@@ -209,7 +209,7 @@ function loadDivisions() {
       success: function(response) {
         positionSelect.innerHTML = '<option value="">Pilih Jabatan</option>';
         positionSelect.disabled = false;
-        
+
         response.data.forEach(role => {
           const option = document.createElement('option');
           option.value = role.id_jabatan;
@@ -227,10 +227,10 @@ function loadDivisions() {
   function changeDivision() {
     const divisionId = divisionSelect.value;
     currentDivisionId = divisionId;
-    
+
     if (divisionId) {
       loadRoles(divisionId);
-      
+
       // Get division name for display
       const divisionName = divisionSelect.options[divisionSelect.selectedIndex].text;
       document.getElementById("infoDivision").textContent = divisionName;
@@ -240,19 +240,19 @@ function loadDivisions() {
       document.getElementById("infoDivision").textContent = "-";
       document.getElementById("infoPosition").textContent = "-";
     }
-    
+
     clearKPIForm();
   }
 
   function changePosition() {
     const roleId = positionSelect.value;
     currentRoleId = roleId;
-    
+
     if (roleId) {
       // Get role name for display
       const roleName = positionSelect.options[positionSelect.selectedIndex].text;
       document.getElementById("infoPosition").textContent = roleName;
-      
+
       // Load existing KPI data for this division and role
       loadKpiData();
     } else {
@@ -263,44 +263,44 @@ function loadDivisions() {
 
   function loadKpiData() {
     if (!currentDivisionId || !currentRoleId) return;
-    
+
     $.ajax({
-        url: `/api/kpi-by-role/${currentRoleId}`,
-        method: 'GET',
-        success: function(response) {
-            clearKPIForm();
-            
-            if (response.kpis && response.kpis.length > 0) {
-                response.kpis.forEach((kpi, index) => {
-                    topicCount++;
-                    
-                    // Prepare questions array
-                    const questions = kpi.questions ? kpi.questions.map(q => {
-                        return {
-                            pertanyaan: q.pertanyaan,
-                            id_question: q.id_question
-                        };
-                    }) : [];
-                    
-                    renderTopic(
-                        topicCount,
-                        kpi.nama,
-                        kpi.bobot,
-                        questions,
-                        kpi.id_kpi
-                    );
-                });
-                
-                updateInfo();
-            }
-        },
-        error: function(xhr) {
-            console.error('Error loading KPI data:', xhr.responseText);
-            // If no KPI data exists, just show empty form
-            clearKPIForm();
+      url: `/api/kpi-by-role/${currentRoleId}`,
+      method: 'GET',
+      success: function(response) {
+        clearKPIForm();
+
+        if (response.kpis && response.kpis.length > 0) {
+          response.kpis.forEach((kpi, index) => {
+            topicCount++;
+
+            // Prepare questions array
+            const questions = kpi.questions ? kpi.questions.map(q => {
+              return {
+                pertanyaan: q.pertanyaan,
+                id_question: q.id_question
+              };
+            }) : [];
+
+            renderTopic(
+              topicCount,
+              kpi.nama,
+              kpi.bobot,
+              questions,
+              kpi.id_kpi
+            );
+          });
+
+          updateInfo();
         }
+      },
+      error: function(xhr) {
+        console.error('Error loading KPI data:', xhr.responseText);
+        // If no KPI data exists, just show empty form
+        clearKPIForm();
+      }
     });
-}
+  }
 
   function clearKPIForm() {
     document.getElementById("topicTabs").innerHTML = "";
@@ -429,7 +429,7 @@ function loadDivisions() {
       alert("Pilih divisi dan jabatan dulu!");
       return;
     }
-    
+
     const topics = [];
     let totalWeight = 0;
     let valid = true;
@@ -487,70 +487,70 @@ function loadDivisions() {
   }
   // Add these functions to your kpi.blade.php JavaScript
 
-function confirmRemoveTopic(index) {
+  function confirmRemoveTopic(index) {
     if (confirm("Yakin hapus aspek ini?")) {
-        const tabPane = document.getElementById(`tab-${index}`);
-        const kpiId = tabPane.querySelector('.kpi-id').value;
-        
-        if (kpiId) {
-            // If this is an existing KPI, delete it from the server
-            $.ajax({
-                url: `/api/division/${currentDivisionId}/kpi/${kpiId}`,
-                method: 'DELETE',
-                success: function(response) {
-                    removeTopic(index);
-                    alert(response.message || 'Aspek berhasil dihapus');
-                },
-                error: function(xhr) {
-                    console.error('Error deleting KPI:', xhr.responseText);
-                    alert('Gagal menghapus aspek: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
-                }
-            });
-        } else {
-            // If it's a new topic, just remove it from the UI
+      const tabPane = document.getElementById(`tab-${index}`);
+      const kpiId = tabPane.querySelector('.kpi-id').value;
+
+      if (kpiId) {
+        // If this is an existing KPI, delete it from the server
+        $.ajax({
+          url: `/api/division/${currentDivisionId}/kpi/${kpiId}`,
+          method: 'DELETE',
+          success: function(response) {
             removeTopic(index);
-        }
+            alert(response.message || 'Aspek berhasil dihapus');
+          },
+          error: function(xhr) {
+            console.error('Error deleting KPI:', xhr.responseText);
+            alert('Gagal menghapus aspek: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
+          }
+        });
+      } else {
+        // If it's a new topic, just remove it from the UI
+        removeTopic(index);
+      }
     }
-}
+  }
 
-function confirmRemoveQuestion(btn) {
+  function confirmRemoveQuestion(btn) {
     if (confirm("Hapus pertanyaan ini?")) {
-        const questionInput = btn.previousElementSibling;
-        const questionId = questionInput.dataset.questionId;
-        
-        if (questionId) {
-            // If this is an existing question, delete it from the server
-            $.ajax({
-                url: `/api/kpi-question/${questionId}`,
-                method: 'DELETE',
-                success: function(response) {
-                    btn.parentElement.remove();
-                    alert(response.message || 'Pertanyaan berhasil dihapus');
-                },
-                error: function(xhr) {
-                    console.error('Error deleting question:', xhr.responseText);
-                    alert('Gagal menghapus pertanyaan: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
-                }
-            });
-        } else {
-            // If it's a new question, just remove it from the UI
-            btn.parentElement.remove();
-        }
-    }
-}
+      const questionInput = btn.previousElementSibling;
+      const questionId = questionInput.dataset.questionId;
 
-// Update the questionTemplate function to include question ID
-function questionTemplate(value = "", questionId = "") {
+      if (questionId) {
+        // If this is an existing question, delete it from the server
+        $.ajax({
+          url: `/api/kpi-question/${questionId}`,
+          method: 'DELETE',
+          success: function(response) {
+            btn.parentElement.remove();
+            alert(response.message || 'Pertanyaan berhasil dihapus');
+          },
+          error: function(xhr) {
+            console.error('Error deleting question:', xhr.responseText);
+            alert('Gagal menghapus pertanyaan: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
+          }
+        });
+      } else {
+        // If it's a new question, just remove it from the UI
+        btn.parentElement.remove();
+      }
+    }
+  }
+
+  // Update the questionTemplate function to include question ID
+  function questionTemplate(value = "", questionId = "") {
     return `
         <div class="input-group mb-2">
             <input type="text" class="form-control question-text" value="${value}" 
                 placeholder="Masukkan pertanyaan" data-question-id="${questionId}">
             <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestion(this)">Hapus</button>
         </div>`;
-}
+  }
 
-// Update the renderTopic function to pass question IDs
-function renderTopic(index, topicName, topicWeight, questions, kpiId) {
+  // Update the renderTopic function to pass question IDs
+  function renderTopic(index, topicName, topicWeight, questions, kpiId) {
     const tabId = `tab-${index}`;
     const tabHTML = `
         <li class="nav-item" role="presentation" id="tab-btn-${index}">
@@ -561,12 +561,12 @@ function renderTopic(index, topicName, topicWeight, questions, kpiId) {
             </button>
         </li>`;
     document
-        .getElementById("topicTabs")
-        .insertAdjacentHTML("beforeend", tabHTML);
+      .getElementById("topicTabs")
+      .insertAdjacentHTML("beforeend", tabHTML);
 
     let questionsHTML = "";
     questions.forEach((q) => {
-        questionsHTML += questionTemplate(q.pertanyaan, q.id_question);
+      questionsHTML += questionTemplate(q.pertanyaan, q.id_question);
     });
 
     const contentHTML = `
@@ -590,8 +590,8 @@ function renderTopic(index, topicName, topicWeight, questions, kpiId) {
             <button class="btn btn-danger btn-sm mt-3" onclick="confirmRemoveTopic(${index})">Hapus aspek</button>
         </div>`;
     document
-        .getElementById("topicContents")
-        .insertAdjacentHTML("beforeend", contentHTML);
-}
+      .getElementById("topicContents")
+      .insertAdjacentHTML("beforeend", contentHTML);
+  }
 </script>
-@endsection
+@endsection 

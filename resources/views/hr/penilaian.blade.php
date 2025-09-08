@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="{{asset('assets/plugin/datatables/responsive.dataTables.min.css')}}">
 <link rel="stylesheet" href="{{asset('assets/plugin/datatables/dataTables.bootstrap5.min.css')}}">
 
-
 <!-- Body: Body -->
 <div class="body d-flex py-lg-3 py-md-2">
     <div class="container-xxl">
@@ -33,21 +32,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td><span class="fw-bold">1</span></td>
-                                    <td><span class="fw-bold ms-1">ui</span></td>
-                                    <td><span class="fw-bold ms-1">Divisi 1</span></td>
-                                    <td><span class="fw-bold ms-1">Belum Dinilai</span></td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#formnilai">
-                                                <i class="icofont-edit text-success"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
@@ -194,10 +179,9 @@
                     </table>
                 </div>
 
-
                 <!-- Step 2 -->
-                <div class="wizard-step" id="step2">
-                    <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
+                <div class="wizard-step d-none" id="step2">
+                    <h6 class="mb-3">Topik: Kompetensi Teknis <small class="text-muted">(Bobot: 30%)</small></h6>
                     <table class="table table-bordered">
                         <thead class="text-center">
                             <tr>
@@ -212,27 +196,19 @@
                         <tbody class="text-center">
                             <tr>
                                 <td>1</td>
-                                <td class="text-start">Kehadiran tepat waktu</td>
-                                <td><input type="radio" name="disiplin_q1" value="1"></td>
-                                <td><input type="radio" name="disiplin_q1" value="2"></td>
-                                <td><input type="radio" name="disiplin_q1" value="3"></td>
-                                <td><input type="radio" name="disiplin_q1" value="4"></td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td class="text-start">Mematuhi aturan perusahaan</td>
-                                <td><input type="radio" name="disiplin_q2" value="1"></td>
-                                <td><input type="radio" name="disiplin_q2" value="2"></td>
-                                <td><input type="radio" name="disiplin_q2" value="3"></td>
-                                <td><input type="radio" name="disiplin_q2" value="4"></td>
+                                <td class="text-start">Menguasai skill utama pekerjaan</td>
+                                <td><input type="radio" name="teknis_q1" value="1"></td>
+                                <td><input type="radio" name="teknis_q1" value="2"></td>
+                                <td><input type="radio" name="teknis_q1" value="3"></td>
+                                <td><input type="radio" name="teknis_q1" value="4"></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Step 3 -->
-                <div class="wizard-step" id="step3">
-                    <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
+                <div class="wizard-step d-none" id="step3">
+                    <h6 class="mb-3">Topik: Kompetensi Umum <small class="text-muted">(Bobot: 50%)</small></h6>
                     <table class="table table-bordered">
                         <thead class="text-center">
                             <tr>
@@ -247,19 +223,11 @@
                         <tbody class="text-center">
                             <tr>
                                 <td>1</td>
-                                <td class="text-start">Kehadiran tepat waktu</td>
-                                <td><input type="radio" name="disiplin_q1" value="1"></td>
-                                <td><input type="radio" name="disiplin_q1" value="2"></td>
-                                <td><input type="radio" name="disiplin_q1" value="3"></td>
-                                <td><input type="radio" name="disiplin_q1" value="4"></td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td class="text-start">Mematuhi aturan perusahaan</td>
-                                <td><input type="radio" name="disiplin_q2" value="1"></td>
-                                <td><input type="radio" name="disiplin_q2" value="2"></td>
-                                <td><input type="radio" name="disiplin_q2" value="3"></td>
-                                <td><input type="radio" name="disiplin_q2" value="4"></td>
+                                <td class="text-start">Kerjasama tim</td>
+                                <td><input type="radio" name="umum_q1" value="1"></td>
+                                <td><input type="radio" name="umum_q1" value="2"></td>
+                                <td><input type="radio" name="umum_q1" value="3"></td>
+                                <td><input type="radio" name="umum_q1" value="4"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -278,120 +246,85 @@
         </div>
     </div>
 </div>
-
 @endsection
+
 @section('script')
 <script src="{{asset ('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
-    $(document).ready(function() {
-        $('#myProjectTable')
-            .addClass('nowrap')
-            .DataTable({
-                responsive: true,
-                pageLength: 5,
-                lengthMenu: [5, 10, 25, 50],
-                ajax: {
-                    url: "{{ url('api/employees/kepala-divisi') }}",
-                    dataSrc: 'data'
-                },
-                columns: [{
-                        data: 'id_karyawan',
-                        render: (data, type, row, meta) => meta.row + 1
-                    }, // nomor urut
-                    {
-                        data: 'nama'
-                    },
-                    {
-                        data: 'division.nama_divisi',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'status_kpi',
-                        defaultContent: 'Belum Dinilai'
-                    },
-                    {
-                        data: null,
-                        render: function(data, type, row) {
-                            return `
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-secondary btn-nilai" data-id="${row.id_karyawan}" data-nama="${row.nama}" data-divisi="${row.division?.nama_divisi ?? '-'}">
-                                        <i class="icofont-edit text-success"></i>
-                                    </button>
-                                </div>`;
+    $('#myProjectTable').DataTable({
+        responsive: true,
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        ajax: {
+            url: "{{ url('api/employees/kepala-divisi') }}",
+            dataSrc: 'data'
+        },
+        columns: [{
+                data: null,
+                render: (data, type, row, meta) => meta.row + 1
+            },
+            {
+                data: 'nama'
+            },
+            {
+                data: 'roles',
+                render: function(data) {
+                    if (data && data.length > 0) {
+                        let kepala = data.find(r => r.nama_jabatan.toLowerCase().includes("kepala divisi"));
+                        if (kepala) {
+                            return kepala.division?.nama_divisi ?? '-';
                         }
+                        return data[0].division?.nama_divisi ?? '-';
                     }
-                ],
-                columnDefs: [{
-                        responsivePriority: 1,
-                        targets: 0
-                    },
-                    {
-                        responsivePriority: 2,
-                        targets: 1
-                    },
-                    {
-                        responsivePriority: 3,
-                        targets: 3
-                    },
-                    {
-                        responsivePriority: 10001,
-                        targets: 2
+                    return '-';
+                }
+            },
+            {
+                data: 'status_kpi',
+                defaultContent: 'Belum Dinilai'
+            },
+            {
+                data: null,
+                render: function(row) {
+                    let divisi = "-";
+                    if (row.roles && row.roles.length > 0) {
+                        divisi = row.roles[0].division?.nama_divisi ?? "-";
                     }
-                ]
-            });
-
-        // Event delegasi untuk tombol nilai (karena table pakai AJAX)
-        $('#myProjectTable').on('click', '.btn-nilai', function() {
-            let nama = $(this).data('nama');
-            let divisi = $(this).data('divisi');
-
-            // Isi form kanan
-            $(".card-body h6").text(nama);
-            $(".card-body small").text(divisi);
-
-            // Simpan untuk modal wizard
-            $("#btnNilai").data('nama', nama).data('divisi', divisi);
-        });
-
-        // Klik tombol Nilai → buka modal wizard
-        $("#btnNilai").on("click", function() {
-            if (!$(this).data('nama')) {
-                alert("Pilih karyawan dulu!");
-                return;
+                    return `
+                        <button type="button" 
+                            class="btn btn-outline-secondary btn-nilai" 
+                            data-id="${row.id_karyawan}" 
+                            data-nama="${row.nama}" 
+                            data-divisi="${divisi}">
+                            <i class="icofont-edit text-success"></i>
+                        </button>`;
+                }
             }
-            let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
-            modal.show();
-        });
+        ]
+    });
+
+    // Delegasi event ke tombol nilai
+    $('#myProjectTable').on('click', '.btn-nilai', function() {
+        let nama = $(this).data('nama');
+        let divisi = $(this).data('divisi');
+
+        $(".card-body h6").text(nama);
+        $(".card-body small").text(divisi);
+
+        $("#btnNilai").data('nama', nama).data('divisi', divisi);
+    });
+
+    // Klik tombol Nilai → buka modal wizard
+    $("#btnNilai").on("click", function() {
+        if (!$(this).data('nama')) {
+            alert("Pilih karyawan dulu!");
+            return;
+        }
+        let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
+        modal.show();
     });
 
     document.addEventListener("DOMContentLoaded", function() {
-        let selectedEmployee = {}; // simpan data karyawan yang dipilih
-
-        // Klik tombol di tabel → isi form kanan
-        document.querySelectorAll("#myProjectTable .btn-outline-secondary").forEach(function(button) {
-            button.addEventListener("click", function() {
-                let row = this.closest("tr");
-                selectedEmployee.nama = row.cells[1].innerText.trim();
-                selectedEmployee.divisi = row.cells[2].innerText.trim();
-                selectedEmployee.status = row.cells[3].innerText.trim();
-
-                // Isi form kanan
-                document.querySelector(".card-body h6").innerText = selectedEmployee.nama;
-                document.querySelector(".card-body small").innerText = selectedEmployee.divisi;
-            });
-        });
-
-        // Klik tombol Nilai → buka modal wizard
-        document.getElementById("btnNilai").addEventListener("click", function() {
-            if (!selectedEmployee.nama) {
-                alert("Pilih karyawan dulu!");
-                return;
-            }
-            let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
-            modal.show();
-        });
-
-        // Wizard stepper
         let currentStep = 1;
         const totalSteps = 3;
 

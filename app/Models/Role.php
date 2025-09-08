@@ -12,7 +12,12 @@ class Role extends Model
 
     public function employees()
     {
-        return $this->belongsToMany(Employee::class, 'roles_has_employees', 'role_id', 'employee_id');
+        return $this->belongsToMany(Employee::class, 'roles_has_employees',
+        'role_id',        // FK di pivot → roles
+        'employee_id',    // FK di pivot → employees
+        'id_jabatan',     // PK di roles
+        'id_karyawan'     // PK di employees
+        )->withPivot('created_at', 'updated_at');
     }
 
     public function division()

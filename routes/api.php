@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DivisionController;
 use App\Http\Controllers\Api\EmployeeApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\KpiController;
+use Illuminate\Support\Facades\Route;
 
 // routes/api.php
 Route::get('/divisions', [DivisionController::class, 'index']);
@@ -23,6 +24,8 @@ Route::get('/divisions/{divisionId}/employee-count', [DivisionController::class,
 Route::get('/divisions/{divisionId}/gender-data', [DivisionController::class, 'getGenderData']);
 
 //api karyawan
+Route::get('/employees/kepala-divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+
 Route::apiResource('employees', EmployeeApiController::class);
 Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
 //api jabatan - PERBAIKAN: gunakan 'roles' bukan 'role'

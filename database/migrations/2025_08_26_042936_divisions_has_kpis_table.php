@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('divisons_has_kpis');
+        Schema::dropIfExists('divisions_has_kpis');
     }
 };

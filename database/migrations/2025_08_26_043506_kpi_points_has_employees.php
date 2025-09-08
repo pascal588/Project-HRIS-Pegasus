@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('nilai', 3, 1);
             $table->timestamps();
 
-            $table->foreign('KPI_Points_id_poin')->references('id_poin')->on('KPI_Points')->onDelete('cascade');
+            $table->foreign('KPI_Points_id_poin')->references('id_poin')->on('kpi_points')->onDelete('cascade');
             $table->foreign('employees_id_karyawan')->references('id_karyawan')->on('employees')->onDelete('cascade');
         });
     }

@@ -70,7 +70,7 @@ public function store(Request $request)
         ], 201);
         
     } catch (\Exception $e) {
-        \Log::error('Error creating division: ' . $e->getMessage());
+        Log::error('Error creating division: ' . $e->getMessage());
         
         return response()->json([
             'success' => false,

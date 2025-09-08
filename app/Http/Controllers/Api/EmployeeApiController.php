@@ -13,17 +13,36 @@ use Illuminate\Support\Facades\DB;
 class EmployeeApiController extends Controller
 {
     // GET /api/employees
-     function index()
+    function index()
     {
         $employees = Employee::with(['user', 'roles.division'])->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $employees
         ], 200);
     }
 
-    
+    public function kepalaDivisi()
+    {
+        try {
+            $employees = Employee::whereHas('roles', function ($query) {
+                $query->where('nama_jabatan', 'Kepala Divisi');
+            })->with(['user', 'roles.division'])->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $employees
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ], 500);
+        }
+    }
+
     // Di method store(), ubah validasi password
     public function store(Request $request)
     {
@@ -32,8 +51,6 @@ class EmployeeApiController extends Controller
             'no_telp' => 'required|string|max:15',
             'gender' => 'required',
             'email' => 'required|email|unique:users,email',
-            // Hapus validasi password karena akan menggunakan default
-            // 'role_id' => 'required|exists:roles,id_jabatan'
         ]);
 
         $employee = DB::transaction(function () use ($request) {
@@ -49,10 +66,20 @@ class EmployeeApiController extends Controller
                 'nama' => $request->nama,
                 'no_telp' => $request->no_telp,
                 'gender' => $request->gender,
+                'status' => 'Aktif', // default status
             ]);
 
-            // assign role
-            $employee->roles()->attach($request->role_id);
+            // cari role default "Karyawan"
+            $defaultRole = Role::where('nama_jabatan', 'Karyawan')->first();
+
+            if ($defaultRole) {
+                $employee->roles()->attach($defaultRole->id_jabatan);
+            }
+
+            // kalau request kirim role tambahan, tambahkan
+            if ($request->filled('role_id')) {
+                $employee->roles()->attach($request->role_id);
+            }
 
             return $employee->load('user', 'roles.division');
         });
@@ -65,56 +92,31 @@ class EmployeeApiController extends Controller
     }
 
     // PUT /api/employees/{id}
-    // PUT /api/employees/{id}
-public function update(Request $request, Employee $employee)
-{
-    $request->validate([
-        'nama' => 'required|string|max:100',
-        'no_telp' => 'required|string|max:15',
-        'gender' => 'required',
-        'email' => 'required|email|unique:users,email,' . $employee->user_id,
-        'status' => 'required|in:Aktif,Non-Aktif,Cuti'
-        // Hapus validasi role_ids karena tidak dikirim dari form edit biasa
-    ]);
-
-    DB::transaction(function () use ($request, $employee) {
-        $employee->update([
-            'nama' => $request->nama,
-            'no_telp' => $request->no_telp,
-            'gender' => $request->gender,
-            'status' => $request->status, // PASTIKAN INI ADA
+    public function update(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'nama' => 'required|string|max:100',
+            'no_telp' => 'required|string|max:15',
+            'gender' => 'required',
+            'email' => 'required|email|unique:users,email,' . $employee->user_id,
+            'status' => 'required|in:Aktif,Non-Aktif,Cuti'
+            // Hapus validasi role_ids karena tidak dikirim dari form edit biasa
         ]);
 
-        $employee->user->update([
-            'email' => $request->email,
-        ]);
-
-        // HAPUS BARIS INI: $employee->roles()->sync($request->role_ids);
-        // Karena role_ids tidak dikirim dari form edit biasa
-    });
-
-    // Reload data dengan division information
-    $employee->load(['user', 'roles.division']);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Karyawan berhasil diperbarui',
-        'data' => $employee
-    ], 200);
-}
-
-// POST /api/employees/{employee}/roles - UPDATE ROLES SAJA
-public function updateRoles(Request $request, Employee $employee)
-{
-    $request->validate([
-        'role_ids' => 'required|array',
-        'role_ids.*' => 'exists:roles,id_jabatan'
-    ]);
-
-    try {
         DB::transaction(function () use ($request, $employee) {
-            // Sync multiple roles
-            $employee->roles()->sync($request->role_ids);
+            $employee->update([
+                'nama' => $request->nama,
+                'no_telp' => $request->no_telp,
+                'gender' => $request->gender,
+                'status' => $request->status, // PASTIKAN INI ADA
+            ]);
+
+            $employee->user->update([
+                'email' => $request->email,
+            ]);
+
+            // HAPUS BARIS INI: $employee->roles()->sync($request->role_ids);
+            // Karena role_ids tidak dikirim dari form edit biasa
         });
 
         // Reload data dengan division information
@@ -122,17 +124,40 @@ public function updateRoles(Request $request, Employee $employee)
 
         return response()->json([
             'success' => true,
-            'message' => 'Jabatan karyawan berhasil diperbarui',
+            'message' => 'Karyawan berhasil diperbarui',
             'data' => $employee
         ], 200);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal memperbarui jabatan: ' . $e->getMessage()
-        ], 500);
     }
-}
+
+    // POST /api/employees/{employee}/roles - UPDATE ROLES SAJA
+    public function updateRoles(Request $request, Employee $employee)
+    {
+        $request->validate([
+            'role_ids' => 'required|array',
+            'role_ids.*' => 'exists:roles,id_jabatan'
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $employee) {
+                // Sync multiple roles
+                $employee->roles()->sync($request->role_ids);
+            });
+
+            // Reload data dengan division information
+            $employee->load(['user', 'roles.division']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Jabatan karyawan berhasil diperbarui',
+                'data' => $employee
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui jabatan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     // DELETE /api/employees/{id}
     public function destroy(Employee $employee)

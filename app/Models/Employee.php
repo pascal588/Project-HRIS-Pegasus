@@ -19,8 +19,7 @@ class Employee extends Model
         'no_telp',
         'gender',
         'foto',
-        'role',
-        'status',
+        'status'
     ];
 
         //relasi ke users
@@ -30,7 +29,7 @@ class Employee extends Model
 
     //relasi ke roles
     public function roles() {
-        return $this->belongsToMany(Role::class, 'roles_has_employees', 'employee_id', 'role_id')
+        return $this->belongsToMany(Role::class, 'roles_has_employees', 'employee_id', 'role_id', 'id_karyawan','id_jabatan')
                     ->withPivot('created_at', 'updated_at');
     }
 

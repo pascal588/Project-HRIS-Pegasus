@@ -6,23 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('kpis', function (Blueprint $table) {
             $table->id('id_kpi');
-            $table->string('nama', 100);
-            $table->text('deskripsi');
-            $table->decimal('bobot', 3, 1);
+            $table->string('nama', 100); // contoh: Disiplin, Teknis
+            $table->text('deskripsi')->nullable();
+            $table->decimal('bobot', 5, 2); // persentase bobot KPI
+            $table->boolean('is_global')->default(true); // true = global, false = khusus divisi
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('kpis');

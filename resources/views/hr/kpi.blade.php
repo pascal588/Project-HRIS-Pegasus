@@ -22,16 +22,21 @@
         <div class="card mb-3 shadow-sm">
           <div class="card-header bg-transparent border-0 row">
             <div class="row mb-3">
+              <!-- Dropdown mode -->
               <div class="col-md-6">
+                <label class="form-label fw-bold">Pilih Mode</label>
+                <select id="modeSelect" class="form-select">
+                  <option value="">Pilih Mode</option>
+                  <option value="global">Global</option>
+                  <option value="division">Divisi</option>
+                </select>
+              </div>
+
+              <!-- Dropdown divisi (default disembunyikan) -->
+              <div class="col-md-6" id="divisionWrapper" style="display:none;">
                 <label class="form-label fw-bold">Pilih Divisi</label>
                 <select id="divisionSelect" class="form-select">
                   <option value="">Pilih Divisi</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Pilih Jabatan</label>
-                <select id="positionSelect" class="form-select" disabled>
-                  <option value="">Pilih Jabatan</option>
                 </select>
               </div>
             </div>
@@ -45,49 +50,26 @@
                 </h5>
                 <div class="row g-3">
                   <div class="col-md-6">
-                    <div
-                      class="p-3 bg-light rounded d-flex align-items-center">
-                      <i
-                        class="bi bi-diagram-3-fill text-success fs-4 me-3"></i>
+                    <div class="p-3 bg-light rounded d-flex align-items-center">
+                      <i class="bi bi-diagram-3-fill text-success fs-4 me-3"></i>
                       <div>
                         <small class="text-muted">Divisi</small>
-                        <div id="infoDivision" class="fw-semibold">
-                          -
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div
-                      class="p-3 bg-light rounded d-flex align-items-center">
-                      <i
-                        class="bi bi-person-badge-fill text-info fs-4 me-3"></i>
-                      <div>
-                        <small class="text-muted">Jabatan</small>
-                        <div id="infoPosition" class="fw-semibold">
-                          -
-                        </div>
+                        <div id="infoDivision" class="fw-semibold">-</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <div
-                      class="p-3 bg-light rounded d-flex align-items-center">
-                      <i
-                        class="bi bi-percent text-warning fs-4 me-3"></i>
+                    <div class="p-3 bg-light rounded d-flex align-items-center">
+                      <i class="bi bi-percent text-warning fs-4 me-3"></i>
                       <div>
                         <small class="text-muted">Total Bobot</small>
-                        <div id="infoTotalWeight" class="fw-semibold">
-                          0%
-                        </div>
+                        <div id="infoTotalWeight" class="fw-semibold">0%</div>
                       </div>
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <div
-                      class="p-3 bg-light rounded d-flex align-items-center">
-                      <i
-                        class="bi bi-graph-up text-danger fs-4 me-3"></i>
+                    <div class="p-3 bg-light rounded d-flex align-items-center">
+                      <i class="bi bi-graph-up text-danger fs-4 me-3"></i>
                       <div>
                         <small class="text-muted">Maksimal Bobot</small>
                         <div class="fw-semibold">100%</div>
@@ -95,15 +77,11 @@
                     </div>
                   </div>
                   <div class="col-md-4">
-                    <div
-                      class="p-3 bg-light rounded d-flex align-items-center">
-                      <i
-                        class="bi bi-list-ol text-primary fs-4 me-3"></i>
+                    <div class="p-3 bg-light rounded d-flex align-items-center">
+                      <i class="bi bi-list-ol text-primary fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Jumlah aspek</small>
-                        <div id="infoTopicCount" class="fw-semibold">
-                          0
-                        </div>
+                        <small class="text-muted">Jumlah aspek divisi</small>
+                        <div id="infoTopicCount" class="fw-semibold">0</div>
                       </div>
                     </div>
                   </div>
@@ -117,23 +95,13 @@
                 <div class="nav-tabs-wrapper mb-2">
                   <ul class="nav nav-tabs" id="topicTabs"></ul>
                   <div class="ms-auto">
-                    <button
-                      id="addTopicBtn"
-                      class="btn btn-light btn-sm">
-                      + Tambah aspek
-                    </button>
-                    <button
-                      id="saveKPIBtn"
-                      class="btn btn-success btn-sm ms-2">
-                      Simpan KPI
-                    </button>
+                    <button id="addTopicBtn" class="btn btn-light btn-sm">+ Tambah aspek</button>
+                    <button id="saveKPIBtn" class="btn btn-success btn-sm ms-2">Simpan KPI</button>
                   </div>
                 </div>
               </div>
               <div class="card-body">
-                <div
-                  class="p-3 tab-content mb-2"
-                  id="topicContents"></div>
+                <div class="p-3 tab-content mb-2" id="topicContents"></div>
               </div>
             </div>
           </div>
@@ -145,453 +113,493 @@
 @endsection
 
 @section('script')
-{{-- <!-- plugin chart -->
+<!-- plugin chart -->
 <script src="assets/bundles/apexcharts.bundle.js"></script>
 <!-- Plugin Js tabel-->
 <script src="assets/bundles/dataTables.bundle.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
+<!-- plugin chart -->
+<script src="assets/bundles/apexcharts.bundle.js"></script>
+<!-- Plugin Js tabel-->
+<script src="assets/bundles/dataTables.bundle.js"></script>
+
 <script>
-  let kpiData = {};
-  let topicCount = 0;
-  let currentKey = "";
+  // --- Helper unique id ---
+  let _uidCounter = 0;
+
+  function uid(prefix = "id") {
+    _uidCounter++;
+    return `${prefix}_${Date.now()}_${_uidCounter}`;
+  }
+
+  // State
   let currentDivisionId = "";
-  let currentRoleId = "";
-
+  let currentMode = ""; // "global" or "division"
   const divisionSelect = document.getElementById("divisionSelect");
-  const positionSelect = document.getElementById("positionSelect");
 
-  // Initialize on page load
+  // Initialize
   $(document).ready(function() {
+    $("#modeSelect").on("change", onModeChange);
     loadDivisions();
-
-    divisionSelect.addEventListener("change", changeDivision);
-    positionSelect.addEventListener("change", changePosition);
-    document
-      .getElementById("addTopicBtn")
-      .addEventListener("click", addTopic);
-    document.getElementById("saveKPIBtn").addEventListener("click", saveKPI);
+    $(divisionSelect).on("change", changeDivision);
+    $("#addTopicBtn").on("click", addAspect);
+    $("#saveKPIBtn").on("click", saveKPI);
   });
+
+  function onModeChange() {
+    currentMode = $("#modeSelect").val();
+    if (currentMode === "division") {
+      $("#divisionWrapper").show();
+    } else {
+      $("#divisionWrapper").hide();
+      $("#divisionSelect").val("");
+      currentDivisionId = "";
+    }
+    // Load KPI for selected mode
+    if (currentMode === "global") {
+      $("#infoDivision").text("Global");
+      loadKpiData(); // load global
+    } else {
+      $("#infoDivision").text("-");
+      clearKPIForm();
+    }
+  }
 
   // Load divisions from API
   function loadDivisions() {
-    $.ajax({
-      url: '/api/divisions',
-      method: 'GET',
-      success: function(response) {
-        // Pastikan response memiliki struktur yang benar
+    $.getJSON("/api/divisions")
+      .done(function(response) {
         if (response.success && response.data) {
           divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-          response.data.forEach(division => {
-            const option = document.createElement('option');
+          response.data.forEach((division) => {
+            const option = document.createElement("option");
             option.value = division.id_divisi;
             option.textContent = division.nama_divisi;
             divisionSelect.appendChild(option);
           });
         } else {
-          console.error('Invalid response structure:', response);
-          alert('Format data divisi tidak valid');
+          console.warn("Format data divisi tidak valid", response);
+          divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
         }
-      },
-      error: function(xhr) {
-        console.error('Error loading divisions:', xhr.responseText);
-        alert('Gagal memuat data divisi');
-      }
-    });
-  }
-
-  // Load roles based on selected division
-  function loadRoles(divisionId) {
-    $.ajax({
-      url: `/api/roles-by-division/${divisionId}`,
-      method: 'GET',
-      success: function(response) {
-        positionSelect.innerHTML = '<option value="">Pilih Jabatan</option>';
-        positionSelect.disabled = false;
-
-        response.data.forEach(role => {
-          const option = document.createElement('option');
-          option.value = role.id_jabatan;
-          option.textContent = role.nama_jabatan;
-          positionSelect.appendChild(option);
-        });
-      },
-      error: function(xhr) {
-        console.error('Error loading roles:', xhr.responseText);
-        alert('Gagal memuat data jabatan');
-      }
-    });
+      })
+      .fail(function(xhr) {
+        console.error("Error loading divisions:", xhr.responseText);
+        divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+      });
   }
 
   function changeDivision() {
-    const divisionId = divisionSelect.value;
-    currentDivisionId = divisionId;
-
-    if (divisionId) {
-      loadRoles(divisionId);
-
-      // Get division name for display
-      const divisionName = divisionSelect.options[divisionSelect.selectedIndex].text;
-      document.getElementById("infoDivision").textContent = divisionName;
+    currentDivisionId = divisionSelect.value;
+    if (currentDivisionId) {
+      $("#infoDivision").text($("#divisionSelect option:selected").text());
+      if (currentMode === "division") loadKpiData();
     } else {
-      positionSelect.innerHTML = '<option value="">Pilih Jabatan</option>';
-      positionSelect.disabled = true;
-      document.getElementById("infoDivision").textContent = "-";
-      document.getElementById("infoPosition").textContent = "-";
-    }
-
-    clearKPIForm();
-  }
-
-  function changePosition() {
-    const roleId = positionSelect.value;
-    currentRoleId = roleId;
-
-    if (roleId) {
-      // Get role name for display
-      const roleName = positionSelect.options[positionSelect.selectedIndex].text;
-      document.getElementById("infoPosition").textContent = roleName;
-
-      // Load existing KPI data for this division and role
-      loadKpiData();
-    } else {
-      document.getElementById("infoPosition").textContent = "-";
+      $("#infoDivision").text("-");
       clearKPIForm();
     }
   }
 
-  function loadKpiData() {
-    if (!currentDivisionId || !currentRoleId) return;
-
-    $.ajax({
-      url: `/api/kpi-by-role/${currentRoleId}`,
-      method: 'GET',
-      success: function(response) {
-        clearKPIForm();
-
-        if (response.kpis && response.kpis.length > 0) {
-          response.kpis.forEach((kpi, index) => {
-            topicCount++;
-
-            // Prepare questions array
-            const questions = kpi.questions ? kpi.questions.map(q => {
-              return {
-                pertanyaan: q.pertanyaan,
-                id_question: q.id_question
-              };
-            }) : [];
-
-            renderTopic(
-              topicCount,
-              kpi.nama,
-              kpi.bobot,
-              questions,
-              kpi.id_kpi
-            );
-          });
-
-          updateInfo();
-        }
-      },
-      error: function(xhr) {
-        console.error('Error loading KPI data:', xhr.responseText);
-        // If no KPI data exists, just show empty form
-        clearKPIForm();
-      }
-    });
-  }
-
+  // --- KPI UI management ---
   function clearKPIForm() {
-    document.getElementById("topicTabs").innerHTML = "";
-    document.getElementById("topicContents").innerHTML = "";
-    topicCount = 0;
+    $("#topicTabs").empty();
+    $("#topicContents").empty();
     updateInfo();
   }
 
-  function addTopic() {
-    if (!currentDivisionId || !currentRoleId) {
-      alert("Pilih divisi dan jabatan dulu!");
+  // Load KPI data depending on mode
+  function loadKpiData() {
+    clearKPIForm();
+    if (currentMode === "division") {
+      if (!currentDivisionId) return;
+      $.getJSON(`/api/kpi-by-division/${currentDivisionId}`)
+        .done(function(response) {
+          if (response.kpis && response.kpis.length) {
+            // Expecting response.kpis array of aspek; each aspek may have subaspects and questions
+            response.kpis.forEach((kpi) => {
+              renderAspect(kpi);
+            });
+            updateInfo();
+          }
+        })
+        .fail(function(xhr) {
+          console.error("Error loading KPI data:", xhr.responseText);
+        });
+    } else if (currentMode === "global") {
+      $.getJSON(`/api/kpi-global`)
+        .done(function(response) {
+          if (response.kpis && response.kpis.length) {
+            response.kpis.forEach((kpi) => renderAspect(kpi));
+            updateInfo();
+          }
+        })
+        .fail(function(xhr) {
+          console.error("Error loading global KPI:", xhr.responseText);
+        });
+    }
+  }
+
+  // Add new aspect (tab)
+  function addAspect() {
+    // if division mode require division chosen
+    if (currentMode === "division" && !currentDivisionId) {
+      alert("Pilih divisi dulu!");
       return;
     }
-    topicCount++;
-    renderTopic(topicCount, "", "", [], null);
-    setActiveTab(topicCount);
+    const aspect = {
+      uid: uid("aspect"),
+      id: null,
+      name: "",
+      weight: 0,
+      subaspects: []
+    };
+    renderAspect(aspect, true);
+    setActiveTab(aspect.uid);
     updateInfo();
   }
 
-  function renderTopic(index, topicName, topicWeight, questions, kpiId) {
-    const tabId = `tab-${index}`;
-    const tabHTML = `
-          <li class="nav-item" role="presentation" id="tab-btn-${index}">
-            <button class="nav-link ${index === 1 ? "active" : ""}" 
-              id="${tabId}-tab" data-bs-toggle="tab" data-bs-target="#${tabId}" 
-              type="button" role="tab">
-              ${topicName || `aspek ${index}`}
-            </button>
-          </li>`;
-    document
-      .getElementById("topicTabs")
-      .insertAdjacentHTML("beforeend", tabHTML);
+  // RENDERING: aspect -> subaspects -> questions
+  function renderAspect(aspectObj, newlyCreated = false) {
+    // aspectObj may be from server: {id, nama, bobot, subaspects: [{id, nama, bobot, questions: [{id_question, pertanyaan}]}]}
+    const aspectUid = aspectObj.uid || uid("aspect");
+    const aspectId = aspectObj.id || "";
+    const aspectName = aspectObj.nama || aspectObj.name || "";
+    const aspectWeight = aspectObj.bobot !== undefined ? aspectObj.bobot : (aspectObj.weight || 0);
+    const subaspects = aspectObj.subaspects || [];
 
-    let questionsHTML = "";
-    questions.forEach((q) => {
-      questionsHTML += questionTemplate(q);
+    // Tab button
+    const tabBtnHtml = `
+      <li class="nav-item" id="tab-btn-${aspectUid}" role="presentation">
+        <button class="nav-link ${newlyCreated ? "active" : ($("#topicTabs .nav-link").length===0 ? "active":"")}"
+                id="tab-${aspectUid}-tab" data-bs-toggle="tab" data-bs-target="#tab-${aspectUid}"
+                type="button" role="tab">${aspectName || "Aspek Baru"}</button>
+      </li>`;
+    $("#topicTabs").append(tabBtnHtml);
+
+    // Subaspects HTML
+    let subHtml = '';
+    subaspects.forEach(sa => {
+      subHtml += subaspectTemplate(aspectUid, sa);
     });
 
-    const contentHTML = `
-          <div class="tab-pane fade ${
-            index === 1 ? "show active" : ""
-          }" id="${tabId}" role="tabpanel">
-            <input type="hidden" class="kpi-id" value="${kpiId || ''}">
-            <div class="mb-3">
-              <label class="form-label">Nama aspek</label>
-              <input type="text" class="form-control topic-name" value="${topicName}" 
-                oninput="updateTabTitle(${index}, this.value)">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Bobot aspek (%)</label>
-              <input type="number" class="form-control topic-weight" value="${topicWeight}" min="0" max="100" 
-                oninput="updateInfo()">
-            </div>
-            <h6>Pertanyaan</h6>
-            <div class="questions-container">
-              ${questionsHTML}
-            </div>
-            <button class="btn btn-outline-primary btn-sm mt-3" onclick="addQuestion('${tabId}')">+ Tambah Pertanyaan</button>
-            <button class="btn btn-danger btn-sm mt-3" onclick="confirmRemoveTopic(${index})">Hapus aspek</button>
-          </div>`;
-    document
-      .getElementById("topicContents")
-      .insertAdjacentHTML("beforeend", contentHTML);
+    // content pane
+    const contentHtml = `
+      <div class="tab-pane fade ${newlyCreated || ($("#topicContents .tab-pane").length===0 ? "show active" : "")}"
+           id="tab-${aspectUid}" role="tabpanel" data-aspect-uid="${aspectUid}">
+        <input type="hidden" class="aspect-id" value="${aspectId}">
+        <div class="mb-3">
+          <label class="form-label">Nama aspek</label>
+          <input type="text" class="form-control aspect-name" value="${escapeHtml(aspectName)}"
+            oninput="updateAspectTabTitle('${aspectUid}', this.value)">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Bobot aspek (%)</label>
+          <input type="number" class="form-control aspect-weight" value="${aspectWeight}" min="0" max="100" oninput="updateInfo()">
+        </div>
+
+        <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
+          <h6>Subaspek</h6>
+          ${subHtml}
+        </div>
+
+        <div class="mt-2">
+          <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
+          <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
+        </div>
+      </div>`;
+    $("#topicContents").append(contentHtml);
+
+    // if no subaspects exist, create one default
+    if (subaspects.length === 0) addSubaspect(aspectUid);
   }
 
-  function questionTemplate(value = "") {
+  function subaspectTemplate(aspectUid, saObj = {}) {
+    const suid = saObj.uid || uid("sub");
+    const sid = saObj.id || "";
+    const sname = saObj.nama || saObj.name || "";
+    const sweight = saObj.bobot !== undefined ? saObj.bobot : (saObj.weight || 0);
+    const questions = saObj.questions || [];
+
+    let qHtml = "";
+    questions.forEach(q => {
+      qHtml += questionInputTemplate(suid, q);
+    });
+
     return `
-          <div class="input-group mb-2">
-            <input type="text" class="form-control question-text" value="${value}" placeholder="Masukkan pertanyaan">
-            <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestion(this)">Hapus</button>
-          </div>`;
+      <div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
+        <input type="hidden" class="subaspect-id" value="${sid}">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div style="flex:1">
+            <label class="form-label">Nama Subaspek</label>
+            <input type="text" class="form-control subaspect-name" value="${escapeHtml(sname)}" oninput="updateInfo()">
+          </div>
+          <div style="width:140px; margin-left:10px">
+            <label class="form-label">Bobot (%)</label>
+            <input type="number" class="form-control subaspect-weight" value="${sweight}" min="0" max="100" oninput="updateInfo()">
+          </div>
+          <div style="margin-left:10px">
+            <label class="form-label">&nbsp;</label>
+            <button class="btn btn-sm btn-outline-danger d-block" onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
+          </div>
+        </div>
+
+        <div class="questions-list" id="questions-${suid}">
+          ${qHtml}
+        </div>
+        <div class="mt-2">
+          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="addQuestionToSub('${suid}')">+ Tambah Pertanyaan</button>
+        </div>
+      </div>
+    `;
   }
 
-  function updateTabTitle(index, value) {
-    const btn = document.querySelector(`#tab-btn-${index} button`);
-    btn.textContent = value || `aspek ${index}`;
+  function questionInputTemplate(suid, q = {}) {
+    const qid = q.id_question || q.id || "";
+    const qtext = q.pertanyaan || q.text || "";
+    return `
+      <div class="input-group mb-2 question-row" data-question-id="${qid}">
+        <input type="text" class="form-control question-text" value="${escapeHtml(qtext)}" placeholder="Masukkan pertanyaan">
+        <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestionInSub(this, '${suid}')">Hapus</button>
+      </div>
+    `;
   }
 
-  function addQuestion(tabId) {
-    const container = document.querySelector(
-      `#${tabId} .questions-container`
-    );
-    container.insertAdjacentHTML("beforeend", questionTemplate());
-  }
-
-  function confirmRemoveQuestion(btn) {
-    if (confirm("Hapus pertanyaan ini?")) {
-      btn.parentElement.remove();
-    }
-  }
-
-  function confirmRemoveTopic(index) {
-    if (confirm("Yakin hapus aspek ini?")) {
-      removeTopic(index);
-    }
-  }
-
-  function removeTopic(index) {
-    document.getElementById(`tab-btn-${index}`)?.remove();
-    document.getElementById(`tab-${index}`)?.remove();
+  // UI actions: add subaspect & questions
+  function addSubaspect(aspectUid) {
+    const sub = {
+      uid: uid("sub"),
+      id: "",
+      name: "",
+      weight: 0,
+      questions: []
+    };
+    const html = subaspectTemplate(aspectUid, sub);
+    $(`#subaspects-${aspectUid}`).append(html);
     updateInfo();
   }
 
-  function setActiveTab(index) {
-    const tabTrigger = new bootstrap.Tab(
-      document.querySelector(`#tab-btn-${index} button`)
-    );
-    tabTrigger.show();
+  function addQuestionToSub(subUid) {
+    const html = questionInputTemplate(subUid, {});
+    $(`#questions-${subUid}`).append(html);
+    updateInfo();
   }
 
-  function updateInfo() {
-    const weights = Array.from(
-      document.querySelectorAll(".topic-weight")
-    ).map((input) => Number(input.value) || 0);
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    document.getElementById("infoTotalWeight").textContent =
-      totalWeight + "%";
-    const topicCountNow = document.querySelectorAll(
-      "#topicContents .tab-pane"
-    ).length;
-    document.getElementById("infoTopicCount").textContent = topicCountNow;
+  // Remove handlers with confirmation
+  function confirmRemoveQuestionInSub(btn, subUid) {
+    const row = btn.closest(".question-row");
+    const qid = row.dataset.questionId;
+    if (qid) {
+      if (!confirm("Yakin hapus pertanyaan ini dari server?")) return;
+      $.ajax({
+        url: `/api/kpi-question/${qid}`,
+        method: "DELETE",
+        success: function(resp) {
+          row.remove();
+          alert(resp.message || "Pertanyaan dihapus");
+          updateInfo();
+        },
+        error: function(xhr) {
+          console.error("Error deleting question:", xhr.responseText);
+          alert("Gagal menghapus pertanyaan");
+        }
+      });
+    } else {
+      if (confirm("Hapus pertanyaan ini?")) row.remove();
+    }
   }
 
+  function confirmRemoveSubaspect(subUid) {
+    const card = $(`#sub-${subUid}`);
+    const subId = card.find(".subaspect-id").val();
+    if (subId) {
+      if (!confirm("Yakin hapus subaspek ini?")) return;
+      // backend: DELETE /api/kpi-subaspect/{id} (implement di backend)
+      $.ajax({
+        url: `/api/kpi-subaspect/${subId}`,
+        method: "DELETE",
+        success: function(resp) {
+          card.remove();
+          alert(resp.message || "Subaspek dihapus");
+          updateInfo();
+        },
+        error: function(xhr) {
+          console.error("Error deleting subaspect:", xhr.responseText);
+          alert("Gagal menghapus subaspek");
+        }
+      });
+    } else {
+      if (confirm("Hapus subaspek ini?")) {
+        card.remove();
+        updateInfo();
+      }
+    }
+  }
+
+  function confirmRemoveAspect(aspectUid) {
+    const pane = $(`#tab-${aspectUid}`);
+    const aspectId = pane.find(".aspect-id").val();
+    if (aspectId) {
+      if (!confirm("Yakin hapus aspek ini?")) return;
+      $.ajax({
+        url: currentMode === "global" ? `/api/kpi-global/${aspectId}` : `/api/division/${currentDivisionId}/kpi/${aspectId}`,
+        method: "DELETE",
+        success: function(resp) {
+          removeAspectFromUI(aspectUid);
+          alert(resp.message || "Aspek dihapus");
+          updateInfo();
+        },
+        error: function(xhr) {
+          console.error("Error deleting aspect:", xhr.responseText);
+          alert("Gagal menghapus aspek");
+        }
+      });
+    } else {
+      if (confirm("Hapus aspek ini?")) {
+        removeAspectFromUI(aspectUid);
+        updateInfo();
+      }
+    }
+  }
+
+  function removeAspectFromUI(aspectUid) {
+    $(`#tab-btn-${aspectUid}`).remove();
+    $(`#tab-${aspectUid}`).remove();
+    // activate first tab if any
+    const first = $("#topicTabs .nav-link").first();
+    if (first.length) {
+      const firstBtn = first.get(0);
+      const tab = new bootstrap.Tab(firstBtn);
+      tab.show();
+    }
+  }
+
+  // Helper to update aspect tab title
+  function updateAspectTabTitle(uid, text) {
+    $(`#tab-btn-${uid} button`).text(text || "Aspek Baru");
+  }
+
+  // Save KPI
   function saveKPI() {
-    if (!currentDivisionId || !currentRoleId) {
-      alert("Pilih divisi dan jabatan dulu!");
+    if (!currentMode) {
+      alert("Pilih mode (Global/Divisi) terlebih dahulu.");
+      return;
+    }
+    if (currentMode === "division" && !currentDivisionId) {
+      alert("Pilih divisi dulu!");
       return;
     }
 
-    const topics = [];
+    // build payload
+    const aspects = [];
     let totalWeight = 0;
     let valid = true;
 
-    document
-      .querySelectorAll("#topicContents .tab-pane")
-      .forEach((tabPane) => {
-        const kpiId = tabPane.querySelector(".kpi-id").value;
-        const topicName = tabPane.querySelector(".topic-name").value.trim();
-        const topicWeight =
-          Number(tabPane.querySelector(".topic-weight").value) || 0;
-        const questions = [];
-        tabPane.querySelectorAll(".question-text").forEach((q) => {
-          if (q.value.trim()) questions.push(q.value.trim());
-        });
+    $("#topicContents .tab-pane").each(function() {
+      const $pane = $(this);
+      const aspectId = $pane.find(".aspect-id").val() || null;
+      const aspectName = $pane.find(".aspect-name").val().trim();
+      const aspectWeight = Number($pane.find(".aspect-weight").val()) || 0;
 
-        if (!topicName) {
-          alert("Nama aspek tidak boleh kosong!");
+      if (!aspectName) {
+        alert("Nama aspek tidak boleh kosong!");
+        valid = false;
+        return false;
+      }
+      totalWeight += aspectWeight;
+
+      const subaspects = [];
+      $pane.find(".subaspect-card").each(function() {
+        const $sa = $(this);
+        const saId = $sa.find(".subaspect-id").val() || null;
+        const saName = $sa.find(".subaspect-name").val().trim();
+        const saWeight = Number($sa.find(".subaspect-weight").val()) || 0;
+        if (!saName) {
+          alert("Nama subaspek tidak boleh kosong!");
           valid = false;
+          return false;
         }
-        totalWeight += topicWeight;
-        topics.push({
-          kpiId,
-          topicName,
-          topicWeight,
+
+        const questions = [];
+        $sa.find(".question-text").each(function() {
+          const qText = $(this).val().trim();
+          const qRow = $(this).closest(".question-row");
+          const qId = qRow.data("question-id") || null;
+          if (qText) questions.push({
+            id: qId,
+            text: qText
+          });
+        });
+        subaspects.push({
+          id: saId,
+          name: saName,
+          weight: saWeight,
           questions
         });
       });
+      if (!valid) return false;
+
+      aspects.push({
+        id: aspectId,
+        name: aspectName,
+        weight: aspectWeight,
+        subaspects
+      });
+    });
 
     if (!valid) return;
+
     if (totalWeight > 100) {
-      alert("Total bobot tidak boleh lebih dari 100%");
+      alert("Total bobot aspek tidak boleh lebih dari 100%");
       return;
     }
 
-    // Save to API
+    const payload = {
+      mode: currentMode,
+      divisionId: currentMode === "division" ? currentDivisionId : null,
+      aspects
+    };
+
     $.ajax({
-      url: '/api/save-kpi',
-      method: 'POST',
-      data: {
-        divisionId: currentDivisionId,
-        roleId: currentRoleId,
-        topics: topics
-      },
+      url: "/api/save-kpi",
+      method: "POST",
+      contentType: "application/json",
+      data: JSON.stringify(payload),
       success: function(response) {
-        alert(response.message || 'KPI berhasil disimpan!');
-        // Reload the KPI data to get updated IDs
+        alert(response.message || "KPI berhasil disimpan!");
+        // reload after save
         loadKpiData();
       },
       error: function(xhr) {
-        console.error('Error saving KPI:', xhr.responseText);
-        alert('Gagal menyimpan KPI: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
+        console.error("Error saving KPI:", xhr.responseText);
+        alert("Gagal menyimpan KPI");
       }
     });
   }
-  // Add these functions to your kpi.blade.php JavaScript
 
-  function confirmRemoveTopic(index) {
-    if (confirm("Yakin hapus aspek ini?")) {
-      const tabPane = document.getElementById(`tab-${index}`);
-      const kpiId = tabPane.querySelector('.kpi-id').value;
-
-      if (kpiId) {
-        // If this is an existing KPI, delete it from the server
-        $.ajax({
-          url: `/api/division/${currentDivisionId}/kpi/${kpiId}`,
-          method: 'DELETE',
-          success: function(response) {
-            removeTopic(index);
-            alert(response.message || 'Aspek berhasil dihapus');
-          },
-          error: function(xhr) {
-            console.error('Error deleting KPI:', xhr.responseText);
-            alert('Gagal menghapus aspek: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
-          }
-        });
-      } else {
-        // If it's a new topic, just remove it from the UI
-        removeTopic(index);
-      }
-    }
+  // Utility: escape html for values
+  function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
-  function confirmRemoveQuestion(btn) {
-    if (confirm("Hapus pertanyaan ini?")) {
-      const questionInput = btn.previousElementSibling;
-      const questionId = questionInput.dataset.questionId;
-
-      if (questionId) {
-        // If this is an existing question, delete it from the server
-        $.ajax({
-          url: `/api/kpi-question/${questionId}`,
-          method: 'DELETE',
-          success: function(response) {
-            btn.parentElement.remove();
-            alert(response.message || 'Pertanyaan berhasil dihapus');
-          },
-          error: function(xhr) {
-            console.error('Error deleting question:', xhr.responseText);
-            alert('Gagal menghapus pertanyaan: ' + (xhr.responseJSON?.message || 'Terjadi kesalahan'));
-          }
-        });
-      } else {
-        // If it's a new question, just remove it from the UI
-        btn.parentElement.remove();
-      }
-    }
+  // Update info panel
+  function updateInfo() {
+    const weights = $(".aspect-weight")
+      .map((_, el) => Number(el.value) || 0)
+      .get();
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    $("#infoTotalWeight").text(totalWeight + "%");
+    $("#infoTopicCount").text($("#topicContents .tab-pane").length);
   }
 
-  // Update the questionTemplate function to include question ID
-  function questionTemplate(value = "", questionId = "") {
-    return `
-        <div class="input-group mb-2">
-            <input type="text" class="form-control question-text" value="${value}" 
-                placeholder="Masukkan pertanyaan" data-question-id="${questionId}">
-            <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestion(this)">Hapus</button>
-        </div>`;
-  }
-
-  // Update the renderTopic function to pass question IDs
-  function renderTopic(index, topicName, topicWeight, questions, kpiId) {
-    const tabId = `tab-${index}`;
-    const tabHTML = `
-        <li class="nav-item" role="presentation" id="tab-btn-${index}">
-            <button class="nav-link ${index === 1 ? "active" : ""}" 
-                id="${tabId}-tab" data-bs-toggle="tab" data-bs-target="#${tabId}" 
-                type="button" role="tab">
-                ${topicName || `aspek ${index}`}
-            </button>
-        </li>`;
-    document
-      .getElementById("topicTabs")
-      .insertAdjacentHTML("beforeend", tabHTML);
-
-    let questionsHTML = "";
-    questions.forEach((q) => {
-      questionsHTML += questionTemplate(q.pertanyaan, q.id_question);
-    });
-
-    const contentHTML = `
-        <div class="tab-pane fade ${index === 1 ? "show active" : ""}" id="${tabId}" role="tabpanel">
-            <input type="hidden" class="kpi-id" value="${kpiId || ''}">
-            <div class="mb-3">
-                <label class="form-label">Nama aspek</label>
-                <input type="text" class="form-control topic-name" value="${topicName}" 
-                    oninput="updateTabTitle(${index}, this.value)">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Bobot aspek (%)</label>
-                <input type="number" class="form-control topic-weight" value="${topicWeight}" min="0" max="100" 
-                    oninput="updateInfo()">
-            </div>
-            <h6>Pertanyaan</h6>
-            <div class="questions-container">
-                ${questionsHTML}
-            </div>
-            <button class="btn btn-outline-primary btn-sm mt-3" onclick="addQuestion('${tabId}')">+ Tambah Pertanyaan</button>
-            <button class="btn btn-danger btn-sm mt-3" onclick="confirmRemoveTopic(${index})">Hapus aspek</button>
-        </div>`;
-    document
-      .getElementById("topicContents")
-      .insertAdjacentHTML("beforeend", contentHTML);
-  }
+  // Initial small bootstrap activation for existing tabs (if any)
+  // (Not necessary but safe)
+  document.addEventListener("click", function(e) {
+    // allow bootstrap tab toggles from dynamic buttons
+  });
 </script>
-@endsection 
+@endsection

@@ -9,22 +9,24 @@ class Kpi extends Model
 {
     use HasFactory;
 
+    protected $table = 'kpis';
     protected $primaryKey = 'id_kpi';
-    protected $fillable = ['nama', 'deskripsi', 'bobot', 'role_id'];
+    protected $fillable = ['nama', 'deskripsi', 'bobot', 'is_global'];
+
+    public function points()
+    {
+        return $this->hasMany(KpiPoint::class, 'kpis_id_kpi', 'id_kpi');
+    }
+
+    public function employees()
+    {
+        return $this->belongsToMany(Employee::class, 'kpis_has_employees', 'kpis_id_kpi', 'employees_id_karyawan')
+            ->withPivot('nilai_akhir', 'tahun', 'bulan')
+            ->withTimestamps();
+    }
 
     public function divisions()
     {
-        return $this->belongsToMany(Division::class, 'divisions_has_kpis', 'kpis_id_kpi', 'division_id')
-                    ->withTimestamps();
-    }
-
-    public function role()
-    {
-        return $this->belongsTo(Role::class, 'role_id', 'id_jabatan');
-    }
-
-    public function questions()
-    {
-        return $this->hasMany(KpiQuestion::class, 'kpi_id', 'id_kpi');
+        return $this->belongsToMany(Division::class, 'divisions_has_kpis', 'kpis_id_kpi', 'division_id');
     }
 }

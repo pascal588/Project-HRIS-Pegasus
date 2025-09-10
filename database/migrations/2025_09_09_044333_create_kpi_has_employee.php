@@ -8,11 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('kpi_points', function (Blueprint $table) {
-            $table->id('id_point');
+        Schema::create('kpis_has_employees', function (Blueprint $table) {
+            $table->id('id');
             $table->foreignId('kpis_id_kpi')->constrained('kpis', 'id_kpi')->cascadeOnDelete();
-            $table->string('nama', 255); // nama sub-aspek (integritas 5%)
-            $table->decimal('bobot', 5, 2)->default(0); // bobot per sub-aspek
+            $table->unsignedBigInteger('employees_id_karyawan'); // FK ke tabel employees
+            $table->year('tahun');
+            $table->tinyInteger('bulan'); // 1-12
+            $table->decimal('nilai_akhir', 8, 2)->nullable(); // hasil akhir KPI
             $table->timestamps();
             $table->softDeletes();
         });
@@ -20,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('kpi_points');
+        Schema::dropIfExists('kpis_has_employees');
     }
 };

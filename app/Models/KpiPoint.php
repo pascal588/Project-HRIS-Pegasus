@@ -10,13 +10,32 @@ class KpiPoint extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $primaryKey = 'id_poin';
-    protected $fillable = ['nama'];
+    protected $table = 'kpi_points';
+    protected $primaryKey = 'id_point';
+    protected $fillable = ['kpis_id_kpi', 'nama', 'bobot'];
 
-    public function employees()
+    // Relasi ke KPI (aspek utama)
+    public function kpi()
     {
-        return $this->belongsToMany(Employee::class, 'kpi_points_has_employees', 'KPI_Points_id_poin', 'employees_id_karyawan')
-                    ->withPivot('nilai')
-                    ->withTimestamps();
+        return $this->belongsTo(Kpi::class, 'kpis_id_kpi', 'id_kpi');
+    }
+
+    // Relasi ke pertanyaan
+    public function questions()
+    {
+        return $this->hasMany(KpiQuestion::class, 'kpi_point_id', 'id_point');
+    }
+
+    // Relasi untuk ambil nilai karyawan langsung dari pertanyaan
+    public function employeeScores()
+    {
+        return $this->hasManyThrough(
+            KpiQuestionHasEmployee::class, // target akhir
+            KpiQuestion::class,            // lewat model KpiQuestion
+            'kpi_point_id',                // FK di kpi_questions
+            'kpi_question_id_question',    // FK di kpi_question_has_employees
+            'id_point',                    // PK di kpi_points
+            'id_question'                  // PK di kpi_questions
+        );
     }
 }

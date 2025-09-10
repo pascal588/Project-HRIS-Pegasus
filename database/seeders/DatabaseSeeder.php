@@ -3,8 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,10 +18,8 @@ class DatabaseSeeder extends Seeder
             EmployeeSeeder::class,
             RoleEmployeeSeeder::class,
             KpiSeeder::class,
-            DivisionKpiSeeder::class,
-            KpiPointSeeder::class,
-            KpiPointEmployeeSeeder::class,
-            KpiQuestionSeeder::class,
+            kpiPointSeeder::class,
+            DivisionHasKpiSeeder::class
         ]);
     }
 }

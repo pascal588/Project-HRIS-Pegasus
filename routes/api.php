@@ -5,13 +5,18 @@ use App\Http\Controllers\Api\DivisionController;
 use App\Http\Controllers\Api\EmployeeApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\KpiController;
+use Illuminate\Support\Facades\Route;
 
-  // ==== DIVISIONS ====
-  Route::apiResource('divisions', DivisionController::class);
+// routes/api.php
+Route::get('/divisions', [DivisionController::class, 'index']);
+Route::post('/divisions', [DivisionController::class, 'store']);
+Route::get('/divisions/{division}', [DivisionController::class, 'show']);
+Route::put('/divisions/{division}', [DivisionController::class, 'update']);
+Route::delete('/divisions/{division}', [DivisionController::class, 'destroy']);
 
-  // Karyawan per divisi & update kepala divisi
-  Route::get('/divisions/{division}/employees', [DivisionController::class, 'getEmployees']);
-  Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead']);
+// Tambahkan routes untuk karyawan divisi
+Route::get('/divisions/{division}/employees', [DivisionController::class, 'getEmployees']);
+Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead']);
 
   // Statistik divisi
   Route::get('/divisions/{division}/employee-count', [DivisionController::class, 'getEmployeeCount']);

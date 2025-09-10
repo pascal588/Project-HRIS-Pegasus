@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PenilaiController;
+use App\Http\Controllers\HrController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -30,9 +31,7 @@ Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
     Route::get('/absensi', function() {
         return view('hr.absensi');
     })->name('hr.absensi');
-    Route::get('/detail-absensi', function() {
-        return view('hr.detail-absensi');
-    })->name('hr.detail-absensi');
+    Route::get('/hr/detail-absensi/{employee_id}', [HrController::class, 'detailAbsensi'])->name('hr.detail-absensi');
     Route::get('/kpi-karyawan', function() {
         return view('hr.kpi-karyawan');
     })->name('hr.kpi-karyawan');

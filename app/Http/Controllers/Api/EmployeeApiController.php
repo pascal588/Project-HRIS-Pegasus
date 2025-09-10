@@ -47,6 +47,7 @@ class EmployeeApiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'id_karyawan' => 'required|integer|unique:employees,id_karyawan',
             'nama' => 'required|string|max:100',
             'no_telp' => 'required|string|max:15',
             'gender' => 'required',
@@ -62,6 +63,7 @@ class EmployeeApiController extends Controller
 
             // buat employee
             $employee = Employee::create([
+                'id_karyawan' => $request->id_karyawan,
                 'user_id' => $user->id,
                 'nama' => $request->nama,
                 'no_telp' => $request->no_telp,
@@ -70,18 +72,21 @@ class EmployeeApiController extends Controller
             ]);
 
             // cari role default "Karyawan"
-            $defaultRole = Role::where('nama_jabatan', 'Karyawan')->first();
-
-            if ($defaultRole) {
-                $employee->roles()->attach($defaultRole->id_jabatan);
-            }
-
-            // kalau request kirim role tambahan, tambahkan
             if ($request->filled('role_id')) {
                 $employee->roles()->attach($request->role_id);
+            } else {
+                // fallback: cari role Karyawan di divisi yang dikirim
+                if ($request->filled('division_id')) {
+                    $defaultRole = Role::where('nama_jabatan', 'Karyawan')
+                        ->where('division_id', $request->division_id)
+                        ->first();
+
+                    if ($defaultRole) {
+                        $employee->roles()->attach($defaultRole->id_jabatan);
+                    }
+                }
             }
 
-            return $employee->load('user', 'roles.division');
         });
 
         return response()->json([

@@ -12,7 +12,7 @@ class RoleEmployeeSeeder extends Seeder
         DB::table('roles_has_employees')->insert([
             ['role_id' => 1, 'employee_id' => 1], // Admin HR as Manager
             ['role_id' => 2, 'employee_id' => 2], // Karyawan 1 as IT Staff
-            ['role_id' => 3, 'employee_id' => 3], // Karyawan 2 as Finance Staff
+            ['role_id' => 3, 'employee_id' => 2018213], // Karyawan 2 as Finance Staff
         ]);
     }
 }

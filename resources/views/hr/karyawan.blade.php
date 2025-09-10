@@ -323,6 +323,10 @@
       <div class="modal-body">
         <form id="formTambahKaryawan">
           <div class="row">
+            <div class="col-md-12 mb-3">
+              <label class="form-label">ID karyawan</label>
+              <input type="text" class="form-control" id="idKaryawan" name="id_karyawan" required>
+            </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Nama Lengkap</label>
               <input type="text" class="form-control" id="namaKaryawan" required>
@@ -1082,13 +1086,14 @@
 
     // TAMBAH KARYAWAN - FIXED (auto bikin role Karyawan di divisi manapun)
     $('#tambahKaryawanBtn').click(function() {
+      const idKaryawan = $('#idKaryawan').val(); 
       const nama = $('#namaKaryawan').val();
       const divisiId = $('#divisiKaryawan').val();
       const gender = $('#genderKaryawan').val();
       const telp = $('#telpKaryawan').val();
       const email = $('#emailKaryawan').val();
 
-      if (!nama || !divisiId || !gender || !telp || !email) {
+      if (!idKaryawan || !nama || !divisiId || !gender || !telp || !email) {
         alert('Semua field harus diisi!');
         return;
       }
@@ -1110,6 +1115,7 @@
             const roleId = roleResponse.data.id_jabatan;
 
             const payload = {
+              id_karyawan: idKaryawan,
               nama: nama,
               gender: gender,
               no_telp: telp,
@@ -1151,7 +1157,7 @@
     });
 
     // Fungsi untuk cari role Karyawan yang sudah ada
-    function cariRoleKaryawan(divisiId, nama, gender, telp, email) {
+    function cariRoleKaryawan(divisiId,idKaryawan, nama, gender, telp, email) {
       $.get('/api/roles')
         .done(rolesResponse => {
           const roles = rolesResponse.data || rolesResponse;
@@ -1164,13 +1170,13 @@
 
           if (roleKaryawan) {
             // Jika ditemukan, simpan karyawan
-            simpanKaryawan(roleKaryawan.id_jabatan, nama, gender, telp, email);
+            simpanKaryawan(roleKaryawan.id_jabatan,idKaryawan, nama, gender, telp, email);
           } else {
             // Jika tidak ditemukan, cari di divisi manapun
             roleKaryawan = roles.find(role => role.nama_jabatan.toLowerCase() === 'karyawan');
 
             if (roleKaryawan) {
-              simpanKaryawan(roleKaryawan.id_jabatan, nama, gender, telp, email);
+              simpanKaryawan(roleKaryawan.id_jabatan,idKaryawan, nama, gender, telp, email);
             } else {
               alert('Tidak dapat menemukan atau membuat role "Karyawan". Silahkan coba lagi.');
             }
@@ -1182,8 +1188,9 @@
     }
 
     // Fungsi untuk simpan karyawan
-    function simpanKaryawan(roleId, nama, gender, telp, email) {
+    function simpanKaryawan(roleId, nama, gender, telp, email, idKaryawan) {
       const payload = {
+        id_karyawan: idKaryawan,
         nama: nama,
         gender: gender,
         no_telp: telp,

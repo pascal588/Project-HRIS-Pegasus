@@ -12,8 +12,11 @@ class Employee extends Model
 
     protected $table = 'employees';
     protected $primaryKey = 'id_karyawan';
+    public $incrementing = false;
+    protected $keyType = 'int'; 
 
     protected $fillable = [
+        'id_karyawan', 
         'user_id',
         'nama',
         'no_telp',

@@ -6,6 +6,15 @@ use App\Http\Controllers\Api\EmployeeApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\KpiController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AttendanceApiController;
+
+
+
+Route::get('/attendances', [AttendanceApiController::class, 'index']);
+Route::get('/attendances/periods', [AttendanceApiController::class, 'getPeriods']);
+Route::post('/attendances/import', [AttendanceApiController::class, 'import']);
+Route::get('/attendances/summary', [AttendanceApiController::class, 'getSummary']);
+Route::get('/attendances/employee/{employee_id}', [AttendanceApiController::class, 'getEmployeeAttendance']);
 
 // routes/api.php
 Route::get('/divisions', [DivisionController::class, 'index']);

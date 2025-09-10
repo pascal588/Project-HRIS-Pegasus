@@ -251,22 +251,6 @@
     // Inisialisasi DataTable
     let table = $('#divisiDataTable').DataTable({
       responsive: true,
-      language: {
-        processing: "Memproses...",
-        search: "Cari:",
-        lengthMenu: "Tampilkan _MENU_ entri",
-        info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
-        infoEmpty: "Menampilkan 0 sampai 0 dari 0 entri",
-        infoFiltered: "(disaring dari _MAX_ total entri)",
-        loadingRecords: "Memuat data...",
-        zeroRecords: "Tidak ada data yang ditemukan",
-        emptyTable: "Tidak ada data divisi yang tersedia",
-        paginate: {
-          first: "Pertama",
-          previous: "Sebelumnya",
-          next: "Selanjutnya",
-          last: "Terakhir"
-        }
       },
       ajax: {
         url: "/api/divisions",

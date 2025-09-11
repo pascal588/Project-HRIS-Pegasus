@@ -49,7 +49,7 @@ class AttendanceApiController extends Controller
     }
 
     // POST /api/attendances/import
-// Di dalam method import(), perbaiki bagian pemrosesan data
+// POST /api/attendances/import
 public function import(Request $request)
 {
     $request->validate([
@@ -62,11 +62,10 @@ public function import(Request $request)
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray();
 
-        // Get employee ID and period from Excel - perbaikan untuk format khusus
+        // Get employee ID and period from Excel
         $employeeId = null;
         $period = null;
         
-        // Cari metadata dengan lebih robust untuk format Excel ini
         foreach ($rows as $rowIndex => $row) {
             foreach ($row as $index => $cell) {
                 if (trim($cell) === 'Personnel ID' && isset($row[$index + 1])) {
@@ -77,7 +76,6 @@ public function import(Request $request)
                 }
             }
             
-            // Hentikan pencarian setelah menemukan kedua data
             if ($employeeId && $period) {
                 break;
             }
@@ -99,132 +97,96 @@ public function import(Request $request)
             ], 400);
         }
 
-        // Find header row and map column indexes - sesuaikan dengan format Excel
-        $headerRowIndex = null;
+        // Find header rows - kita perlu membaca dua baris header
+        $headerRowIndex1 = null;
+        $headerRowIndex2 = null;
         $columnMapping = [];
         
         foreach ($rows as $index => $row) {
-            // Look for header row dengan format yang sesuai dengan Excel
-            $noIndex = array_search('No', $row);
-            $dateIndex = array_search('Date', $row);
-            $statusIndex = array_search('Status', $row);
-            
-            if ($noIndex !== false && $dateIndex !== false && $statusIndex !== false) {
-                $headerRowIndex = $index;
-                
-                // Map column names to their indexes - sesuaikan dengan struktur Excel
-                $columnMapping = [
-                    'no' => $noIndex,
-                    'date' => $dateIndex,
-                    'status' => $statusIndex,
-                    'work_pattern' => array_search('Work Pattern', $row) !== false ? array_search('Work Pattern', $row) : null,
-                    'clock_in' => array_search('Clock-in', $row) !== false ? array_search('Clock-in', $row) : null,
-                    'clock_out' => array_search('Clock-out', $row) !== false ? array_search('Clock-out', $row) : null,
-                    'late_tolerance' => array_search('Late Tolerance', $row) !== false ? array_search('Late Tolerance', $row) : null,
-                    'daily_attendance_clock_in' => $this->findColumnIndex($row, ['Daily Attendance', 'Clock-in']),
-                    'break' => array_search('Break', $row) !== false ? array_search('Break', $row) : null,
-                    'after_break' => array_search('After Break', $row) !== false ? array_search('After Break', $row) : null,
-                    'daily_attendance_clock_out' => $this->findColumnIndex($row, ['Daily Attendance', 'Clock-out']),
-                    'overtime_in' => array_search('Overtime In', $row) !== false ? array_search('Overtime In', $row) : null,
-                    'overtime_out' => array_search('Overtime Out', $row) !== false ? array_search('Overtime Out', $row) : null,
-                    'late' => array_search('Late', $row) !== false ? array_search('Late', $row) : null,
-                    'early_leave' => array_search('Early Leave', $row) !== false ? array_search('Early Leave', $row) : null,
-                    'total_attendance' => $this->findColumnIndex($row, ['Total', 'Attendance']),
-                    'break_duration' => $this->findColumnIndex($row, ['Break', 'Break Duration']),
-                    'overtime' => array_search('Overtime', $row) !== false ? array_search('Overtime', $row) : null,
-                    'timezone_clock_in' => $this->findColumnIndex($row, ['Timezone', 'Clock-in']),
-                    'timezone_clock_out' => $this->findColumnIndex($row, ['Timezone', 'Clock-out']),
-                ];
-                
+            // Cari baris dengan "No", "Date", "Status"
+            if (in_array('No', $row) && in_array('Date', $row) && in_array('Status', $row)) {
+                $headerRowIndex1 = $index;
+                $headerRowIndex2 = $index + 1; // Baris header kedua ada di bawahnya
                 break;
             }
         }
 
-        if ($headerRowIndex === null) {
+        if ($headerRowIndex1 === null) {
             return response()->json([
                 'success' => false,
                 'message' => 'Could not find header row in Excel file'
             ], 400);
         }
 
+        // Dapatkan kedua baris header
+        $headerRow1 = $rows[$headerRowIndex1];
+        $headerRow2 = $rows[$headerRowIndex2];
+
+        // Buat mapping kolom berdasarkan kedua baris header
+        $columnMapping = $this->createColumnMapping($headerRow1, $headerRow2);
+
         $importedCount = 0;
         $skippedCount = 0;
 
-        // Process attendance data starting from row after header
-        for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+        // Process attendance data starting from row after second header
+        for ($i = $headerRowIndex2 + 1; $i < count($rows); $i++) {
             $row = $rows[$i];
             
-            // Skip empty rows or rows without date
+            // Skip empty rows atau rows tanpa nomor
             if (empty($row[$columnMapping['no']]) || !is_numeric($row[$columnMapping['no']])) {
                 continue;
             }
 
             try {
-                // Parse date safely - handle format "6 Aug 2025"
+                // Parse date
                 $dateValue = $row[$columnMapping['date']];
                 $date = \Carbon\Carbon::createFromFormat('d M Y', $dateValue)->format('Y-m-d');
                 
-                // Konversi status dari format Excel ke format database jika perlu
-                $status = isset($columnMapping['status']) && isset($row[$columnMapping['status']]) ? $row[$columnMapping['status']] : null;
-                
-                // Pastikan status sesuai dengan enum yang ditentukan
-                $validStatuses = [
-                    'Present at workday (PW)', 
-                    'Non-working day (NW)', 
-                    'Absent (A)', 
-                    'Sick (S)', 
-                    'Permission (I)'
+                // Process status
+                $status = $row[$columnMapping['status']] ?? null;
+                $statusMap = [
+                    'Present at workday (PW)' => 'Present at workday (PW)',
+                    'Non-working day (NW)' => 'Non-working day (NW)',
+                    'Absent (A)' => 'Absent (A)',
+                    'Sick (S)' => 'Sick (S)',
+                    'Permission (I)' => 'Permission (I)'
                 ];
                 
-                if (!in_array($status, $validStatuses)) {
-                    // Coba mapping jika status tidak persis sama
-                    $statusMap = [
-                        'Present at workday (PW)' => 'Present at workday (PW)',
-                        'Non-working day (NW)' => 'Non-working day (NW)',
-                        'Absent (A)' => 'Absent (A)',
-                        'Sick (S)' => 'Sick (S)',
-                        'Permission (I)' => 'Permission (I)'
-                    ];
-                    
-                    $status = $statusMap[$status] ?? 'Absent (A)'; // Default to Absent if not recognized
-                }
-                
-                // Map Excel columns to database fields using column mapping
+                $status = $statusMap[$status] ?? 'Absent (A)';
+
+                // Prepare attendance data
                 $attendanceData = [
                     'employee_id' => $employeeId,
                     'period' => $period,
                     'date' => $date,
                     'status' => $status,
-                    'work_pattern' => isset($columnMapping['work_pattern']) && isset($row[$columnMapping['work_pattern']]) ? $row[$columnMapping['work_pattern']] : null,
-                    'clock_in' => isset($columnMapping['clock_in']) && isset($row[$columnMapping['clock_in']]) ? $this->parseTime($row[$columnMapping['clock_in']]) : null,
-                    'clock_out' => isset($columnMapping['clock_out']) && isset($row[$columnMapping['clock_out']]) ? $this->parseTime($row[$columnMapping['clock_out']]) : null,
-                    'late_tolerance' => isset($columnMapping['late_tolerance']) && isset($row[$columnMapping['late_tolerance']]) ? $this->parseInt($row[$columnMapping['late_tolerance']]) : null,
-                    'daily_attendance_clock_in' => isset($columnMapping['daily_attendance_clock_in']) && isset($row[$columnMapping['daily_attendance_clock_in']]) ? $this->parseTime($row[$columnMapping['daily_attendance_clock_in']]) : null,
-                    'break' => isset($columnMapping['break']) && isset($row[$columnMapping['break']]) ? $this->parseTime($row[$columnMapping['break']]) : null,
-                    'after_break' => isset($columnMapping['after_break']) && isset($row[$columnMapping['after_break']]) ? $this->parseTime($row[$columnMapping['after_break']]) : null,
-                    'daily_attendance_clock_out' => isset($columnMapping['daily_attendance_clock_out']) && isset($row[$columnMapping['daily_attendance_clock_out']]) ? $this->parseTime($row[$columnMapping['daily_attendance_clock_out']]) : null,
-                    'overtime_in' => isset($columnMapping['overtime_in']) && isset($row[$columnMapping['overtime_in']]) ? $this->parseTime($row[$columnMapping['overtime_in']]) : null,
-                    'overtime_out' => isset($columnMapping['overtime_out']) && isset($row[$columnMapping['overtime_out']]) ? $this->parseTime($row[$columnMapping['overtime_out']]) : null,
-                    'late' => isset($columnMapping['late']) && isset($row[$columnMapping['late']]) ? $this->parseInt($row[$columnMapping['late']]) : null,
-                    'early_leave' => isset($columnMapping['early_leave']) && isset($row[$columnMapping['early_leave']]) ? $this->parseInt($row[$columnMapping['early_leave']]) : null,
-                    'total_attendance' => isset($columnMapping['total_attendance']) && isset($row[$columnMapping['total_attendance']]) ? $this->parseTimeDuration($row[$columnMapping['total_attendance']]) : null,
-                    'break_duration' => isset($columnMapping['break_duration']) && isset($row[$columnMapping['break_duration']]) ? $this->parseTimeDuration($row[$columnMapping['break_duration']]) : null,
-                    'overtime' => isset($columnMapping['overtime']) && isset($row[$columnMapping['overtime']]) ? $this->parseTimeDuration($row[$columnMapping['overtime']]) : null,
-                    'timezone_clock_in' => isset($columnMapping['timezone_clock_in']) && isset($row[$columnMapping['timezone_clock_in']]) ? $row[$columnMapping['timezone_clock_in']] : null,
-                    'timezone_clock_out' => isset($columnMapping['timezone_clock_out']) && isset($row[$columnMapping['timezone_clock_out']]) ? $row[$columnMapping['timezone_clock_out']] : null,
+                    'work_pattern_clock_in' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_in'),
+                    'work_pattern_clock_out' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_out'),
+                    'work_pattern_late_tolerance' => $this->getCellValue($row, $columnMapping, 'work_pattern_late_tolerance', 'int'),
+                    'daily_attendance_clock_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_in'),
+                    'daily_attendance_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_break'),
+                    'daily_attendance_after_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_after_break'),
+                    'daily_attendance_clock_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_out'),
+                    'daily_attendance_overtime_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_in'),
+                    'daily_attendance_overtime_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_out'),
+                    'late' => $this->getCellValue($row, $columnMapping, 'late', 'int'),
+                    'early_leave' => $this->getCellValue($row, $columnMapping, 'early_leave', 'int'),
+                    'total_attendance' => $this->getCellValue($row, $columnMapping, 'total_attendance', 'duration'),
+                    'total_break_duration' => $this->getCellValue($row, $columnMapping, 'total_break_duration', 'duration'),
+                    'total_overtime' => $this->getCellValue($row, $columnMapping, 'total_overtime', 'duration'),
+                    'timezone_clock_in' => $this->getCellValue($row, $columnMapping, 'timezone_clock_in'),
+                    'timezone_clock_out' => $this->getCellValue($row, $columnMapping, 'timezone_clock_out'),
                 ];
 
-                // Check if attendance already exists for this date and employee
+                // Check if attendance already exists
                 $existing = Attendance::where('employee_id', $employeeId)
                     ->where('date', $attendanceData['date'])
                     ->first();
 
                 if ($existing) {
-                    // Update existing record
                     $existing->update($attendanceData);
                     $importedCount++;
                 } else {
-                    // Create new record
                     Attendance::create($attendanceData);
                     $importedCount++;
                 }
@@ -251,6 +213,93 @@ public function import(Request $request)
             'success' => false,
             'message' => 'Failed to import attendance data: ' . $e->getMessage()
         ], 500);
+    }
+}
+
+// Helper method untuk membuat mapping kolom dari dua baris header
+private function createColumnMapping($headerRow1, $headerRow2)
+{
+    $mapping = [
+        'no' => array_search('No', $headerRow1),
+        'date' => array_search('Date', $headerRow1),
+        'status' => array_search('Status', $headerRow1),
+    ];
+
+    // Mapping untuk Work Pattern
+    $workPatternIndex = array_search('Work Pattern', $headerRow1);
+    if ($workPatternIndex !== false) {
+        $mapping['work_pattern_clock_in'] = $this->findSubColumnIndex($headerRow2, 'Clock-in', $workPatternIndex);
+        $mapping['work_pattern_clock_out'] = $this->findSubColumnIndex($headerRow2, 'Clock-out', $workPatternIndex);
+        $mapping['work_pattern_late_tolerance'] = $this->findSubColumnIndex($headerRow2, 'Late Tolerance', $workPatternIndex);
+    }
+
+    // Mapping untuk Daily Attendance
+    $dailyAttendanceIndex = array_search('Daily Attendance', $headerRow1);
+    if ($dailyAttendanceIndex !== false) {
+        $mapping['daily_attendance_clock_in'] = $this->findSubColumnIndex($headerRow2, 'Clock-in', $dailyAttendanceIndex);
+        $mapping['daily_attendance_break'] = $this->findSubColumnIndex($headerRow2, 'Break', $dailyAttendanceIndex);
+        $mapping['daily_attendance_after_break'] = $this->findSubColumnIndex($headerRow2, 'After Break', $dailyAttendanceIndex);
+        $mapping['daily_attendance_clock_out'] = $this->findSubColumnIndex($headerRow2, 'Clock-out', $dailyAttendanceIndex);
+        $mapping['daily_attendance_overtime_in'] = $this->findSubColumnIndex($headerRow2, 'Overtime In', $dailyAttendanceIndex);
+        $mapping['daily_attendance_overtime_out'] = $this->findSubColumnIndex($headerRow2, 'Overtime Out', $dailyAttendanceIndex);
+    }
+
+    // Mapping untuk kolom lainnya
+    $mapping['late'] = array_search('Late', $headerRow1);
+    $mapping['early_leave'] = array_search('Early Leave', $headerRow1);
+    
+    // Mapping untuk Total
+    $totalIndex = array_search('Total', $headerRow1);
+    if ($totalIndex !== false) {
+        $mapping['total_attendance'] = $this->findSubColumnIndex($headerRow2, 'Attendance', $totalIndex);
+        $mapping['total_break_duration'] = $this->findSubColumnIndex($headerRow2, 'Break', $totalIndex);
+        $mapping['total_overtime'] = $this->findSubColumnIndex($headerRow2, 'Overtime', $totalIndex);
+    }
+
+    // Mapping untuk Timezone
+    $timezoneIndex = array_search('Timezone', $headerRow1);
+    if ($timezoneIndex !== false) {
+        $mapping['timezone_clock_in'] = $this->findSubColumnIndex($headerRow2, 'Clock-in', $timezoneIndex);
+        $mapping['timezone_clock_out'] = $this->findSubColumnIndex($headerRow2, 'Clock-out', $timezoneIndex);
+    }
+
+    return $mapping;
+}
+
+// Helper untuk mencari sub-kolom di bawah header utama
+private function findSubColumnIndex($headerRow2, $columnName, $startIndex)
+{
+    // Cari kolom dengan nama yang sesuai, mulai dari index tertentu
+    for ($i = $startIndex; $i < count($headerRow2); $i++) {
+        if (trim($headerRow2[$i]) === $columnName) {
+            return $i;
+        }
+    }
+    return null;
+}
+
+// Helper untuk mendapatkan nilai cell dengan tipe data yang sesuai
+private function getCellValue($row, $columnMapping, $key, $type = 'string')
+{
+    if (!isset($columnMapping[$key]) || !isset($row[$columnMapping[$key]])) {
+        return null;
+    }
+
+    $value = $row[$columnMapping[$key]];
+
+    if ($value === '-' || $value === '' || $value === null) {
+        return null;
+    }
+
+    switch ($type) {
+        case 'int':
+            return $this->parseInt($value);
+        case 'duration':
+            return $this->parseTimeDuration($value);
+        case 'time':
+            return $this->parseTime($value);
+        default:
+            return $value;
     }
 }
 
@@ -412,7 +461,9 @@ public function getEmployeeAttendance($employee_id, Request $request)
     try {
         // Cari employee berdasarkan id_karyawan
         $employee = Employee::where('id_karyawan', $employee_id)
-            ->with('roles.division')
+            ->with(['roles.division', 'roles' => function($query) {
+                $query->select('id_jabatan', 'nama_jabatan', 'division_id');
+            }])
             ->firstOrFail();
         
         $query = Attendance::where('employee_id', $employee_id);
@@ -450,7 +501,7 @@ public function getEmployeeAttendance($employee_id, Request $request)
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'Employee not found: ' . $e->getMessage()
+            'message' => 'Employee not found: ' . $ek->getMessage()
         ], 404);
     }
 }

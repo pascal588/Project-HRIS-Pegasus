@@ -226,7 +226,9 @@ $(document).ready(function() {
                     $('#emp-name').text(response.employee.nama);
                     $('#emp-id').text(response.employee.id_karyawan);
                     $('#emp-division').text(response.employee.roles[0]?.division?.nama_divisi || '-');
-                    $('#emp-position').text(response.employee.roles[0]?.jabatan || '-');
+                    // Tampilkan semua jabatan (jika ada lebih dari satu)
+                    const positions = response.employee.roles.map(role => role.nama_jabatan).join(', ');
+                    $('#emp-position').text(positions || '-');
                     
                     // Update summary
                     $('#summary-hadir').text(response.summary.hadir + ' Hari');

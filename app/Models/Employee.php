@@ -36,6 +36,12 @@ class Employee extends Model
                     ->withPivot('created_at', 'updated_at');
     }
 
+    //relasi ke divisi
+    public function division() {
+    return $this->belongsTo(Division::class, 'divisions_id_divisi', 'id_divisi');
+}
+
+
     public function kpiPoints()
     {
         return $this->belongsToMany(KpiPoint::class, 'kpi_points_has_employees', 'employees_id_karyawan', 'KPI_Points_id_poin')

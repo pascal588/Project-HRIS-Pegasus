@@ -12,8 +12,8 @@ class DivisionHasKpiSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('divisions_has_kpis')->insert([
-            'division_id' => 1,
+        DB::table('division_has_kpis')->insert([
+            'id_divisi' => 1,
             'kpis_id_kpi' => 1,
             'created_at' => now(),
             'updated_at' => now(),

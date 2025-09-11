@@ -25,7 +25,7 @@ class Division extends Model
     
     public function kpis()
     {
-        return $this->belongsToMany(Kpi::class, 'divisions_has_kpis', 'division_id', 'kpis_id_kpi')
+        return $this->belongsToMany(Kpi::class, 'division_has_kpis', 'id_divisi', 'kpis_id_kpi')
                     ->withTimestamps();
     }
 }

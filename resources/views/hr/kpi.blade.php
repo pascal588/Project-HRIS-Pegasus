@@ -113,18 +113,7 @@
 @endsection
 
 @section('script')
-<!-- plugin chart -->
-<script src="assets/bundles/apexcharts.bundle.js"></script>
-<!-- Plugin Js tabel-->
-<script src="assets/bundles/dataTables.bundle.js"></script>
-
-<!-- plugin chart -->
-<script src="assets/bundles/apexcharts.bundle.js"></script>
-<!-- Plugin Js tabel-->
-<script src="assets/bundles/dataTables.bundle.js"></script>
-
 <script>
-  // --- Helper unique id ---
   let _uidCounter = 0;
 
   function uid(prefix = "id") {
@@ -132,12 +121,10 @@
     return `${prefix}_${Date.now()}_${_uidCounter}`;
   }
 
-  // State
   let currentDivisionId = "";
-  let currentMode = ""; // "global" or "division"
+  let currentMode = ""; // "global" atau "division"
   const divisionSelect = document.getElementById("divisionSelect");
 
-  // Initialize
   $(document).ready(function() {
     $("#modeSelect").on("change", onModeChange);
     loadDivisions();
@@ -155,36 +142,31 @@
       $("#divisionSelect").val("");
       currentDivisionId = "";
     }
-    // Load KPI for selected mode
+
     if (currentMode === "global") {
       $("#infoDivision").text("Global");
-      loadKpiData(); // load global
+      loadKpiData();
     } else {
       $("#infoDivision").text("-");
       clearKPIForm();
     }
   }
 
-  // Load divisions from API
   function loadDivisions() {
     $.getJSON("/api/divisions")
       .done(function(response) {
-        if (response.success && response.data) {
-          divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+        divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+        if (response && response.success && response.data) {
           response.data.forEach((division) => {
             const option = document.createElement("option");
             option.value = division.id_divisi;
             option.textContent = division.nama_divisi;
             divisionSelect.appendChild(option);
           });
-        } else {
-          console.warn("Format data divisi tidak valid", response);
-          divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
         }
       })
       .fail(function(xhr) {
-        console.error("Error loading divisions:", xhr.responseText);
-        divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
+        console.error("Error loading divisions:", xhr.responseText || xhr.statusText);
       });
   }
 
@@ -199,48 +181,59 @@
     }
   }
 
-  // --- KPI UI management ---
   function clearKPIForm() {
     $("#topicTabs").empty();
     $("#topicContents").empty();
     updateInfo();
   }
 
-  // Load KPI data depending on mode
   function loadKpiData() {
     clearKPIForm();
-    if (currentMode === "division") {
-      if (!currentDivisionId) return;
+    if (currentMode === "division" && currentDivisionId) {
       $.getJSON(`/api/kpi-by-division/${currentDivisionId}`)
         .done(function(response) {
           if (response.kpis && response.kpis.length) {
-            // Expecting response.kpis array of aspek; each aspek may have subaspects and questions
-            response.kpis.forEach((kpi) => {
-              renderAspect(kpi);
-            });
+            response.kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
             updateInfo();
           }
         })
         .fail(function(xhr) {
-          console.error("Error loading KPI data:", xhr.responseText);
+          console.error("Error loading KPI data:", xhr.responseText || xhr.statusText);
         });
     } else if (currentMode === "global") {
       $.getJSON(`/api/kpi-global`)
         .done(function(response) {
           if (response.kpis && response.kpis.length) {
-            response.kpis.forEach((kpi) => renderAspect(kpi));
+            response.kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
             updateInfo();
           }
         })
         .fail(function(xhr) {
-          console.error("Error loading global KPI:", xhr.responseText);
+          console.error("Error loading global KPI:", xhr.responseText || xhr.statusText);
         });
     }
   }
 
-  // Add new aspect (tab)
+  function normalizeKpiFromServer(kpi) {
+    return {
+      uid: uid("kpi"),
+      id: kpi.id || kpi.id_kpi || null,
+      nama: kpi.nama || "",
+      bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
+      subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
+        uid: uid("sub"),
+        id: pt.id || pt.id_point || null,
+        nama: pt.nama || "",
+        bobot: pt.bobot !== undefined ? pt.bobot : 0,
+        questions: (pt.questions || pt.kpi_questions || []).map((q) => ({
+          id: q.id_question || q.id || null,
+          pertanyaan: q.pertanyaan || "",
+        })),
+      })),
+    };
+  }
+
   function addAspect() {
-    // if division mode require division chosen
     if (currentMode === "division" && !currentDivisionId) {
       alert("Pilih divisi dulu!");
       return;
@@ -248,81 +241,88 @@
     const aspect = {
       uid: uid("aspect"),
       id: null,
-      name: "",
-      weight: 0,
-      subaspects: []
+      nama: "",
+      bobot: 0,
+      subaspects: [],
     };
     renderAspect(aspect, true);
     setActiveTab(aspect.uid);
     updateInfo();
   }
 
-  // RENDERING: aspect -> subaspects -> questions
   function renderAspect(aspectObj, newlyCreated = false) {
-    // aspectObj may be from server: {id, nama, bobot, subaspects: [{id, nama, bobot, questions: [{id_question, pertanyaan}]}]}
     const aspectUid = aspectObj.uid || uid("aspect");
     const aspectId = aspectObj.id || "";
-    const aspectName = aspectObj.nama || aspectObj.name || "";
-    const aspectWeight = aspectObj.bobot !== undefined ? aspectObj.bobot : (aspectObj.weight || 0);
+    const aspectName = aspectObj.nama || "";
+    const aspectWeight = aspectObj.bobot || 0;
     const subaspects = aspectObj.subaspects || [];
 
-    // Tab button
-    const tabBtnHtml = `
-      <li class="nav-item" id="tab-btn-${aspectUid}" role="presentation">
-        <button class="nav-link ${newlyCreated ? "active" : ($("#topicTabs .nav-link").length===0 ? "active":"")}"
-                id="tab-${aspectUid}-tab" data-bs-toggle="tab" data-bs-target="#tab-${aspectUid}"
-                type="button" role="tab">${aspectName || "Aspek Baru"}</button>
-      </li>`;
-    $("#topicTabs").append(tabBtnHtml);
+    // Tab
+    const li = document.createElement("li");
+    li.className = "nav-item";
+    li.id = `tab-btn-${aspectUid}`;
+    li.setAttribute("role", "presentation");
 
-    // Subaspects HTML
-    let subHtml = '';
-    subaspects.forEach(sa => {
-      subHtml += subaspectTemplate(aspectUid, sa);
-    });
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "nav-link";
+    if (newlyCreated || document.querySelectorAll("#topicTabs .nav-link").length === 0)
+      btn.classList.add("active");
+    btn.id = `tab-${aspectUid}-tab`;
+    btn.setAttribute("data-bs-toggle", "tab");
+    btn.setAttribute("data-bs-target", `#tab-${aspectUid}`);
+    btn.setAttribute("role", "tab");
+    btn.textContent = aspectName || "Aspek Baru";
+    li.appendChild(btn);
+    document.getElementById("topicTabs").appendChild(li);
 
-    // content pane
-    const contentHtml = `
-      <div class="tab-pane fade ${newlyCreated || ($("#topicContents .tab-pane").length===0 ? "show active" : "")}"
-           id="tab-${aspectUid}" role="tabpanel" data-aspect-uid="${aspectUid}">
-        <input type="hidden" class="aspect-id" value="${aspectId}">
-        <div class="mb-3">
-          <label class="form-label">Nama aspek</label>
-          <input type="text" class="form-control aspect-name" value="${escapeHtml(aspectName)}"
-            oninput="updateAspectTabTitle('${aspectUid}', this.value)">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Bobot aspek (%)</label>
-          <input type="number" class="form-control aspect-weight" value="${aspectWeight}" min="0" max="100" oninput="updateInfo()">
-        </div>
+    // Content
+    let subHtml = "";
+    subaspects.forEach((sa) => (subHtml += subaspectTemplate(aspectUid, sa)));
 
-        <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
-          <h6>Subaspek</h6>
-          ${subHtml}
-        </div>
+    const contentPane = document.createElement("div");
+    contentPane.className = "tab-pane fade";
+    if (newlyCreated || document.querySelectorAll("#topicContents .tab-pane").length === 0) {
+      contentPane.classList.add("show", "active");
+    }
+    contentPane.id = `tab-${aspectUid}`;
+    contentPane.setAttribute("role", "tabpanel");
+    contentPane.dataset.aspectUid = aspectUid;
+    contentPane.innerHTML = `
+      <input type="hidden" class="aspect-id" value="${aspectId}">
+      <div class="mb-3">
+        <label class="form-label">Nama aspek</label>
+        <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
+          oninput="updateAspectTabTitle('${aspectUid}', this.value)">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Bobot aspek (%)</label>
+        <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" oninput="updateInfo()">
+      </div>
+      <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
+        <h6>Subaspek</h6>
+        ${subHtml}
+      </div>
+      <div class="mt-2">
+        <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
+        <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
+      </div>
+    `;
+    document.getElementById("topicContents").appendChild(contentPane);
 
-        <div class="mt-2">
-          <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
-          <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
-        </div>
-      </div>`;
-    $("#topicContents").append(contentHtml);
-
-    // if no subaspects exist, create one default
     if (subaspects.length === 0) addSubaspect(aspectUid);
+    updateInfo();
   }
 
   function subaspectTemplate(aspectUid, saObj = {}) {
     const suid = saObj.uid || uid("sub");
     const sid = saObj.id || "";
-    const sname = saObj.nama || saObj.name || "";
-    const sweight = saObj.bobot !== undefined ? saObj.bobot : (saObj.weight || 0);
+    const sname = saObj.nama || "";
+    const sweight = saObj.bobot || 0;
     const questions = saObj.questions || [];
 
     let qHtml = "";
-    questions.forEach(q => {
-      qHtml += questionInputTemplate(suid, q);
-    });
+    questions.forEach((q) => (qHtml += questionInputTemplate(suid, q)));
 
     return `
       <div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
@@ -330,18 +330,17 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div style="flex:1">
             <label class="form-label">Nama Subaspek</label>
-            <input type="text" class="form-control subaspect-name" value="${escapeHtml(sname)}" oninput="updateInfo()">
+            <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}" oninput="updateInfo()">
           </div>
           <div style="width:140px; margin-left:10px">
             <label class="form-label">Bobot (%)</label>
-            <input type="number" class="form-control subaspect-weight" value="${sweight}" min="0" max="100" oninput="updateInfo()">
+            <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}" min="0" max="100" oninput="updateInfo()">
           </div>
           <div style="margin-left:10px">
             <label class="form-label">&nbsp;</label>
-            <button class="btn btn-sm btn-outline-danger d-block" onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
+            <button class="btn btn-sm btn-outline-danger d-block" type="button" onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
           </div>
         </div>
-
         <div class="questions-list" id="questions-${suid}">
           ${qHtml}
         </div>
@@ -354,23 +353,22 @@
 
   function questionInputTemplate(suid, q = {}) {
     const qid = q.id_question || q.id || "";
-    const qtext = q.pertanyaan || q.text || "";
+    const qtext = q.pertanyaan || "";
     return `
-      <div class="input-group mb-2 question-row" data-question-id="${qid}">
-        <input type="text" class="form-control question-text" value="${escapeHtml(qtext)}" placeholder="Masukkan pertanyaan">
+      <div class="input-group mb-2 question-row" data-question-id="${escapeAttr(qid)}">
+        <input type="text" class="form-control question-text" value="${escapeAttr(qtext)}" placeholder="Masukkan pertanyaan">
         <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestionInSub(this, '${suid}')">Hapus</button>
       </div>
     `;
   }
 
-  // UI actions: add subaspect & questions
   function addSubaspect(aspectUid) {
     const sub = {
       uid: uid("sub"),
       id: "",
-      name: "",
-      weight: 0,
-      questions: []
+      nama: "",
+      bobot: 0,
+      questions: [],
     };
     const html = subaspectTemplate(aspectUid, sub);
     $(`#subaspects-${aspectUid}`).append(html);
@@ -383,52 +381,27 @@
     updateInfo();
   }
 
-  // Remove handlers with confirmation
   function confirmRemoveQuestionInSub(btn, subUid) {
     const row = btn.closest(".question-row");
-    const qid = row.dataset.questionId;
+    const qid = row ? row.dataset.questionId : null;
     if (qid) {
       if (!confirm("Yakin hapus pertanyaan ini dari server?")) return;
       $.ajax({
         url: `/api/kpi-question/${qid}`,
         method: "DELETE",
         success: function(resp) {
-          row.remove();
+          if (row) row.remove();
           alert(resp.message || "Pertanyaan dihapus");
           updateInfo();
         },
         error: function(xhr) {
-          console.error("Error deleting question:", xhr.responseText);
+          console.error("Error deleting question:", xhr.responseText || xhr.statusText);
           alert("Gagal menghapus pertanyaan");
-        }
-      });
-    } else {
-      if (confirm("Hapus pertanyaan ini?")) row.remove();
-    }
-  }
-
-  function confirmRemoveSubaspect(subUid) {
-    const card = $(`#sub-${subUid}`);
-    const subId = card.find(".subaspect-id").val();
-    if (subId) {
-      if (!confirm("Yakin hapus subaspek ini?")) return;
-      // backend: DELETE /api/kpi-subaspect/{id} (implement di backend)
-      $.ajax({
-        url: `/api/kpi-subaspect/${subId}`,
-        method: "DELETE",
-        success: function(resp) {
-          card.remove();
-          alert(resp.message || "Subaspek dihapus");
-          updateInfo();
         },
-        error: function(xhr) {
-          console.error("Error deleting subaspect:", xhr.responseText);
-          alert("Gagal menghapus subaspek");
-        }
       });
     } else {
-      if (confirm("Hapus subaspek ini?")) {
-        card.remove();
+      if (confirm("Hapus pertanyaan ini?") && row) {
+        row.remove();
         updateInfo();
       }
     }
@@ -440,17 +413,19 @@
     if (aspectId) {
       if (!confirm("Yakin hapus aspek ini?")) return;
       $.ajax({
-        url: currentMode === "global" ? `/api/kpi-global/${aspectId}` : `/api/division/${currentDivisionId}/kpi/${aspectId}`,
+        url: currentMode === "global" ?
+          `/api/kpi-global/${aspectId}` :
+          `/api/division/${currentDivisionId}/kpi/${aspectId}`,
         method: "DELETE",
         success: function(resp) {
           removeAspectFromUI(aspectUid);
           alert(resp.message || "Aspek dihapus");
-          updateInfo();
+          loadKpiData();
         },
         error: function(xhr) {
-          console.error("Error deleting aspect:", xhr.responseText);
+          console.error("Error deleting aspect:", xhr.responseText || xhr.statusText);
           alert("Gagal menghapus aspek");
-        }
+        },
       });
     } else {
       if (confirm("Hapus aspek ini?")) {
@@ -463,21 +438,22 @@
   function removeAspectFromUI(aspectUid) {
     $(`#tab-btn-${aspectUid}`).remove();
     $(`#tab-${aspectUid}`).remove();
-    // activate first tab if any
     const first = $("#topicTabs .nav-link").first();
-    if (first.length) {
-      const firstBtn = first.get(0);
-      const tab = new bootstrap.Tab(firstBtn);
-      tab.show();
-    }
+    if (first.length) new bootstrap.Tab(first.get(0)).show();
+    updateInfo();
   }
 
-  // Helper to update aspect tab title
   function updateAspectTabTitle(uid, text) {
-    $(`#tab-btn-${uid} button`).text(text || "Aspek Baru");
+    const el = document.querySelector(`#tab-btn-${uid} button`);
+    if (el) el.textContent = text || "Aspek Baru";
   }
 
-  // Save KPI
+  function setActiveTab(uid) {
+    const btn = document.querySelector(`#tab-${uid}-tab`);
+    if (!btn) return;
+    new bootstrap.Tab(btn).show();
+  }
+
   function saveKPI() {
     if (!currentMode) {
       alert("Pilih mode (Global/Divisi) terlebih dahulu.");
@@ -488,96 +464,103 @@
       return;
     }
 
-    // build payload
-    const aspects = [];
-    let totalWeight = 0;
+    const kpiPanes = $("#topicContents .tab-pane");
+    if (kpiPanes.length === 0) {
+      alert("Tambahkan minimal 1 aspek KPI!");
+      return;
+    }
+
+    const $pane = $(kpiPanes[0]);
+    const nama = $pane.find(".aspect-name").val().trim();
+    const bobot = Number($pane.find(".aspect-weight").val()) || 0;
+
+    if (!nama) {
+      alert("Nama KPI tidak boleh kosong!");
+      return;
+    }
+
+    const points = [];
+    let totalPointWeight = 0;
     let valid = true;
 
-    $("#topicContents .tab-pane").each(function() {
-      const $pane = $(this);
-      const aspectId = $pane.find(".aspect-id").val() || null;
-      const aspectName = $pane.find(".aspect-name").val().trim();
-      const aspectWeight = Number($pane.find(".aspect-weight").val()) || 0;
+    $pane.find(".subaspect-card").each(function() {
+      const $sub = $(this);
+      const subNama = $sub.find(".subaspect-name").val().trim();
+      const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
 
-      if (!aspectName) {
-        alert("Nama aspek tidak boleh kosong!");
+      if (!subNama) {
+        alert("Nama subaspek tidak boleh kosong!");
         valid = false;
         return false;
       }
-      totalWeight += aspectWeight;
 
-      const subaspects = [];
-      $pane.find(".subaspect-card").each(function() {
-        const $sa = $(this);
-        const saId = $sa.find(".subaspect-id").val() || null;
-        const saName = $sa.find(".subaspect-name").val().trim();
-        const saWeight = Number($sa.find(".subaspect-weight").val()) || 0;
-        if (!saName) {
-          alert("Nama subaspek tidak boleh kosong!");
-          valid = false;
-          return false;
-        }
+      totalPointWeight += subBobot;
 
-        const questions = [];
-        $sa.find(".question-text").each(function() {
-          const qText = $(this).val().trim();
-          const qRow = $(this).closest(".question-row");
-          const qId = qRow.data("question-id") || null;
-          if (qText) questions.push({
-            id: qId,
-            text: qText
-          });
-        });
-        subaspects.push({
-          id: saId,
-          name: saName,
-          weight: saWeight,
-          questions
+      const questions = [];
+      $sub.find(".question-text").each(function() {
+        const qText = $(this).val().trim();
+        if (qText) questions.push({
+          pertanyaan: qText
         });
       });
-      if (!valid) return false;
 
-      aspects.push({
-        id: aspectId,
-        name: aspectName,
-        weight: aspectWeight,
-        subaspects
+      if (questions.length === 0) {
+        alert("Subaspek harus memiliki minimal 1 pertanyaan!");
+        valid = false;
+        return false;
+      }
+
+      points.push({
+        nama: subNama,
+        bobot: subBobot,
+        questions: questions,
       });
     });
 
     if (!valid) return;
 
-    if (totalWeight > 100) {
-      alert("Total bobot aspek tidak boleh lebih dari 100%");
+    if (totalPointWeight > 100) {
+      alert("Total bobot subaspek tidak boleh lebih dari 100%");
       return;
     }
 
     const payload = {
-      mode: currentMode,
-      divisionId: currentMode === "division" ? currentDivisionId : null,
-      aspects
+      nama: nama,
+      bobot: bobot,
+      is_global: currentMode === "global" ? 1 : 0,
+      points: points,
     };
+    if (currentMode === "division") payload.division_id = currentDivisionId;
+
+    console.log("Payload dikirim:", payload);
 
     $.ajax({
-      url: "/api/save-kpi",
+      url: "/api/kpi/save",
       method: "POST",
       contentType: "application/json",
+      processData: false,
+      headers: {
+        Accept: "application/json"
+      },
       data: JSON.stringify(payload),
       success: function(response) {
         alert(response.message || "KPI berhasil disimpan!");
-        // reload after save
         loadKpiData();
       },
       error: function(xhr) {
-        console.error("Error saving KPI:", xhr.responseText);
-        alert("Gagal menyimpan KPI");
-      }
+        console.error("Error saving KPI:", xhr.responseText || xhr.statusText);
+        let msg = "Gagal menyimpan KPI";
+        try {
+          const errResp = JSON.parse(xhr.responseText);
+          if (errResp && errResp.errors) msg += "\n" + Object.values(errResp.errors).flat().join("\n");
+        } catch (e) {}
+        alert(msg);
+      },
     });
   }
 
-  // Utility: escape html for values
-  function escapeHtml(text) {
-    if (!text) return "";
+  function escapeAttr(text) {
+    if (text === null || text === undefined) return "";
     return String(text)
       .replace(/&/g, "&amp;")
       .replace(/"/g, "&quot;")
@@ -586,7 +569,6 @@
       .replace(/>/g, "&gt;");
   }
 
-  // Update info panel
   function updateInfo() {
     const weights = $(".aspect-weight")
       .map((_, el) => Number(el.value) || 0)
@@ -595,11 +577,6 @@
     $("#infoTotalWeight").text(totalWeight + "%");
     $("#infoTopicCount").text($("#topicContents .tab-pane").length);
   }
-
-  // Initial small bootstrap activation for existing tabs (if any)
-  // (Not necessary but safe)
-  document.addEventListener("click", function(e) {
-    // allow bootstrap tab toggles from dynamic buttons
-  });
 </script>
+
 @endsection

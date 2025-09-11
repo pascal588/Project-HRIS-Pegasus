@@ -64,12 +64,191 @@ class KpiController extends Controller
                     ]);
                 }
             }
+
+            // ⬇️ Tambahan untuk relasi ke divisi
+            if ($request->is_global) {
+                $allDivisions = DB::table('divisions')->pluck('id_divisi'); // pakai id_divisi
+                foreach ($allDivisions as $divisionId) {
+                    DB::table('division_has_kpis')->insert([
+                        'id_divisi' => $divisionId, // sesuaikan kolom pivot
+                        'kpis_id_kpi' => $kpi->id_kpi,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            } else {
+                if ($request->has('division_id')) {
+                    DB::table('division_has_kpis')->insert([
+                        'id_divisi' => $request->division_id, // sesuaikan
+                        'kpi_id' => $kpi->id_kpi,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
         });
 
         return response()->json([
             'message' => 'KPI berhasil dibuat'
         ]);
     }
+
+    /**
+     * Ambil semua KPI yang tersedia untuk sebuah divisi
+     * Termasuk KPI global
+     */
+    public function listKpiByDivision($divisionId)
+    {
+        $globalKpis = Kpi::where('is_global', true)->with('points.questions')->get();
+
+        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+            $q->where('divisions.id_divisi', $divisionId);
+        })->with('points.questions')->get();
+
+        $allKpis = $globalKpis->concat($divisionKpis)->unique('id_kpi')->values();
+
+        return response()->json([
+            'division_id' => $divisionId,
+            'kpis' => $allKpis
+        ]);
+    }
+
+    public function listGlobalKpi()
+    {
+        $kpis = Kpi::where('is_global', true)->with('points.questions')->get();
+        return response()->json(['kpis' => $kpis]);
+    }
+
+    public function deleteGlobalKpi($id)
+    {
+        $kpi = Kpi::where('is_global', true)->findOrFail($id);
+        $kpi->delete();
+        return response()->json(['message' => 'KPI global berhasil dihapus']);
+    }
+
+    public function updateGlobalKpi(Request $request, $id)
+    {
+        $kpi = Kpi::where('is_global', true)->findOrFail($id);
+        $kpi->update($request->only(['nama', 'deskripsi', 'bobot']));
+        return response()->json(['message' => 'KPI global berhasil diperbarui']);
+    }
+
+    public function deleteDivisionKpi($divisionId, $kpiId)
+    {
+        $exists = DB::table('division_has_kpis')
+            ->where('id_divisi', $divisionId)
+            ->where('kpis_id_kpi', $kpiId)
+            ->exists();
+
+        if (!$exists) {
+            return response()->json(['message' => 'KPI tidak ditemukan'], 404);
+        }
+
+        // hapus dari pivot
+        DB::table('division_has_kpis')
+            ->where('id_divisi', $divisionId)
+            ->where('kpis_id_kpi', $kpiId)
+            ->delete();
+
+        // optional: hapus KPI jika tidak ada relasi lagi
+        $stillUsed = DB::table('division_has_kpis')->where('kpis_id_kpi', $kpiId)->exists();
+        if (!$stillUsed) {
+            Kpi::find($kpiId)?->delete();
+        }
+
+        return response()->json(['message' => 'KPI divisi berhasil dihapus']);
+    }
+
+    public function updateDivisionKpi(Request $request, $divisionId, $kpiId)
+    {
+        $exists = DB::table('division_has_kpis')
+            ->where('id_divisi', $divisionId)
+            ->where('kpis_id_kpi', $kpiId)
+            ->exists();
+
+        if (!$exists) {
+            return response()->json(['message' => 'KPI tidak ditemukan'], 404);
+        }
+
+        $kpi = Kpi::findOrFail($kpiId);
+        $kpi->update($request->only(['nama', 'deskripsi', 'bobot']));
+
+        return response()->json(['message' => 'KPI divisi berhasil diperbarui']);
+    }
+
+
+
+    public function getDivisionKpi($divisionId, $tahun, $bulan)
+    {
+        // Ambil semua karyawan di divisi
+        $employees = Employee::where('divisions_id_divisi', $divisionId)->get();
+
+        if ($employees->isEmpty()) {
+            return response()->json(['message' => 'Tidak ada karyawan di divisi ini'], 404);
+        }
+
+        // Ambil KPI beserta sub-aspek & pertanyaan
+        $kpis = Kpi::with('points.questions')->get();
+        $result = [];
+
+        foreach ($employees as $employee) {
+            $employeeData = [
+                'employee_id' => $employee->id_karyawan,
+                'nama_karyawan' => $employee->nama_karyawan,
+                'kpis' => []
+            ];
+
+            foreach ($kpis as $kpi) {
+                // Nilai akhir dari tabel pivot kpi_has_employee
+                $nilaiAkhir = KpiHasEmployee::where('kpis_id_kpi', $kpi->id_kpi)
+                    ->where('employees_id_karyawan', $employee->id_karyawan)
+                    ->where('tahun', $tahun)
+                    ->where('bulan', $bulan)
+                    ->value('nilai_akhir') ?? 0;
+
+                $points = [];
+                foreach ($kpi->points as $point) {
+                    $questions = [];
+                    foreach ($point->questions as $q) {
+                        $nilai = KpiQuestionHasEmployee::where('kpi_question_id_question', $q->id_question)
+                            ->where('employees_id_karyawan', $employee->id_karyawan)
+                            ->value('nilai') ?? null;
+
+                        $questions[] = [
+                            'id_question' => $q->id_question,
+                            'pertanyaan' => $q->pertanyaan,
+                            'nilai' => $nilai
+                        ];
+                    }
+
+                    $points[] = [
+                        'id_point' => $point->id_point,
+                        'nama' => $point->nama,
+                        'bobot' => $point->bobot,
+                        'questions' => $questions
+                    ];
+                }
+
+                $employeeData['kpis'][] = [
+                    'id_kpi' => $kpi->id_kpi,
+                    'nama' => $kpi->nama,
+                    'bobot' => $kpi->bobot,
+                    'nilai_akhir' => $nilaiAkhir,
+                    'points' => $points
+                ];
+            }
+
+            $result[] = $employeeData;
+        }
+
+        return response()->json([
+            'id_divisi' => $divisionId,
+            'tahun' => $tahun,
+            'bulan' => $bulan,
+            'employees' => $result
+        ]);
+    }
+
 
     /**
      * Update KPI beserta sub-aspek dan pertanyaan

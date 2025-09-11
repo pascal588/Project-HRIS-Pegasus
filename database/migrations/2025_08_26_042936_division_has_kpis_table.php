@@ -11,15 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('divisions_has_kpis', function (Blueprint $table) {
+        Schema::create('division_has_kpis', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('division_id');
+            $table->unsignedBigInteger('id_divisi');
             $table->unsignedBigInteger('kpis_id_kpi');
             $table->timestamps();
 
-            $table->foreign('division_id')->references('id_divisi')->on('divisions')->onDelete('cascade');
+            $table->foreign('id_divisi')->references('id_divisi')->on('divisions')->onDelete('cascade');
             $table->foreign('kpis_id_kpi')->references('id_kpi')->on('kpis')->onDelete('cascade');
-            $table->unique(['division_id', 'kpis_id_kpi']);
+            $table->unique(['id_divisi', 'kpis_id_kpi']);
         });
     }
 

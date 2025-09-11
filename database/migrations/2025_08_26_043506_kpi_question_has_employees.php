@@ -15,6 +15,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('pertanyaan'); // teks pertanyaan
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

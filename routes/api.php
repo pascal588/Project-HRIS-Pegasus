@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\DivisionController;
 use App\Http\Controllers\Api\EmployeeApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\KpiController;
-use Illuminate\Support\Facades\Route;
 
 // routes/api.php
 Route::get('/divisions', [DivisionController::class, 'index']);
@@ -18,30 +17,53 @@ Route::delete('/divisions/{division}', [DivisionController::class, 'destroy']);
 Route::get('/divisions/{division}/employees', [DivisionController::class, 'getEmployees']);
 Route::put('/divisions/{division}/head', [DivisionController::class, 'updateHead']);
 
-  // Statistik divisi
-  Route::get('/divisions/{division}/employee-count', [DivisionController::class, 'getEmployeeCount']);
-  Route::get('/divisions/{division}/kpi-data', [DivisionController::class, 'getKpiData']);
-  Route::get('/divisions/{division}/gender-data', [DivisionController::class, 'getGenderData']);
+// Statistik divisi
+Route::get('/divisions/{division}/employee-count', [DivisionController::class, 'getEmployeeCount']);
+Route::get('/divisions/{division}/kpi-data', [DivisionController::class, 'getKpiData']);
+Route::get('/divisions/{division}/gender-data', [DivisionController::class, 'getGenderData']);
 
-  // ==== EMPLOYEES ====
-  Route::apiResource('employees', EmployeeApiController::class);
 
-  // Update role karyawan
-  Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
+// Ambil semua kepala divisi 
+Route::get('/employees/kepala-divisi', [EmployeeApiController::class, 'kepalaDivisi']);
 
-  // Ambil semua kepala divisi 
-  Route::get('/employees/kepala-divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+// ==== EMPLOYEES ====
+Route::apiResource('employees', EmployeeApiController::class);
 
-  // ==== ROLES ====
-  Route::apiResource('roles', RoleApiController::class);
+// Update role karyawan
+Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
 
-  // ==== KPI ====
-  Route::prefix('kpi')->group(function () {
-    Route::get('/', [KpiController::class, 'getAllKpis']); 
-    Route::get('/roles-by-division/{division}', [KpiController::class, 'getRolesByDivision']);
-    Route::get('/by-role/{role}', [KpiController::class, 'getKpisByRole']);
-    Route::post('/save', [KpiController::class, 'saveKpi']);
-    Route::delete('/division/{division}/kpi/{kpi}', [KpiController::class, 'deleteKpi']);
-    Route::delete('/question/{question}', [KpiController::class, 'deleteQuestion']);
-  });
+// ==== ROLES ====
+Route::apiResource('roles', RoleApiController::class);
 
+// ==== KPI ====
+Route::prefix('kpi')->group(function () {
+  Route::get('/', [KpiController::class, 'getAllKpis']);
+  Route::post('/save', [KpiController::class, 'storeKpi']);
+  Route::put('/{kpiId}', [KpiController::class, 'updateKpi']);
+  Route::delete('/{kpiId}', [KpiController::class, 'deleteKpi']);
+
+  // Nilai karyawan
+  Route::post('/score', [KpiController::class, 'storeEmployeeScore']);
+  Route::post('/calculate/{employeeId}/{tahun}/{bulan}', [KpiController::class, 'calculateFinalScore']);
+  Route::get('/scores/{employeeId}/{tahun}/{bulan}', [KpiController::class, 'getScoreByAspekUtama']);
+
+  // KPI per divisi
+  Route::get('/division/{divisionId}/{tahun}/{bulan}', [KpiController::class, 'getDivisionKpi']);
+});
+
+// === Kompatibilitas frontend lama ===
+Route::get('/kpi-global', [KpiController::class, 'getAllKpis']);
+Route::get('/kpi-by-division/{division}', [KpiController::class, 'listKpiByDivision']);
+
+// KPI Global
+Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
+Route::delete('/kpi-global/{id}', [KpiController::class, 'deleteGlobalKpi']);
+Route::put('/kpi-global/{id}', [KpiController::class, 'updateGlobalKpi']);
+
+// KPI Divisi
+Route::get('/kpi-by-division/{divisionId}', [KpiController::class, 'listKpiByDivision']);
+Route::delete('/division/{divisionId}/kpi/{kpiId}', [KpiController::class, 'deleteDivisionKpi']);
+Route::put('/division/{divisionId}/kpi/{kpiId}', [KpiController::class, 'updateDivisionKpi']);
+
+// Simpan KPI baru (global atau division)
+Route::post('/kpi/save', [KpiController::class, 'storeKpi']);

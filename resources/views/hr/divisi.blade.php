@@ -251,7 +251,7 @@
     // Inisialisasi DataTable
     let table = $('#divisiDataTable').DataTable({
       responsive: true,
-      },
+      
       ajax: {
         url: "/api/divisions",
         dataSrc: function(json) {

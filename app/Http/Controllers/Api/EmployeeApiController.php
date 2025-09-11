@@ -27,7 +27,7 @@ class EmployeeApiController extends Controller
     {
         try {
             $employees = Employee::whereHas('roles', function ($query) {
-                $query->where('nama_jabatan', 'Kepala Divisi');
+                $query->whereRaw('LOWER(nama_jabatan) = ?', ['kepala divisi']);
             })->with(['user', 'roles.division'])->get();
 
             return response()->json([
@@ -86,7 +86,6 @@ class EmployeeApiController extends Controller
                     }
                 }
             }
-
         });
 
         return response()->json([

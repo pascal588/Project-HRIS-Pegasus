@@ -49,22 +49,10 @@
                             <small class="text-muted">ID Karyawan</small>
                         </div>
                         <hr>
-                        <div class="form-group mb-2">
-                            <label class="fw-bold">Poin Kehadiran</label>
-                            <div class="form-control">-</div>
-                        </div>
-                        <div class="form-group mb-2">
-                            <label class="fw-bold">Poin Disiplin</label>
-                            <div class="form-control">-</div>
-                        </div>
-                        <div class="form-group mb-2">
-                            <label class="fw-bold">Poin Kompetensi Teknis</label>
-                            <div class="form-control">-</div>
-                        </div>
-                        <div class="form-group mb-2">
-                            <label class="fw-bold">Poin Kompetensi Umum</label>
-                            <div class="form-control">-</div>
-                        </div>
+
+                        <!-- Dinamis isi aspek KPI -->
+                        <div id="aspekKpiList"></div>
+
                         <button id="btnNilai" class="btn btn-primary w-100 mt-3">Nilai</button>
                     </div>
                 </div>
@@ -144,94 +132,7 @@
             <!-- Body -->
             <div class="modal-body">
 
-                <!-- Step 1 -->
-                <div class="wizard-step" id="step1">
-                    <h6 class="mb-3">Topik: Disiplin Kerja <small class="text-muted">(Bobot: 20%)</small></h6>
-                    <table class="table table-bordered">
-                        <thead class="text-center">
-                            <tr>
-                                <th>No</th>
-                                <th>Pertanyaan</th>
-                                <th>1</th>
-                                <th>2</th>
-                                <th>3</th>
-                                <th>4</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-center">
-                            <tr>
-                                <td>1</td>
-                                <td class="text-start">Kehadiran tepat waktu</td>
-                                <td><input type="radio" name="disiplin_q1" value="1"></td>
-                                <td><input type="radio" name="disiplin_q1" value="2"></td>
-                                <td><input type="radio" name="disiplin_q1" value="3"></td>
-                                <td><input type="radio" name="disiplin_q1" value="4"></td>
-                            </tr>
-                            <tr>
-                                <td>2</td>
-                                <td class="text-start">Mematuhi aturan perusahaan</td>
-                                <td><input type="radio" name="disiplin_q2" value="1"></td>
-                                <td><input type="radio" name="disiplin_q2" value="2"></td>
-                                <td><input type="radio" name="disiplin_q2" value="3"></td>
-                                <td><input type="radio" name="disiplin_q2" value="4"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Step 2 -->
-                <div class="wizard-step d-none" id="step2">
-                    <h6 class="mb-3">Topik: Kompetensi Teknis <small class="text-muted">(Bobot: 30%)</small></h6>
-                    <table class="table table-bordered">
-                        <thead class="text-center">
-                            <tr>
-                                <th>No</th>
-                                <th>Pertanyaan</th>
-                                <th>1</th>
-                                <th>2</th>
-                                <th>3</th>
-                                <th>4</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-center">
-                            <tr>
-                                <td>1</td>
-                                <td class="text-start">Menguasai skill utama pekerjaan</td>
-                                <td><input type="radio" name="teknis_q1" value="1"></td>
-                                <td><input type="radio" name="teknis_q1" value="2"></td>
-                                <td><input type="radio" name="teknis_q1" value="3"></td>
-                                <td><input type="radio" name="teknis_q1" value="4"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="wizard-step d-none" id="step3">
-                    <h6 class="mb-3">Topik: Kompetensi Umum <small class="text-muted">(Bobot: 50%)</small></h6>
-                    <table class="table table-bordered">
-                        <thead class="text-center">
-                            <tr>
-                                <th>No</th>
-                                <th>Pertanyaan</th>
-                                <th>1</th>
-                                <th>2</th>
-                                <th>3</th>
-                                <th>4</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-center">
-                            <tr>
-                                <td>1</td>
-                                <td class="text-start">Kerjasama tim</td>
-                                <td><input type="radio" name="umum_q1" value="1"></td>
-                                <td><input type="radio" name="umum_q1" value="2"></td>
-                                <td><input type="radio" name="umum_q1" value="3"></td>
-                                <td><input type="radio" name="umum_q1" value="4"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <div id="wizardBody"></div>
 
             </div>
 
@@ -251,6 +152,7 @@
 @section('script')
 <script src="{{asset ('assets/bundles/dataTables.bundle.js')}}"></script>
 <script>
+    // ===================== DataTable =====================
     $('#myProjectTable').DataTable({
         responsive: true,
         pageLength: 5,
@@ -295,7 +197,8 @@
                             class="btn btn-outline-secondary btn-nilai" 
                             data-id="${row.id_karyawan}" 
                             data-nama="${row.nama}" 
-                            data-divisi="${divisi}">
+                            data-divisi="${divisi}" 
+                            data-divisi-id="${row.roles[0]?.division?.id_divisi ?? ''}">
                             <i class="icofont-edit text-success"></i>
                         </button>`;
                 }
@@ -303,34 +206,90 @@
         ]
     });
 
-    // Delegasi event ke tombol nilai
+    // ===================== Event Tombol Nilai =====================
     $('#myProjectTable').on('click', '.btn-nilai', function() {
         let nama = $(this).data('nama');
         let divisi = $(this).data('divisi');
+        let divisiId = $(this).data('divisi-id');
 
         $(".card-body h6").text(nama);
         $(".card-body small").text(divisi);
 
-        $("#btnNilai").data('nama', nama).data('divisi', divisi);
+        $("#btnNilai").data('nama', nama)
+            .data('divisi', divisi)
+            .data('divisi-id', divisiId);
     });
 
-    // Klik tombol Nilai → buka modal wizard
+    // ===================== Wizard KPI Dinamis =====================
     $("#btnNilai").on("click", function() {
         if (!$(this).data('nama')) {
             alert("Pilih karyawan dulu!");
             return;
         }
+
+        let divisionId = $(this).data('divisi-id');
+        let url = divisionId ?
+            `/kpi-by-division/${divisionId}` :
+            `/kpi-global`;
+
+        $.get(url, function(response) {
+        buildWizard(response);   // untuk modal wizard
+        buildFormNilai(response); // untuk form kanan
         let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
         modal.show();
     });
+    });
 
-    document.addEventListener("DOMContentLoaded", function() {
+    function buildWizard(kpis) {
+        let wizardBody = $("#wizardBody");
+        let stepNav = $(".step-container");
+        wizardBody.empty();
+        stepNav.empty();
+
+        kpis.forEach((kpi, index) => {
+            stepNav.append(`
+                <button class="step-btn ${index===0 ? 'active' : ''}" data-step="${index+1}">${index+1}</button>
+            `);
+
+            let rows = kpi.pertanyaan.map((q, idx) => `
+                <tr>
+                    <td>${idx+1}</td>
+                    <td class="text-start">${q.teks}</td>
+                    ${[1,2,3,4].map(val => 
+                        `<td><input type="radio" name="kpi_${kpi.id_kpi}_q${q.id}" value="${val}"></td>`
+                    ).join("")}
+                </tr>
+            `).join("");
+
+            wizardBody.append(`
+                <div class="wizard-step ${index!==0 ? 'd-none' : ''}" id="step${index+1}">
+                    <h6 class="mb-3">Topik: ${kpi.nama} <small class="text-muted">(Bobot: ${kpi.bobot}%)</small></h6>
+                    <table class="table table-bordered">
+                        <thead class="text-center">
+                            <tr>
+                                <th>No</th>
+                                <th>Pertanyaan</th>
+                                <th>1</th>
+                                <th>2</th>
+                                <th>3</th>
+                                <th>4</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center">
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `);
+        });
+
+        initWizardNav(kpis.length);
+    }
+
+    function initWizardNav(totalSteps) {
         let currentStep = 1;
-        const totalSteps = 3;
-
-        const stepButtons = document.querySelectorAll(".step-btn");
         const steps = document.querySelectorAll(".wizard-step");
-
+        const stepButtons = document.querySelectorAll(".step-btn");
         const prevBtn = document.getElementById("prevStep");
         const nextBtn = document.getElementById("nextStep");
         const finishBtn = document.getElementById("finishWizard");
@@ -339,11 +298,9 @@
             steps.forEach((el, index) => {
                 el.classList.toggle("d-none", index + 1 !== step);
             });
-
             stepButtons.forEach((btn, index) => {
                 btn.classList.toggle("active", index + 1 === step);
             });
-
             prevBtn.style.display = step === 1 ? "none" : "inline-block";
             nextBtn.style.display = step === totalSteps ? "none" : "inline-block";
             finishBtn.classList.toggle("d-none", step !== totalSteps);
@@ -355,23 +312,200 @@
                 showStep(currentStep);
             });
         });
-
-        nextBtn.addEventListener("click", () => {
+        nextBtn.onclick = () => {
             if (currentStep < totalSteps) {
                 currentStep++;
                 showStep(currentStep);
             }
-        });
-
-        prevBtn.addEventListener("click", () => {
+        };
+        prevBtn.onclick = () => {
             if (currentStep > 1) {
                 currentStep--;
                 showStep(currentStep);
             }
+        };
+
+        showStep(currentStep);
+    }
+</script>
+@endsection
+@section('script')
+<script src="{{asset ('assets/bundles/dataTables.bundle.js')}}"></script>
+<script>
+    // ===================== DataTable =====================
+    $('#myProjectTable').DataTable({
+        responsive: true,
+        pageLength: 5,
+        lengthMenu: [5, 10, 25, 50],
+        ajax: {
+            url: "{{ url('api/employees/kepala-divisi') }}",
+            dataSrc: 'data'
+        },
+        columns: [{
+                data: null,
+                render: (data, type, row, meta) => meta.row + 1
+            },
+            {
+                data: 'nama'
+            },
+            {
+                data: 'roles',
+                render: function(data) {
+                    if (data && data.length > 0) {
+                        let kepala = data.find(r => r.nama_jabatan.toLowerCase().includes("kepala divisi"));
+                        if (kepala) {
+                            return kepala.division?.nama_divisi ?? '-';
+                        }
+                        return data[0].division?.nama_divisi ?? '-';
+                    }
+                    return '-';
+                }
+            },
+            {
+                data: 'status_kpi',
+                defaultContent: 'Belum Dinilai'
+            },
+            {
+                data: null,
+                render: function(row) {
+                    let divisi = "-";
+                    if (row.roles && row.roles.length > 0) {
+                        divisi = row.roles[0].division?.nama_divisi ?? "-";
+                    }
+                    return `
+                        <button type="button" 
+                            class="btn btn-outline-secondary btn-nilai" 
+                            data-id="${row.id_karyawan}" 
+                            data-nama="${row.nama}" 
+                            data-divisi="${divisi}" 
+                            data-divisi-id="${row.roles[0]?.division?.id_divisi ?? ''}">
+                            <i class="icofont-edit text-success"></i>
+                        </button>`;
+                }
+            }
+        ]
+    });
+
+    // ===================== Event Tombol Nilai =====================
+    $('#myProjectTable').on('click', '.btn-nilai', function() {
+        let nama = $(this).data('nama');
+        let divisi = $(this).data('divisi');
+        let divisiId = $(this).data('divisi-id');
+
+        $(".card-body h6").text(nama);
+        $(".card-body small").text(divisi);
+
+        $("#btnNilai").data('nama', nama)
+            .data('divisi', divisi)
+            .data('divisi-id', divisiId);
+    });
+
+    // ===================== Wizard KPI Dinamis =====================
+    $("#btnNilai").on("click", function() {
+        if (!$(this).data('nama')) {
+            alert("Pilih karyawan dulu!");
+            return;
+        }
+
+        let divisionId = $(this).data('divisi-id');
+        let url = divisionId ?
+            `/kpi-by-division/${divisionId}` :
+            `/kpi-global`;
+
+        $.get(url, function(response) {
+            buildWizard(response);
+            let modal = new bootstrap.Modal(document.getElementById("modalWizard"));
+            modal.show();
+        });
+    });
+
+    function buildWizard(kpis) {
+        let wizardBody = $("#wizardBody");
+        let stepNav = $(".step-container");
+        wizardBody.empty();
+        stepNav.empty();
+
+        kpis.forEach((kpi, index) => {
+            stepNav.append(`
+                <button class="step-btn ${index===0 ? 'active' : ''}" data-step="${index+1}">${index+1}</button>
+            `);
+
+            let rows = kpi.pertanyaan.map((q, idx) => `
+                <tr>
+                    <td>${idx+1}</td>
+                    <td class="text-start">${q.teks}</td>
+                    ${[1,2,3,4].map(val => 
+                        `<td><input type="radio" name="kpi_${kpi.id_kpi}_q${q.id}" value="${val}"></td>`
+                    ).join("")}
+                </tr>
+            `).join("");
+
+            wizardBody.append(`
+                <div class="wizard-step ${index!==0 ? 'd-none' : ''}" id="step${index+1}">
+                    <h6 class="mb-3">Topik: ${kpi.nama} <small class="text-muted">(Bobot: ${kpi.bobot}%)</small></h6>
+                    <table class="table table-bordered">
+                        <thead class="text-center">
+                            <tr>
+                                <th>No</th>
+                                <th>Pertanyaan</th>
+                                <th>1</th>
+                                <th>2</th>
+                                <th>3</th>
+                                <th>4</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center">
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `);
         });
 
-        // Pertama kali buka modal → tampilkan step 1
+        initWizardNav(kpis.length);
+    }
+
+    function initWizardNav(totalSteps) {
+        let currentStep = 1;
+        const steps = document.querySelectorAll(".wizard-step");
+        const stepButtons = document.querySelectorAll(".step-btn");
+        const prevBtn = document.getElementById("prevStep");
+        const nextBtn = document.getElementById("nextStep");
+        const finishBtn = document.getElementById("finishWizard");
+
+        function showStep(step) {
+            steps.forEach((el, index) => {
+                el.classList.toggle("d-none", index + 1 !== step);
+            });
+            stepButtons.forEach((btn, index) => {
+                btn.classList.toggle("active", index + 1 === step);
+            });
+            prevBtn.style.display = step === 1 ? "none" : "inline-block";
+            nextBtn.style.display = step === totalSteps ? "none" : "inline-block";
+            finishBtn.classList.toggle("d-none", step !== totalSteps);
+        }
+
+        stepButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
+                currentStep = parseInt(btn.dataset.step);
+                showStep(currentStep);
+            });
+        });
+        nextBtn.onclick = () => {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        };
+        prevBtn.onclick = () => {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        };
+
         showStep(currentStep);
-    });
+    }
 </script>
+
 @endsection

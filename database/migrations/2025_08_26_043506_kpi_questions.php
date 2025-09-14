@@ -21,6 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('kpi_points_has_employees');
+        Schema::dropIfExists('kpi_questions');
     }
 };

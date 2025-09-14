@@ -27,71 +27,113 @@ class KpiController extends Controller
      */
     public function storeKpi(Request $request)
     {
-        $request->validate([
-            'nama' => 'required|string|max:100',
-            'deskripsi' => 'nullable|string',
-            'bobot' => 'required|numeric|min:0|max:100',
-            'is_global' => 'required|boolean',
-            'points' => 'required|array|min:1',
-            'points.*.nama' => 'required|string|max:255',
-            'points.*.bobot' => 'required|numeric|min:0|max:100',
-            'points.*.questions' => 'required|array|min:1',
-            'points.*.questions.*' => 'required|string|max:1000',
-        ]);
+        $isBulk = $request->has('kpis'); // cek apakah bulk
 
-        DB::transaction(function () use ($request) {
-            // Buat KPI utama
-            $kpi = Kpi::create([
-                'nama' => $request->nama,
-                'deskripsi' => $request->deskripsi,
-                'bobot' => $request->bobot,
-                'is_global' => $request->is_global,
+        if ($isBulk) {
+            // validasi bulk
+            $request->validate([
+                'is_global' => 'required|boolean',
+                'division_id' => 'nullable|integer|exists:divisions,id_divisi',
+                'kpis' => 'required|array|min:1',
+                'kpis.*.nama' => 'required|string|max:100',
+                'kpis.*.bobot' => 'required|numeric|min:0|max:100',
+                'kpis.*.points' => 'required|array|min:1',
+                'kpis.*.points.*.nama' => 'required|string|max:255',
+                'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
+                'kpis.*.points.*.questions' => 'required|array|min:1',
+                'kpis.*.points.*.questions.*.pertanyaan' => 'required|string|max:1000',
             ]);
 
-            // Buat sub-aspek
-            foreach ($request->points as $pointData) {
-                $point = KpiPoint::create([
-                    'kpis_id_kpi' => $kpi->id_kpi,
-                    'nama' => $pointData['nama'],
-                    'bobot' => $pointData['bobot'],
-                ]);
-
-                // Buat pertanyaan untuk setiap sub-aspek
-                foreach ($pointData['questions'] as $qText) {
-                    KpiQuestion::create([
-                        'kpi_point_id' => $point->id_point,
-                        'pertanyaan' => $qText
-                    ]);
+            DB::transaction(function () use ($request) {
+                foreach ($request->kpis as $kpiData) {
+                    $this->saveSingleKpi($kpiData, $request->is_global, $request->division_id);
                 }
-            }
+            });
 
-            // ⬇️ Tambahan untuk relasi ke divisi
-            if ($request->is_global) {
-                $allDivisions = DB::table('divisions')->pluck('id_divisi'); // pakai id_divisi
-                foreach ($allDivisions as $divisionId) {
-                    DB::table('division_has_kpis')->insert([
-                        'id_divisi' => $divisionId, // sesuaikan kolom pivot
-                        'kpis_id_kpi' => $kpi->id_kpi,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            } else {
-                if ($request->has('division_id')) {
-                    DB::table('division_has_kpis')->insert([
-                        'id_divisi' => $request->division_id, // sesuaikan
-                        'kpi_id' => $kpi->id_kpi,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-        });
+            return response()->json(['message' => 'Semua KPI berhasil disimpan!']);
+        } else {
+            // validasi single
+            $request->validate([
+                'nama' => 'required|string|max:100',
+                'deskripsi' => 'nullable|string',
+                'bobot' => 'required|numeric|min:0|max:100',
+                'is_global' => 'required|boolean',
+                'division_id' => 'nullable|integer|exists:divisions,id_divisi',
+                'points' => 'required|array|min:1',
+                'points.*.nama' => 'required|string|max:255',
+                'points.*.bobot' => 'required|numeric|min:0|max:100',
+                'points.*.questions' => 'required|array|min:1',
+                'points.*.questions.*' => 'required|string|max:1000',
+            ]);
 
-        return response()->json([
-            'message' => 'KPI berhasil dibuat'
-        ]);
+            DB::transaction(function () use ($request) {
+                $this->saveSingleKpi($request->all(), $request->is_global, $request->division_id);
+            });
+
+            return response()->json(['message' => 'KPI berhasil disimpan!']);
+        }
     }
+
+    /**
+     * Helper: simpan 1 KPI (bisa dipakai single/bulk)
+     */
+    private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = null)
+    {
+        // buat / update KPI
+        $kpi = isset($kpiData['id_kpi'])
+            ? Kpi::findOrFail($kpiData['id_kpi'])
+            : new Kpi();
+
+        $kpi->nama = $kpiData['nama'];
+        $kpi->deskripsi = $kpiData['deskripsi'] ?? null;
+        $kpi->bobot = $kpiData['bobot'];
+        $kpi->is_global = $isGlobal;
+        $kpi->save();
+
+        // sub-aspek (points)
+        foreach ($kpiData['points'] as $pointData) {
+            $point = isset($pointData['id_point'])
+                ? KpiPoint::findOrFail($pointData['id_point'])
+                : new KpiPoint(['kpis_id_kpi' => $kpi->id_kpi]);
+
+            $point->nama = $pointData['nama'];
+            $point->bobot = $pointData['bobot'];
+            $point->kpis_id_kpi = $kpi->id_kpi;
+            $point->save();
+
+            // pertanyaan
+            foreach ($pointData['questions'] as $qData) {
+                // bulk: bentuknya array ['pertanyaan'=>'xxx']
+                // single: bentuknya string "xxx"
+                $pertanyaan = is_array($qData) ? $qData['pertanyaan'] : $qData;
+
+                $question = isset($qData['id_question'])
+                    ? KpiQuestion::findOrFail($qData['id_question'])
+                    : new KpiQuestion(['kpi_point_id' => $point->id_point]);
+
+                $question->pertanyaan = $pertanyaan;
+                $question->kpi_point_id = $point->id_point;
+                $question->save();
+            }
+        }
+
+        // relasi division
+        if ($isGlobal) {
+            $allDivisions = DB::table('divisions')->pluck('id_divisi');
+            foreach ($allDivisions as $divId) {
+                DB::table('division_has_kpis')->updateOrInsert(
+                    ['id_divisi' => $divId, 'kpis_id_kpi' => $kpi->id_kpi],
+                    ['created_at' => now(), 'updated_at' => now()]
+                );
+            }
+        } elseif ($divisionId) {
+            DB::table('division_has_kpis')->updateOrInsert(
+                ['id_divisi' => $divisionId, 'kpis_id_kpi' => $kpi->id_kpi],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+        }
+    }
+
 
     /**
      * Ambil semua KPI yang tersedia untuk sebuah divisi
@@ -321,23 +363,28 @@ class KpiController extends Controller
      */
     public function storeEmployeeScore(Request $request)
     {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,id_karyawan',
-            'kpi_question_id' => 'required|exists:kpi_questions,id_question',
-            'nilai' => 'required|integer|min:1|max:4'
+        $validated = $request->validate([
+            'id_karyawan' => 'required|exists:employees,id_karyawan',
+            'hasil' => 'required|array|min:1',
+            'hasil.*.jawaban' => 'required|array|min:1',
+            'hasil.*.jawaban.*.id' => 'required|exists:kpi_questions,id_question',
+            'hasil.*.jawaban.*.jawaban' => 'required|integer|min:1|max:4',
         ]);
 
-        $record = KpiQuestionHasEmployee::updateOrCreate(
-            [
-                'employees_id_karyawan' => $request->employee_id,
-                'kpi_question_id_question' => $request->kpi_question_id,
-            ],
-            ['nilai' => $request->nilai]
-        );
+        foreach ($validated['hasil'] as $aspek) {
+            foreach ($aspek['jawaban'] as $jawaban) {
+                KpiQuestionHasEmployee::updateOrCreate(
+                    [
+                        'employees_id_karyawan' => $validated['id_karyawan'],
+                        'kpi_question_id_question' => $jawaban['id']
+                    ],
+                    ['nilai' => $jawaban['jawaban']]
+                );
+            }
+        }
 
         return response()->json([
-            'message' => 'Nilai berhasil disimpan',
-            'data' => $record
+            'message' => 'Nilai karyawan berhasil disimpan'
         ]);
     }
 

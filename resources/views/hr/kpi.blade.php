@@ -245,6 +245,7 @@
       bobot: 0,
       subaspects: [],
     };
+
     renderAspect(aspect, true);
     setActiveTab(aspect.uid);
     updateInfo();
@@ -266,8 +267,6 @@
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "nav-link";
-    if (newlyCreated || document.querySelectorAll("#topicTabs .nav-link").length === 0)
-      btn.classList.add("active");
     btn.id = `tab-${aspectUid}-tab`;
     btn.setAttribute("data-bs-toggle", "tab");
     btn.setAttribute("data-bs-target", `#tab-${aspectUid}`);
@@ -282,7 +281,7 @@
 
     const contentPane = document.createElement("div");
     contentPane.className = "tab-pane fade";
-    if (newlyCreated || document.querySelectorAll("#topicContents .tab-pane").length === 0) {
+    if (document.querySelectorAll("#topicContents .tab-pane").length === 0) {
       contentPane.classList.add("show", "active");
     }
     contentPane.id = `tab-${aspectUid}`;
@@ -435,6 +434,32 @@
     }
   }
 
+  function confirmRemoveSubaspect(subUid) {
+    const subCard = $(`#sub-${subUid}`);
+    const idPoint = subCard.find(".subaspect-id").val();
+    if (idPoint) {
+      if (!confirm("Yakin hapus subaspek ini dari server?")) return;
+      $.ajax({
+        url: `/api/kpi-point/${idPoint}`,
+        method: "DELETE",
+        success: function(resp) {
+          subCard.remove();
+          alert(resp.message || "Subaspek dihapus");
+          updateInfo();
+        },
+        error: function(xhr) {
+          console.error("Error deleting subaspect:", xhr.responseText || xhr.statusText);
+          alert("Gagal menghapus subaspek");
+        },
+      });
+    } else {
+      if (confirm("Hapus subaspek ini?")) {
+        subCard.remove();
+        updateInfo();
+      }
+    }
+  }
+
   function removeAspectFromUI(aspectUid) {
     $(`#tab-btn-${aspectUid}`).remove();
     $(`#tab-${aspectUid}`).remove();
@@ -470,67 +495,87 @@
       return;
     }
 
-    const $pane = $(kpiPanes[0]);
-    const nama = $pane.find(".aspect-name").val().trim();
-    const bobot = Number($pane.find(".aspect-weight").val()) || 0;
-
-    if (!nama) {
-      alert("Nama KPI tidak boleh kosong!");
-      return;
-    }
-
-    const points = [];
-    let totalPointWeight = 0;
+    const aspects = [];
     let valid = true;
 
-    $pane.find(".subaspect-card").each(function() {
-      const $sub = $(this);
-      const subNama = $sub.find(".subaspect-name").val().trim();
-      const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
+    kpiPanes.each(function() {
+      const $pane = $(this);
+      const idKpi = $pane.find(".aspect-id").val() || null;
+      const nama = $pane.find(".aspect-name").val().trim();
+      const bobot = Number($pane.find(".aspect-weight").val()) || 0;
 
-      if (!subNama) {
-        alert("Nama subaspek tidak boleh kosong!");
+      if (!nama) {
+        alert("Nama KPI tidak boleh kosong!");
         valid = false;
         return false;
       }
 
-      totalPointWeight += subBobot;
+      const points = [];
+      let totalPointWeight = 0;
 
-      const questions = [];
-      $sub.find(".question-text").each(function() {
-        const qText = $(this).val().trim();
-        if (qText) questions.push({
-          pertanyaan: qText
+      $pane.find(".subaspect-card").each(function() {
+        const $sub = $(this);
+        const idPoint = $sub.find(".subaspect-id").val() || null;
+        const subNama = $sub.find(".subaspect-name").val().trim();
+        const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
+
+        if (!subNama) {
+          alert("Nama subaspek tidak boleh kosong!");
+          valid = false;
+          return false;
+        }
+
+        totalPointWeight += subBobot;
+
+        const questions = [];
+        $sub.find(".question-row").each(function() {
+          const qid = $(this).data("question-id") || null;
+          const qText = $(this).find(".question-text").val().trim();
+          if (qText) {
+            questions.push({
+              id_question: qid,
+              pertanyaan: qText,
+            });
+          }
+        });
+
+        if (questions.length === 0) {
+          alert("Subaspek harus memiliki minimal 1 pertanyaan!");
+          valid = false;
+          return false;
+        }
+
+        points.push({
+          id_point: idPoint,
+          nama: subNama,
+          bobot: subBobot,
+          questions: questions,
         });
       });
 
-      if (questions.length === 0) {
-        alert("Subaspek harus memiliki minimal 1 pertanyaan!");
+      if (!valid) return false;
+
+      if (totalPointWeight > 100) {
+        alert("Total bobot subaspek tidak boleh lebih dari 100%");
         valid = false;
         return false;
       }
 
-      points.push({
-        nama: subNama,
-        bobot: subBobot,
-        questions: questions,
+      aspects.push({
+        id_kpi: idKpi,
+        nama: nama,
+        bobot: bobot,
+        points: points,
       });
     });
 
     if (!valid) return;
 
-    if (totalPointWeight > 100) {
-      alert("Total bobot subaspek tidak boleh lebih dari 100%");
-      return;
-    }
-
     const payload = {
-      nama: nama,
-      bobot: bobot,
       is_global: currentMode === "global" ? 1 : 0,
-      points: points,
+      division_id: currentMode === "division" ? currentDivisionId : null,
+      kpis: aspects,
     };
-    if (currentMode === "division") payload.division_id = currentDivisionId;
 
     console.log("Payload dikirim:", payload);
 
@@ -552,7 +597,8 @@
         let msg = "Gagal menyimpan KPI";
         try {
           const errResp = JSON.parse(xhr.responseText);
-          if (errResp && errResp.errors) msg += "\n" + Object.values(errResp.errors).flat().join("\n");
+          if (errResp && errResp.errors)
+            msg += "\n" + Object.values(errResp.errors).flat().join("\n");
         } catch (e) {}
         alert(msg);
       },
@@ -577,6 +623,5 @@
     $("#infoTotalWeight").text(totalWeight + "%");
     $("#infoTopicCount").text($("#topicContents .tab-pane").length);
   }
-</script>
-
+</script> 
 @endsection

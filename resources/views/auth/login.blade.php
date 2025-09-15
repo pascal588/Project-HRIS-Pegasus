@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     
-    <title>:: My-Task:: Signin</title>
+    <title>HRIS Login</title>
     <link rel="icon" href="{{ asset('assets/favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ asset('assets/css/my-task.style.min.css') }}">
 </head>
@@ -27,7 +27,7 @@
                                 </svg>
                             </div>
                             <div class="mb-5">
-                                <h2 class="color-900 text-center">Hrris Pegasus Website</h2>
+                                <h2 class="color-900 text-center">HRIS Pegasus Website</h2>
                             </div>
                             <div>
                                 <img src="{{ asset('assets/images/login-img.svg') }}" alt="login-img">
@@ -41,7 +41,7 @@
                                 @csrf
                                 <div class="col-12 text-center mb-1 mb-lg-5">
                                     <h1>Masuk</h1>
-                                    <span>Masukkan Akun dan Password untuk masuk</span>
+                                    <span>Masukkan Alamat Email dan Sandi Untuk Masuk</span>
                                 </div>
                                 <div class="col-12">
                                     <div class="mb-2">
@@ -53,7 +53,7 @@
                                     <div class="mb-2">
                                         <div class="form-label">
                                             <span class="d-flex justify-content-between align-items-center">
-                                                Password
+                                                Sandi
                                                 <a class="text-secondary" href="{{ route('password.request') }}">Lupa Sandi?</a>
                                             </span>
                                         </div>

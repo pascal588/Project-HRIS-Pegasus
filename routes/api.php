@@ -13,7 +13,6 @@ Route::post('/attendances/import', [AttendanceApiController::class, 'import']);
 Route::get('/attendances/summary', [AttendanceApiController::class, 'getSummary']);
 Route::get('/attendances/employee/{employee_id}', [AttendanceApiController::class, 'getEmployeeAttendance']);
 
-
 // routes/api.php
 Route::get('/divisions', [DivisionController::class, 'index']);
 Route::post('/divisions', [DivisionController::class, 'store']);

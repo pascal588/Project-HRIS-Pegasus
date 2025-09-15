@@ -228,7 +228,7 @@ $(document).ready(function() {
                 { data: 'izin', className: 'text-center' },
                 { data: 'sakit', className: 'text-center' },
                 { data: 'mangkir', className: 'text-center' },
-                { data: 'terlambat', className: 'text-center' },
+                { data: 'jumlah_terlambat', className: 'text-center' },
                 { 
                     data: 'actions',
                     orderable: false,
@@ -298,13 +298,12 @@ function loadAttendanceData() {
                 if (response.success && response.data) {
                     const data = response.data;
                     
-                    // Calculate totals - FIXED
                     const totals = {
                         hadir: 0,
                         izin: 0,
                         sakit: 0,
                         mangkir: 0,
-                        terlambat: 0
+                        jumlah_terlambat: 0
                     };
                     
                     data.forEach(item => {
@@ -312,7 +311,7 @@ function loadAttendanceData() {
                         totals.izin += parseInt(item.izin) || 0;
                         totals.sakit += parseInt(item.sakit) || 0;
                         totals.mangkir += parseInt(item.mangkir) || 0;
-                        totals.terlambat += parseInt(item.terlambat) || 0;
+                        totals.jumlah_terlambat += parseInt(item.jumlah_terlambat) || 0;
                     });
                     
                     console.log('Totals calculated:', totals);

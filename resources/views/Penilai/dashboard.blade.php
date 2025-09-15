@@ -55,46 +55,56 @@
         </div>
       </div>
 
-      <!-- Absensi -->
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-header bg-transparent border-bottom-0">
-            <h6 class="mb-0 fw-bold">Histori Absensi</h6>
-          </div>
-          <div class="card-body">
-            <div class="row g-2">
-              <div class="col-3">
-                <div class="card text-center p-3 h-100 shadow-sm">
-                  <i class="icofont-checked fs-3 text-success"></i>
-                  <h6 class="fw-bold small mt-2 mb-0">Hadir</h6>
-                  <span class="text-muted">400</span>
+      {{-- absensi --}}
+        <div class="col-12">
+          <div class="card mb-3">
+            <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-bold">Histori Absensi</h6>
+              <!-- Hapus dropdown pemilihan periode -->
+            </div>
+            <div class="card-body">
+              <div id="attendanceLoading" class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Loading...</span>
                 </div>
+                <p class="mt-2">Memuat data absensi...</p>
               </div>
-              <div class="col-3">
-                <div class="card text-center p-3 h-100 shadow-sm">
-                  <i class="icofont-ban fs-3 text-danger"></i>
-                  <h6 class="fw-bold small mt-2 mb-0">Mangkir</h6>
-                  <span class="text-muted">06</span>
-                </div>
-              </div>
-              <div class="col-3">
-                <div class="card text-center p-3 h-100 shadow-sm">
-                  <i class="icofont-beach-bed fs-3 text-warning"></i>
-                  <h6 class="fw-bold small mt-2 mb-0">Izin/Cuti</h6>
-                  <span class="text-muted">14</span>
-                </div>
-              </div>
-              <div class="col-3">
-                <div class="card text-center p-3 h-100 shadow-sm">
-                  <i class="icofont-stopwatch fs-3 text-primary"></i>
-                  <h6 class="fw-bold small mt-2 mb-0">Terlambat</h6>
-                  <span class="text-muted">17</span>
+              <div id="attendanceError" class="alert alert-danger d-none" role="alert"></div>
+              <div id="attendanceContent" class="d-none">
+                <div class="row g-2">
+                  <div class="col-3">
+                    <div class="card text-center p-2">
+                      <i class="icofont-checked fs-3 text-success"></i>
+                      <h6 class="fw-bold small mt-2 mb-0">Hadir</h6>
+                      <span class="text-muted" id="presentCount">0</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="card text-center p-2">
+                      <i class="icofont-ban fs-3 text-danger"></i>
+                      <h6 class="fw-bold small mt-2 mb-0">Mangkir</h6>
+                      <span class="text-muted" id="absentCount">0</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="card text-center p-2">
+                      <i class="icofont-beach-bed fs-3 text-warning"></i>
+                      <h6 class="fw-bold small mt-2 mb-0">Izin/Cuti</h6>
+                      <span class="text-muted" id="permissionCount">0</span>
+                    </div>
+                  </div>
+                  <div class="col-3">
+                    <div class="card text-center p-2">
+                      <i class="icofont-stopwatch fs-3 text-primary"></i>
+                      <h6 class="fw-bold small mt-2 mb-0">Terlambat</h6>
+                      <span class="text-muted" id="lateCount">0</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
     </div>
   </div>
 
@@ -492,6 +502,52 @@ function renderGenderDonutChart(genderData) {
 
 // Panggil fungsi saat halaman dimuat
 document.addEventListener('DOMContentLoaded', loadDivisionData);
+
+ // Fungsi untuk mengambil data absensi
+  function fetchAttendanceData() {
+    const employeeId = '{{ Auth::user()->employee->id_karyawan }}';
+    let url = `/api/attendances/employee/${employeeId}`;
+    
+    // Tampilkan loading, sembunyikan error dan content
+    document.getElementById('attendanceLoading').classList.remove('d-none');
+    document.getElementById('attendanceError').classList.add('d-none');
+    document.getElementById('attendanceContent').classList.add('d-none');
+    
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          // Update data absensi
+          document.getElementById('presentCount').textContent = data.summary.hadir || 0;
+          document.getElementById('absentCount').textContent = data.summary.mangkir || 0;
+          document.getElementById('permissionCount').textContent = data.summary.izin || 0;
+          document.getElementById('lateCount').textContent = data.summary.terlambat || 0;
+          
+          // Sembunyikan loading, tampilkan content
+          document.getElementById('attendanceLoading').classList.add('d-none');
+          document.getElementById('attendanceContent').classList.remove('d-none');
+        } else {
+          throw new Error(data.message || 'Failed to fetch attendance data');
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching attendance data:', error);
+        document.getElementById('attendanceLoading').classList.add('d-none');
+        document.getElementById('attendanceError').classList.remove('d-none');
+        document.getElementById('attendanceError').textContent = 'Gagal memuat data absensi: ' + error.message;
+      });
+  }
+
+  // Ambil data absensi saat halaman dimuat
+  document.addEventListener('DOMContentLoaded', function() {
+    fetchAttendanceData();
+  });
+
 </script>
 
 <script>

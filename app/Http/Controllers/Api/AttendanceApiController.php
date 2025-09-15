@@ -48,7 +48,6 @@ class AttendanceApiController extends Controller
         ], 200);
     }
 
-    // POST /api/attendances/import
 // POST /api/attendances/import
 public function import(Request $request)
 {
@@ -389,6 +388,11 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
         $summary = [];
         foreach ($attendances->groupBy('employee_id') as $employeeId => $records) {
             $employee = $records->first()->employee;
+
+            // Hitung jumlah keterlambatan
+        $terlambatCount = $records->filter(function($record) {
+            return !empty($record->late) && $record->late > 0;
+        })->count();
             
             $summary[] = [
                 'employee_id' => $employeeId,
@@ -399,6 +403,7 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
                 'sakit' => $records->where('status', 'Sick (S)')->count(),
                 'mangkir' => $records->where('status', 'Absent (A)')->count(),
                 'terlambat' => $records->sum('late'),
+                'jumlah_terlambat' => $terlambatCount,
                 'actions' => '<a href="'.route('hr.detail-absensi', ['employee_id' => $employeeId]).'" class="btn btn-outline-secondary btn-sm"><i class="icofont-eye-alt"></i></a>'
             ];
         }
@@ -482,6 +487,9 @@ public function getEmployeeAttendance($employee_id, Request $request)
             'sakit' => $attendances->where('status', 'Sick (S)')->count(),
             'mangkir' => $attendances->where('status', 'Absent (A)')->count(),
             'terlambat' => $attendances->sum('late'),
+            'jumlah_terlambat' => $attendances->filter(function($record) {
+                return !empty($record->late) && $record->late > 0;
+            })->count(),
         ];
         
         // Get unique periods for this employee

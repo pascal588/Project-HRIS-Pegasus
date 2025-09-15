@@ -152,7 +152,7 @@
                             <button class="btn btn-sm btn-outline-secondary me-2" id="refresh-btn">
                                 <i class="icofont-refresh"></i> Refresh
                             </button>
-                            <button class="btn btn-sm btn-primary" id="export-btn">Export Excel</button>
+                            {{-- <button class="btn btn-sm btn-primary" id="export-btn">Export Excel</button> --}}
                         </div>
                     </div>
                     <div class="card-body">
@@ -160,6 +160,7 @@
                             <table class="table detail-table table-bordered table-hover" id="attendance-detail-table">
                                 <thead>
                                     <tr>
+                                        <th>No</th>
                                         <th>Tanggal</th>
                                         <th>Hari</th>
                                         <th>Status</th>
@@ -173,7 +174,7 @@
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td colspan="9" class="text-center">Memuat data...</td>
+                                        <td colspan="10" class="text-center">Memuat data...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -222,6 +223,7 @@ $(document).ready(function() {
             data: { period: period },
             success: function(response) {
                 if (response.success) {
+                    
                     // Update employee info
                     $('#emp-name').text(response.employee.nama);
                     $('#emp-id').text(response.employee.id_karyawan);
@@ -235,7 +237,7 @@ $(document).ready(function() {
                     $('#summary-izin').text(response.summary.izin + ' Hari');
                     $('#summary-sakit').text(response.summary.sakit + ' Hari');
                     $('#summary-mangkir').text(response.summary.mangkir + ' Hari');
-                    $('#summary-terlambat').text(response.summary.terlambat + ' Kali');
+                    $('#summary-terlambat').text(response.summary.jumlah_terlambat + ' Kali');
                     
                     // Update period dropdown
                     $('#period-list').html(`
@@ -263,6 +265,7 @@ $(document).ready(function() {
                     tbody.empty();
                     
                     if (response.attendances.length > 0) {
+                        let counter = 1; // Counter untuk nomor urut
                         response.attendances.forEach(attendance => {
                             const date = new Date(attendance.date);
                             const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -284,6 +287,7 @@ $(document).ready(function() {
                            
                             tbody.append(`
                                 <tr>
+                                    <td>${counter}</td>
                                     <td>${formatDate(attendance.date)}</td>
                                     <td>${dayName}</td>
                                     <td>${statusBadge}</td>
@@ -299,11 +303,12 @@ $(document).ready(function() {
                                     </td>
                                 </tr>
                             `);
+                            counter++; // Increment counter
                         });
                     } else {
                         tbody.append(`
                             <tr>
-                                <td colspan="8" class="text-center">Tidak ada data absensi untuk periode yang dipilih</td>
+                                <td colspan="10" class="text-center">Tidak ada data absensi untuk periode yang dipilih</td>
                             </tr>
                         `);
                     }
@@ -319,7 +324,7 @@ $(document).ready(function() {
                 const tbody = $('#attendance-detail-table tbody');
                 tbody.html(`
                     <tr>
-                        <td colspan="8" class="text-center text-danger">
+                        <td colspan="10" class="text-center text-danger">
                             Gagal memuat data. Silakan refresh halaman.
                         </td>
                     </tr>
@@ -336,14 +341,9 @@ $(document).ready(function() {
         loadEmployeeAttendance(period);
     });
     
-    // Handle refresh button
+    // refresh button
     $('#refresh-btn').click(function() {
         loadEmployeeAttendance(currentPeriod);
-    });
-    
-    // Handle export button
-    $('#export-btn').click(function() {
-        alert('Fitur export akan diimplementasikan kemudian');
     });
     
     // Initial load

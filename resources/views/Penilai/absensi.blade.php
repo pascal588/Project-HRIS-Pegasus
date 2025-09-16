@@ -90,37 +90,45 @@
   </div>
 </div>
 
-<!-- Modal - Diperlebar untuk desktop -->
+<!-- Modal -->
 <div class="modal fade" id="showabsen" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Data Absensi</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-0">
-        <div class="table-responsive">
-          <table class="table table-bordered table-striped mb-0">
-            <thead class="table-secondary text-center">
-              <tr>
-                <th style="min-width: 120px;">Tanggal</th>
-                <th style="min-width: 100px;">Status</th>
-                <th>Jam Masuk</th>
-                <th>Jam Keluar</th>
-                <th>Lama Kerja</th>
-              </tr>
-            </thead>
-            <tbody class="text-center" id="modalAttendanceBody">
-              <!-- Data akan diisi oleh JavaScript -->
-            </tbody>
-          </table>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Data Absensi - Periode: <span id="modalPeriodTitle"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped mb-0">
+                        <thead class="table-secondary text-center">
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Status</th>
+                                <th>Masuk</th>
+                                <th>Keluar</th>
+                                <th>Break</th>
+                                <th>Setelah Break</th>
+                                <th>Overtime In</th>
+                                <th>Overtime Out</th>
+                                <th>Total Kerja</th>
+                                <th>Total Break</th>
+                                <th>Total Overtime</th>
+                                <th>Terlambat</th>
+                                <th>Early Leave</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center" id="modalAttendanceBody">
+                            <!-- Data akan diisi oleh JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-      </div>
     </div>
-  </div>
 </div>
 @endsection
 
@@ -280,7 +288,7 @@
           izin: 0,
           sakit: 0,
           mangkir: 0,
-          terlambat: 0
+          jumlah_terlambat: 0
         };
       }
       
@@ -301,9 +309,10 @@
       }
       
       // Jumlahkan keterlambatan
-      if (attendance.late) {
-        attendanceByPeriod[attendance.period].terlambat += parseInt(attendance.late) || 0;
-      }
+      if (attendance.late && attendance.late > 0) {
+            attendanceByPeriod[attendance.period].terlambat += parseInt(attendance.late) || 0;
+            attendanceByPeriod[attendance.period].jumlah_terlambat++; // Tambah jumlah hari terlambat
+        }
     });
     
     // Buat baris tabel untuk setiap periode (desktop)
@@ -315,7 +324,7 @@
           <td><span class="fw-bold">${periodData.izin}</span></td>
           <td><span class="fw-bold">${periodData.sakit}</span></td>
           <td><span class="fw-bold">${periodData.mangkir}</span></td>
-          <td><span class="fw-bold">${periodData.terlambat}m</span></td>
+          <td><span class="fw-bold">${periodData.jumlah_terlambat}</span></td>
           <td>
             <button type="button" class="btn btn-outline-secondary btn-view-details" data-period="${periodData.period}">
               <i class="icofont-eye text-success"></i>
@@ -348,7 +357,7 @@
               </div>
               <div class="col-4 mt-2">
                 <small>Terlambat</small>
-                <div class="fw-bold">${periodData.terlambat}m</div>
+                <div class="fw-bold">${periodData.jumlah_terlambat}m</div>
               </div>
               <div class="col-4 mt-2">
                 <small>Aksi</small>
@@ -570,7 +579,7 @@
   }
 
   // Fungsi untuk menampilkan detail absensi dalam modal
-  // Fungsi untuk menampilkan detail absensi dalam modal
+// Fungsi untuk menampilkan detail absensi dalam modal
 function showAttendanceDetails(period, attendances) {
     // Filter absensi berdasarkan periode
     const periodAttendances = attendances.filter(a => a.period === period);
@@ -611,24 +620,39 @@ function showAttendanceDetails(period, attendances) {
                 statusClass = 'text-secondary';
         }
         
-        // Format jam - coba beberapa field yang mungkin
-        const clockIn = attendance.clock_in || 
-                       attendance.daily_attendance_clock_in || 
-                       (attendance.clock_in_time ? attendance.clock_in_time.substring(0, 5) : '-');
-        
-        const clockOut = attendance.clock_out || 
-                        attendance.daily_attendance_clock_out || 
-                        (attendance.clock_out_time ? attendance.clock_out_time.substring(0, 5) : '-');
-        
-        // Format durasi kerja
-        let totalAttendance = attendance.total_attendance || '-';
-        if (totalAttendance && totalAttendance !== '-') {
-            // Jika format "HH:MM:SS", ambil hanya "HH:MM"
-            if (totalAttendance.includes(':')) {
-                const parts = totalAttendance.split(':');
-                totalAttendance = `${parts[0]}:${parts[1]}`;
+        // Format jam
+        const formatTime = (timeValue) => {
+            if (!timeValue || timeValue === '-' || timeValue === '00:00:00') return '-';
+            if (typeof timeValue === 'string' && timeValue.includes(':')) {
+                return timeValue.substring(0, 5); // Ambil hanya HH:MM
             }
-        }
+            return timeValue;
+        };
+        
+        const clockIn = formatTime(attendance.daily_attendance_clock_in);
+        const clockOut = formatTime(attendance.daily_attendance_clock_out);
+        const breakTime = formatTime(attendance.daily_attendance_break);
+        const afterBreak = formatTime(attendance.daily_attendance_after_break);
+        const overtimeIn = formatTime(attendance.daily_attendance_overtime_in);
+        const overtimeOut = formatTime(attendance.daily_attendance_overtime_out);
+        
+        // Format durasi
+        const formatDuration = (duration) => {
+            if (!duration || duration === '-') return '-';
+            if (typeof duration === 'string' && duration.includes(':')) {
+                const parts = duration.split(':');
+                return `${parts[0]}j ${parts[1]}m`;
+            }
+            return duration;
+        };
+        
+        const totalAttendance = formatDuration(attendance.total_attendance);
+        const totalBreak = formatDuration(attendance.total_break_duration);
+        const totalOvertime = formatDuration(attendance.total_overtime);
+        
+        // Data terlambat dan early leave
+        const late = attendance.late ? `${attendance.late} menit` : '-';
+        const earlyLeave = attendance.early_leave ? `${attendance.early_leave} menit` : '-';
         
         modalBody += `
             <tr>
@@ -636,18 +660,27 @@ function showAttendanceDetails(period, attendances) {
                 <td><span class="fw-bold ${statusClass}">${status}</span></td>
                 <td>${clockIn}</td>
                 <td>${clockOut}</td>
+                <td>${breakTime}</td>
+                <td>${afterBreak}</td>
+                <td>${overtimeIn}</td>
+                <td>${overtimeOut}</td>
                 <td>${totalAttendance}</td>
+                <td>${totalBreak}</td>
+                <td>${totalOvertime}</td>
+                <td>${late}</td>
+                <td>${earlyLeave}</td>
             </tr>
         `;
     });
     
+    // Update header tabel modal untuk menampung kolom baru
     $('#modalAttendanceBody').html(modalBody);
     
     // Jika tidak ada data, tampilkan pesan
     if (periodAttendances.length === 0) {
         $('#modalAttendanceBody').html(`
             <tr>
-                <td colspan="5" class="text-center text-muted py-3">
+                <td colspan="14" class="text-center text-muted py-3">
                     <i class="icofont-info-circle fs-4"></i>
                     <p class="mt-2 mb-0">Tidak ada data absensi untuk periode ini</p>
                 </td>

@@ -17,6 +17,16 @@ class EmployeeApiController extends Controller
     {
         $employees = Employee::with(['user', 'roles.division'])->get();
 
+        // Tambahkan URL foto jika ada
+        $employees->transform(function($employee) {
+            if ($employee->foto) {
+                $employee->foto_url = asset('storage/' . $employee->foto);
+            } else {
+                $employee->foto_url = asset('assets/images/default-avatar.png');
+            }
+            return $employee;
+        });
+
         return response()->json([
             'success' => true,
             'data' => $employees

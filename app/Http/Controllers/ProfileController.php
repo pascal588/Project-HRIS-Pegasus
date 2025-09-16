@@ -22,34 +22,33 @@ class ProfileController extends Controller
         ]);
     }
 
-    /**
-     * Update the user's profile photo.
-     */
     public function updatePhoto(Request $request): RedirectResponse
     {
         $request->validate([
-            'foto' => ['required', 'image', 'max:2048'] // Max 2MB
+            'foto' => ['required', 'image', 'max:5120']
         ]);
         
+        $employee = $request->user()->employee;
+        
         // Hapus foto lama jika ada
-        if ($request->user()->employee->foto) {
-            Storage::delete('public/' . $request->user()->employee->foto);
+        if ($employee->foto) {
+            // Hapus file dari storage public tanpa menambahkan prefix 'public/'
+            if (Storage::disk('public')->exists($employee->foto)) {
+                Storage::disk('public')->delete($employee->foto);
+            }
         }
         
         // Simpan foto baru
         $path = $request->file('foto')->store('profile-photos', 'public');
         
         // Update database
-        $request->user()->employee->update([
+        $employee->update([
             'foto' => $path
         ]);
 
         return Redirect::route('profile.edit')->with('status', 'photo-updated');
     }
 
-    /**
-     * Update the user's profile information.
-     */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         // Update user data
@@ -64,9 +63,7 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
-    /**
-     * Delete the user's account.
-     */
+
     public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
@@ -77,7 +74,9 @@ class ProfileController extends Controller
 
         // Hapus foto profil jika ada
         if ($user->employee->foto) {
-            Storage::delete('public/' . $user->employee->foto);
+            if (Storage::disk('public')->exists($user->employee->foto)) {
+                Storage::disk('public')->delete($user->employee->foto);
+            }
         }
 
         Auth::logout();

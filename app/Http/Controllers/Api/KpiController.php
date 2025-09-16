@@ -135,10 +135,6 @@ class KpiController extends Controller
     }
 
 
-    /**
-     * Ambil semua KPI yang tersedia untuk sebuah divisi
-     * Termasuk KPI global
-     */
 // Di KpiController.php - perbaiki method listKpiByDivision
 public function listKpiByDivision($divisionId)
 {
@@ -169,17 +165,20 @@ public function listKpiByDivision($divisionId)
         ->values()
         ->map(function($kpi) {
             return [
+                'id' => $kpi->id_kpi,
                 'id_kpi' => $kpi->id_kpi,
                 'nama' => $kpi->nama,
                 'bobot' => $kpi->bobot,
                 'is_global' => $kpi->is_global,
                 'points' => $kpi->points->map(function($point) {
                     return [
+                        'id' => $point->id_point,
                         'id_point' => $point->id_point,
                         'nama' => $point->nama,
                         'bobot' => $point->bobot,
                         'questions' => $point->questions->map(function($question) {
                             return [
+                                'id' => $question->id_question,
                                 'id_question' => $question->id_question,
                                 'pertanyaan' => $question->pertanyaan
                             ];
@@ -189,10 +188,7 @@ public function listKpiByDivision($divisionId)
             ];
         });
 
-    return response()->json([
-        'success' => true,
-        'data' => $allKpis
-    ]);
+    return response()->json($allKpis); // Langsung return array
 }
 
     public function listGlobalKpi()

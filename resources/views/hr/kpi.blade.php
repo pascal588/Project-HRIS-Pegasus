@@ -189,38 +189,46 @@
 
   function loadKpiData() {
     clearKPIForm();
+    let url = '';
+    
     if (currentMode === "division" && currentDivisionId) {
-      $.getJSON(`/api/kpi-by-division/${currentDivisionId}`)
-        .done(function(response) {
-          if (response.kpis && response.kpis.length) {
-            response.kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
-            updateInfo();
-          }
-        })
-        .fail(function(xhr) {
-          console.error("Error loading KPI data:", xhr.responseText || xhr.statusText);
-        });
+        url = `/api/kpi-by-division/${currentDivisionId}`;
     } else if (currentMode === "global") {
-      $.getJSON(`/api/kpi-global`)
+        url = `/api/kpi-global`;
+    } else {
+        return;
+    }
+
+    $.getJSON(url)
         .done(function(response) {
-          if (response.kpis && response.kpis.length) {
-            response.kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
-            updateInfo();
-          }
+            // Perhatikan struktur response yang berbeda
+            let kpis = [];
+            
+            if (currentMode === "division") {
+                // Response dari /api/kpi-by-division/{id} langsung array KPI
+                kpis = response || [];
+            } else if (currentMode === "global") {
+                // Response dari /api/kpi-global adalah {kpis: array}
+                kpis = response.kpis || [];
+            }
+
+            if (kpis.length) {
+                kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
+                updateInfo();
+            }
         })
         .fail(function(xhr) {
-          console.error("Error loading global KPI:", xhr.responseText || xhr.statusText);
+            console.error("Error loading KPI data:", xhr.responseText || xhr.statusText);
+            alert("Gagal memuat data KPI");
         });
-    }
-  }
-
+}
   function normalizeKpiFromServer(kpi) {
     return {
         uid: uid("kpi"),
         id: kpi.id || kpi.id_kpi || null,
         nama: kpi.nama || "",
         bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
-        is_global: kpi.is_global || false, // TAMBAHKAN INI
+        is_global: kpi.is_global || false, // Pastikan ini ada
         subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
             uid: uid("sub"),
             id: pt.id || pt.id_point || null,
@@ -258,9 +266,9 @@
     const aspectName = aspectObj.nama || "";
     const aspectWeight = aspectObj.bobot || 0;
     const subaspects = aspectObj.subaspects || [];
-    const isGlobal = aspectObj.is_global || false; // Tambahkan ini
+    const isGlobal = aspectObj.is_global || false;
 
-    // Tab
+    // Tab - tambahkan class khusus untuk KPI global
     const li = document.createElement("li");
     li.className = "nav-item";
     li.id = `tab-btn-${aspectUid}`;
@@ -281,59 +289,60 @@
     li.appendChild(btn);
     document.getElementById("topicTabs").appendChild(li);
 
-    // Content
+    // Content - tambahkan kondisi readonly untuk KPI global
     let subHtml = "";
-    subaspects.forEach((sa) => (subHtml += subaspectTemplate(aspectUid, sa)));
+    subaspects.forEach((sa) => (subHtml += subaspectTemplate(aspectUid, sa, isGlobal)));
 
     const contentPane = document.createElement("div");
     contentPane.className = "tab-pane fade";
     if (document.querySelectorAll("#topicContents .tab-pane").length === 0) {
-      contentPane.classList.add("show", "active");
+        contentPane.classList.add("show", "active");
     }
     const isReadOnly = currentMode === "division" && isGlobal;
     contentPane.id = `tab-${aspectUid}`;
     contentPane.setAttribute("role", "tabpanel");
     contentPane.dataset.aspectUid = aspectUid;
     contentPane.innerHTML = `
-      <input type="hidden" class="aspect-id" value="${aspectId}">
-      <input type="hidden" class="aspect-is-global" value="${isGlobal}">
-      <div class="mb-3">
-        <label class="form-label">Nama aspek</label>
-        <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
-          oninput="updateAspectTabTitle('${aspectUid}', this.value)" ${isReadOnly ? 'readonly' : ''}>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Bobot aspek (%)</label>
-        <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" 
-          oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
-      </div>
-      ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
-      <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
-        <h6>Subaspek</h6>
-        ${subHtml}
-      </div>
-      ${!isReadOnly ? `
-      <div class="mt-2">
-        <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
-        <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
-      </div>
-      ` : ''}
+        <input type="hidden" class="aspect-id" value="${aspectId}">
+        <input type="hidden" class="aspect-is-global" value="${isGlobal}">
+        <div class="mb-3">
+            <label class="form-label">Nama aspek</label>
+            <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
+                oninput="updateAspectTabTitle('${aspectUid}', this.value)" ${isReadOnly ? 'readonly' : ''}>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Bobot aspek (%)</label>
+            <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" 
+                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
+        </div>
+        ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
+        <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
+            <h6>Subaspek</h6>
+            ${subHtml}
+        </div>
+        ${!isReadOnly ? `
+        <div class="mt-2">
+            <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
+            <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
+        </div>
+        ` : ''}
     `;
     document.getElementById("topicContents").appendChild(contentPane);
 
-    if (subaspects.length === 0) addSubaspect(aspectUid);
+    if (subaspects.length === 0 && !isReadOnly) addSubaspect(aspectUid);
     updateInfo();
-  }
+}
 
-  function subaspectTemplate(aspectUid, saObj = {}) {
+  function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
     const suid = saObj.uid || uid("sub");
     const sid = saObj.id || "";
     const sname = saObj.nama || "";
     const sweight = saObj.bobot || 0;
     const questions = saObj.questions || [];
+    const isReadOnly = currentMode === "division" && isGlobalAspect;
 
     let qHtml = "";
-    questions.forEach((q) => (qHtml += questionInputTemplate(suid, q)));
+    questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
 
     return `
       <div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
@@ -341,26 +350,32 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <div style="flex:1">
             <label class="form-label">Nama Subaspek</label>
-            <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}" oninput="updateInfo()">
+            <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}" 
+                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
           </div>
           <div style="width:140px; margin-left:10px">
             <label class="form-label">Bobot (%)</label>
-            <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}" min="0" max="100" oninput="updateInfo()">
+            <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}" min="0" max="100" 
+                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
           </div>
+          ${!isReadOnly ? `
           <div style="margin-left:10px">
             <label class="form-label">&nbsp;</label>
             <button class="btn btn-sm btn-outline-danger d-block" type="button" onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
           </div>
+          ` : ''}
         </div>
         <div class="questions-list" id="questions-${suid}">
           ${qHtml}
         </div>
+        ${!isReadOnly ? `
         <div class="mt-2">
           <button class="btn btn-outline-secondary btn-sm" type="button" onclick="addQuestionToSub('${suid}')">+ Tambah Pertanyaan</button>
         </div>
+        ` : ''}
       </div>
     `;
-  }
+}
 
   function questionInputTemplate(suid, q = {}) {
     const qid = q.id_question || q.id || "";
@@ -421,30 +436,38 @@
   function confirmRemoveAspect(aspectUid) {
     const pane = $(`#tab-${aspectUid}`);
     const aspectId = pane.find(".aspect-id").val();
-    if (aspectId) {
-      if (!confirm("Yakin hapus aspek ini?")) return;
-      $.ajax({
-        url: currentMode === "global" ?
-          `/api/kpi-global/${aspectId}` :
-          `/api/division/${currentDivisionId}/kpi/${aspectId}`,
-        method: "DELETE",
-        success: function(resp) {
-          removeAspectFromUI(aspectUid);
-          alert(resp.message || "Aspek dihapus");
-          loadKpiData();
-        },
-        error: function(xhr) {
-          console.error("Error deleting aspect:", xhr.responseText || xhr.statusText);
-          alert("Gagal menghapus aspek");
-        },
-      });
-    } else {
-      if (confirm("Hapus aspek ini?")) {
-        removeAspectFromUI(aspectUid);
-        updateInfo();
-      }
+    const isGlobal = pane.find(".aspect-is-global").val() === "true";
+    
+    // Jika KPI global di mode divisi, jangan izinkan hapus
+    if (currentMode === "division" && isGlobal) {
+        alert("KPI Global tidak dapat dihapus dari mode Divisi. Gunakan mode Global untuk mengelola KPI Global.");
+        return;
     }
-  }
+
+    if (aspectId) {
+        if (!confirm("Yakin hapus aspek ini?")) return;
+        $.ajax({
+            url: currentMode === "global" ?
+                `/api/kpi-global/${aspectId}` :
+                `/api/division/${currentDivisionId}/kpi/${aspectId}`,
+            method: "DELETE",
+            success: function(resp) {
+                removeAspectFromUI(aspectUid);
+                alert(resp.message || "Aspek dihapus");
+                loadKpiData();
+            },
+            error: function(xhr) {
+                console.error("Error deleting aspect:", xhr.responseText || xhr.statusText);
+                alert("Gagal menghapus aspek");
+            },
+        });
+    } else {
+        if (confirm("Hapus aspek ini?")) {
+            removeAspectFromUI(aspectUid);
+            updateInfo();
+        }
+    }
+}
 
   function confirmRemoveSubaspect(subUid) {
     const subCard = $(`#sub-${subUid}`);
@@ -493,34 +516,40 @@
 
   function saveKPI() {
     if (!currentMode) {
-      alert("Pilih mode (Global/Divisi) terlebih dahulu.");
-      return;
+        alert("Pilih mode (Global/Divisi) terlebih dahulu.");
+        return;
     }
     if (currentMode === "division" && !currentDivisionId) {
-      alert("Pilih divisi dulu!");
-      return;
+        alert("Pilih divisi dulu!");
+        return;
     }
 
     const kpiPanes = $("#topicContents .tab-pane");
     if (kpiPanes.length === 0) {
-      alert("Tambahkan minimal 1 aspek KPI!");
-      return;
+        alert("Tambahkan minimal 1 aspek KPI!");
+        return;
     }
 
     const aspects = [];
     let valid = true;
 
     kpiPanes.each(function() {
-      const $pane = $(this);
-      const idKpi = $pane.find(".aspect-id").val() || null;
-      const nama = $pane.find(".aspect-name").val().trim();
-      const bobot = Number($pane.find(".aspect-weight").val()) || 0;
+        const $pane = $(this);
+        const idKpi = $pane.find(".aspect-id").val() || null;
+        const isGlobal = $pane.find(".aspect-is-global").val() === "true";
+        const nama = $pane.find(".aspect-name").val().trim();
+        const bobot = Number($pane.find(".aspect-weight").val()) || 0;
 
-      if (!nama) {
-        alert("Nama KPI tidak boleh kosong!");
-        valid = false;
-        return false;
-      }
+        // Jika di mode divisi dan KPI global, skip karena tidak boleh diubah
+        if (currentMode === "division" && isGlobal) {
+            return true; // continue ke next iteration
+        }
+
+        if (!nama) {
+            alert("Nama KPI tidak boleh kosong!");
+            valid = false;
+            return false;
+        }
 
       const points = [];
       let totalPointWeight = 0;

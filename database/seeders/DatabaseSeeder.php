@@ -17,9 +17,9 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             EmployeeSeeder::class,
             RoleEmployeeSeeder::class,
-            KpiSeeder::class,
-            kpiPointSeeder::class,
-            DivisionHasKpiSeeder::class
+            // KpiSeeder::class,
+            // kpiPointSeeder::class,
+            // DivisionHasKpiSeeder::class
         ]);
     }
 }

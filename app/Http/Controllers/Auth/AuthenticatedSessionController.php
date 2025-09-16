@@ -42,7 +42,7 @@ class AuthenticatedSessionController extends Controller
         $roles = $user->employee?->roles->pluck('nama_jabatan')->toArray() ?? [];
         if (in_array('HR', $roles)) {
             return redirect()->route('hr.dashboard');
-        } elseif (in_array('Kepala-divisi', $roles)) {
+        } elseif (in_array('Kepala Divisi', $roles)) {
             return redirect()->route('penilai.dashboard');
         } elseif (in_array('Karyawan', $roles)) {
             return redirect()->route('karyawan.dashboard');

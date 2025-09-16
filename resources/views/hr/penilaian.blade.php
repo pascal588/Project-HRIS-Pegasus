@@ -119,6 +119,23 @@
                     transform: scale(1.15);
                     cursor: pointer;
                 }
+                
+                .subaspek-card {
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    overflow: hidden;
+                }
+                
+                .subaspek-header {
+                    background-color: #f8f9fa;
+                    padding: 12px 15px;
+                    border-bottom: 1px solid #e0e0e0;
+                }
+                
+                .subaspek-body {
+                    padding: 15px;
+                }
             </style>
 
             <!-- Body -->
@@ -142,7 +159,7 @@
 @section('script')
 <script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
 <script>
-    /* ====== Konfigurasi / Variabel global ====== */
+    /* Konfigurasi / Variabel global */
     const tableSelector = '#myProjectTable';
     const modalWizardEl = document.getElementById('modalWizard');
     const wizardContent = document.getElementById('wizardContent');
@@ -152,18 +169,18 @@
 
     let currentStep = 1;
     let totalSteps = 0;
-    // stepsData: array of { stepIndex, kpiId, kpiName, kpiBobot, pointId, pointName, questions: [{id, pertanyaan}] }
+    // stepsData: array of { stepIndex, kpiId, kpiName, kpiBobot, points: [{pointId, pointName, questions: [{id, pertanyaan}] }] }
     let stepsData = [];
     // answersMap: questionId -> numeric(1..4)
     let answersMap = {};
 
-    /* ====== Inisialisasi DataTable (tidak diubah banyak) ====== */
+    /* Inisialisasi DataTable (tidak diubah banyak) */
     $(tableSelector).DataTable({
         responsive: true,
         pageLength: 5,
         lengthMenu: [5, 10, 25, 50],
         ajax: {
-            url: "{{ url('api/employees/kepala-divisi') }}",
+            url: "{{ url('api/employees/Kepala Divisi') }}",
             dataSrc: 'data'
         },
         columns: [{
@@ -177,8 +194,7 @@
                 data: 'roles',
                 render: function(data) {
                     if (data && data.length > 0) {
-                        let kepala = data.find(r => r.nama_jabatan.toLowerCase().includes("kepala divisi"));
-                        if (kepala) return kepala.division?.nama_divisi ?? '-';
+                        // Ambil divisi dari role pertama (atau sesuai struktur data Anda)
                         return data[0].division?.nama_divisi ?? '-';
                     }
                     return '-';
@@ -192,76 +208,89 @@
                 data: null,
                 render: function(row) {
                     let divisi = "-";
-                    if (row.roles && row.roles.length > 0) divisi = row.roles[0].division?.nama_divisi ?? "-";
+                    let divisiId = null;
+                    if (row.roles && row.roles.length > 0) {
+                        divisi = row.roles[0].division?.nama_divisi ?? "-";
+                        divisiId = row.roles[0].division?.id_divisi ?? null;
+                    }
                     return `
                     <button type="button" 
-                      class="btn btn-outline-secondary btn-nilai" 
-                      data-id="${row.id_karyawan}" 
-                      data-nama="${row.nama}" 
-                      data-divisi="${divisi}">
-                      <i class="icofont-edit text-success"></i>
+                    class="btn btn-outline-secondary btn-nilai" 
+                    data-id="${row.id_karyawan}" 
+                    data-nama="${row.nama}" 
+                    data-divisi="${divisi}"
+                    data-divisi-id="${divisiId}">
+                    <i class="icofont-edit text-success"></i>
                     </button>`;
                 }
             }
         ]
     });
 
-    /* ====== Preview karyawan saat klik tombol edit ====== */
+    /* Preview karyawan saat klik tombol edit */
     $(tableSelector).on('click', '.btn-nilai', function() {
-        let id = $(this).data('id');
-        let nama = $(this).data('nama');
-        let divisi = $(this).data('divisi');
+    let id = $(this).data('id');
+    let nama = $(this).data('nama');
+    let divisi = $(this).data('divisi');
+    let divisiId = $(this).data('divisi-id'); // Ambil ID divisi
 
-        $("#previewNama").text(nama);
-        $("#previewDivisi").text(divisi);
-        $("#btnNilai").data({
-            id,
-            nama,
-            divisi
+    $("#previewNama").text(nama);
+    $("#previewDivisi").text(divisi);
+    $("#btnNilai").data({
+        id,
+        nama,
+        divisi,
+            divisiId // Simpan ID divisi
         });
     });
 
-    /* ====== Ketika tombol "Nilai" di preview diklik: load KPI dan render wizard ====== */
     $("#btnNilai").on("click", function() {
-        if (!$(this).data('nama')) {
-            alert("Pilih karyawan dulu!");
-            return;
-        }
+    if (!$(this).data('nama')) {
+        alert("Pilih karyawan dulu!");
+        return;
+    }
 
-        let divisi = $(this).data("divisi");
-        let url = divisi && divisi !== "-" ? `/api/kpi-by-division/${encodeURIComponent(divisi)}` : `/api/kpi-global`;
+    let divisiId = $(this).data("divisi-id");
+    
+    if (!divisiId) {
+        alert("Divisi karyawan tidak valid!");
+        return;
+    }
 
-        fetch(url)
-            .then(res => res.json())
-            .then(res => {
-                // Response bisa memiliki struktur berbeda tergantung endpoint; kita normalisasi
-                // Kita tunggu objek: res.kpis OR res (array)
-                let kpisArray = [];
-                if (Array.isArray(res.kpis)) kpisArray = res.kpis;
-                else if (Array.isArray(res)) kpisArray = res;
-                else if (Array.isArray(res.data)) kpisArray = res.data;
-                else if (Array.isArray(res.kpis || res.data)) kpisArray = res.kpis || res.data;
+    let url = `/api/kpi-by-division/${divisiId}`;
+    
+    fetch(url)
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(kpis => {
+            if (!Array.isArray(kpis)) {
+                throw new Error('Invalid data format from server');
+            }
+            
+            if (kpis.length === 0) {
+                alert("Tidak ada KPI yang ditetapkan untuk divisi ini!");
+                return;
+            }
+            
+            buildStepsFromKpis(kpis);
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalWizard'));
+            modal.show();
+        })
+        .catch(err => {
+            console.error("Error load KPI:", err);
+            alert("Gagal memuat data KPI: " + err.message);
+        });
+});
 
-                buildStepsFromKpis(kpisArray);
-                currentStep = 1;
-                showStep(currentStep);
-
-                // Tampilkan modal
-                let modal = new bootstrap.Modal(modalWizardEl);
-                modal.show();
-            })
-            .catch(err => {
-                console.error("Error load KPI:", err);
-                alert("Gagal memuat data KPI");
-            });
-    });
-
-    /* ====== Build steps: 1 step per subaspek (point). Jika satu kpi punya >1 point, masing-masing jadi step ====== */
+    /* Build steps: 1 step per aspek utama */
     function buildStepsFromKpis(kpis) {
         stepsData = [];
         answersMap = {};
 
-        // iterate kpis
+        // iterate kpis (aspek utama)
         kpis.forEach(kpi => {
             const kpiId = kpi.id_kpi ?? kpi.id ?? null;
             const kpiName = kpi.nama ?? kpi.name ?? 'Aspek';
@@ -269,49 +298,27 @@
 
             const points = kpi.points || kpi.subaspek || [];
 
-            if (points.length === 0) {
-                // Jika kpi langsung mempunyai questions tanpa points (edge case), buat satu step synthetic
-                const questions = (kpi.questions || []).map(q => ({
-                    id: q.id_question ?? q.id,
-                    pertanyaan: q.pertanyaan ?? q.text ?? ''
-                }));
-
-                stepsData.push({
-                    stepIndex: stepsData.length + 1,
-                    kpiId,
-                    kpiName,
-                    kpiBobot,
-                    pointId: null,
-                    pointName: null,
-                    questions
-                });
-            } else {
-                points.forEach(point => {
-                    const questions = (point.questions || point.questions || []).map(q => ({
+            stepsData.push({
+                stepIndex: stepsData.length + 1,
+                kpiId,
+                kpiName,
+                kpiBobot,
+                points: points.map(point => ({
+                    pointId: point.id_point ?? point.id ?? null,
+                    pointName: point.nama ?? point.name ?? null,
+                    pointBobot: point.bobot ?? 0,
+                    questions: (point.questions || []).map(q => ({
                         id: q.id_question ?? q.id,
                         pertanyaan: q.pertanyaan ?? q.text ?? ''
-                    }));
-
-                    // fallback jika point.questions kosong tapi point membawa questions di field lain (compat)
-                    const derivedQuestions = questions;
-
-                    stepsData.push({
-                        stepIndex: stepsData.length + 1,
-                        kpiId,
-                        kpiName,
-                        kpiBobot,
-                        pointId: point.id_point ?? point.id ?? null,
-                        pointName: point.nama ?? point.name ?? null,
-                        questions: derivedQuestions
-                    });
-                });
-            }
+                    }))
+                }))
+            });
         });
 
         renderWizardSteps(stepsData);
     }
 
-    /* ====== Render wizard steps (each step = satu subaspek) ====== */
+    /* Render wizard steps (each step = satu aspek utama) */
     function renderWizardSteps(steps) {
         wizardContent.innerHTML = "";
 
@@ -324,7 +331,7 @@
             btn.type = 'button';
             btn.className = "step-btn btn btn-sm btn-outline-secondary";
             btn.dataset.step = idx + 1;
-            btn.innerText = `${idx + 1}` + (stepObj.pointName ? ` • ${truncate(stepObj.pointName, 18)}` : '');
+            btn.innerText = `${idx + 1} • ${truncate(stepObj.kpiName, 18)}`;
             btn.addEventListener("click", () => {
                 currentStep = idx + 1;
                 showStep(currentStep);
@@ -334,54 +341,80 @@
 
         wizardContent.appendChild(stepButtonsContainer);
 
-        // Render each step content
+        // Render each step content (satu aspek utama per step)
         steps.forEach((stepObj, idx) => {
             const stepDiv = document.createElement("div");
             stepDiv.className = "wizard-step d-none";
             stepDiv.id = `step${idx + 1}`;
             stepDiv.dataset.kpiId = stepObj.kpiId;
-            stepDiv.dataset.pointId = stepObj.pointId ?? '';
 
             // Header
             const header = document.createElement("div");
-            header.className = "mb-2";
-            header.innerHTML = `<h6 class="mb-1">Aspek: <strong>${escapeHtml(stepObj.kpiName)}</strong> ${stepObj.kpiBobot ? `<small class="text-muted">(Bobot: ${stepObj.kpiBobot}%)</small>` : ''}</h6>
-                            ${stepObj.pointName ? `<div class="mb-2"><small class="text-muted">Sub-aspek: ${escapeHtml(stepObj.pointName)}</small></div>` : ''}`;
-
-            // Table of questions (subaspek)
-            const table = document.createElement("table");
-            table.className = "table table-bordered";
-            table.innerHTML = `
-            <thead class="text-center">
-                <tr><th style="width:48px">No</th><th class="text-start">Pertanyaan</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
-            </thead>
-            <tbody class="text-center"></tbody>
-        `;
-
-            const tbody = table.querySelector('tbody');
-
-            stepObj.questions.forEach((q, i) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                <td>${i + 1}</td>
-                <td class="text-start">${escapeHtml(q.pertanyaan)}</td>
-                <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="1"></td>
-                <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="2"></td>
-                <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="3"></td>
-                <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="4"></td>
-            `;
-                tbody.appendChild(tr);
-            });
-
-            // Score display untuk ASPEK (seluruh questions yang punya kpiId)
-            const scoreDisplay = document.createElement("div");
-            scoreDisplay.className = "mt-2 fw-bold";
-            scoreDisplay.innerHTML = `Score Aspek (${escapeHtml(stepObj.kpiName)}): <span id="score_aspek_${stepObj.kpiId}">Belum dinilai</span>`;
+            header.className = "mb-3";
+            header.innerHTML = `<h5 class="mb-1">Aspek: <strong>${escapeHtml(stepObj.kpiName)}</strong></h5>
+                            <div class="mb-2"><small class="text-muted">Bobot: ${stepObj.kpiBobot}%</small></div>`;
 
             stepDiv.appendChild(header);
-            stepDiv.appendChild(table);
-            stepDiv.appendChild(scoreDisplay);
 
+            // Render semua sub-aspek (points) dalam aspek ini
+            if (stepObj.points && stepObj.points.length > 0) {
+                stepObj.points.forEach((point, pointIdx) => {
+                    const pointCard = document.createElement("div");
+                    pointCard.className = "subaspek-card";
+                    
+                    // Header sub-aspek
+                    const pointHeader = document.createElement("div");
+                    pointHeader.className = "subaspek-header";
+                    pointHeader.innerHTML = `<h6 class="mb-0">${pointIdx + 1}. ${escapeHtml(point.pointName)}</h6>
+                                            <small class="text-muted">Bobot: ${point.pointBobot}%</small>`;
+                    
+                    // Body sub-aspek (tabel pertanyaan)
+                    const pointBody = document.createElement("div");
+                    pointBody.className = "subaspek-body";
+                    
+                    const table = document.createElement("table");
+                    table.className = "table table-bordered mb-0";
+                    table.innerHTML = `
+                        <thead class="text-center">
+                            <tr><th style="width:48px">No</th><th class="text-start">Pertanyaan</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+                        </thead>
+                        <tbody class="text-center"></tbody>
+                    `;
+
+                    const tbody = table.querySelector('tbody');
+
+                    point.questions.forEach((q, i) => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${i + 1}</td>
+                            <td class="text-start">${escapeHtml(q.pertanyaan)}</td>
+                            <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="1"></td>
+                            <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="2"></td>
+                            <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="3"></td>
+                            <td><input type="radio" name="q_${q.id}" data-kpi="${stepObj.kpiId}" data-question="${q.id}" value="4"></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    pointBody.appendChild(table);
+                    pointCard.appendChild(pointHeader);
+                    pointCard.appendChild(pointBody);
+                    stepDiv.appendChild(pointCard);
+                });
+            } else {
+                // Jika tidak ada sub-aspek, tampilkan pesan
+                const noDataMsg = document.createElement("div");
+                noDataMsg.className = "alert alert-info";
+                noDataMsg.textContent = "Tidak ada sub-aspek untuk aspek ini.";
+                stepDiv.appendChild(noDataMsg);
+            }
+
+            // Score display untuk ASPEK
+            const scoreDisplay = document.createElement("div");
+            scoreDisplay.className = "mt-3 fw-bold text-end";
+            scoreDisplay.innerHTML = `Score Aspek: <span id="score_aspek_${stepObj.kpiId}">Belum dinilai</span>`;
+
+            stepDiv.appendChild(scoreDisplay);
             wizardContent.appendChild(stepDiv);
         });
 
@@ -397,7 +430,7 @@
         showStep(1);
     }
 
-    /* ====== Event delegation handler untuk radio inputs ====== */
+    /* Event delegation handler untuk radio inputs */
     function onRadioChangeDelegated(e) {
         const target = e.target;
         if (target && target.matches('input[type="radio"][data-question]')) {
@@ -412,13 +445,15 @@
         }
     }
 
-    /* ====== Hitung dan update skor aspek (rata-rata semua question di aspek / 4) ====== */
+    /* Hitung dan update skor aspek (rata-rata semua question di aspek / 4) */
     function updateAspekScoreDisplay(kpiId) {
         // collect all question ids that belong to this kpi from stepsData
         let questionIds = [];
         stepsData.forEach(s => {
             if (String(s.kpiId) === String(kpiId)) {
-                (s.questions || []).forEach(q => questionIds.push(q.id));
+                s.points.forEach(point => {
+                    point.questions.forEach(q => questionIds.push(q.id));
+                });
             }
         });
 
@@ -449,7 +484,7 @@
         document.getElementById(`score_aspek_${kpiId}`).innerText = norm.toFixed(2);
     }
 
-    /* ====== Navigasi wizard (prev/next/finish visibility) ====== */
+    /* Navigasi wizard (prev/next/finish visibility) */
     function showStep(step) {
         document.querySelectorAll(".wizard-step").forEach((el, index) => {
             el.classList.toggle("d-none", index + 1 !== step);
@@ -476,7 +511,7 @@
         }
     });
 
-    /* ====== Kumpulkan jawaban: group per aspek (kpi) sesuai format backend ====== */
+    /* Kumpulkan jawaban: group per aspek (kpi) sesuai format backend */
     function kumpulkanJawaban() {
         // kelompokkan questions per kpi
         const aspekMap = {}; // kpiId -> { id_aspek, nama_aspek, bobot, jawaban: [{id, jawaban}], skor }
@@ -492,16 +527,19 @@
                     skor: null
                 };
             }
-            (s.questions || []).forEach(q => {
-                const stored = answersMap[q.id];
-                aspekMap[kpiId].jawaban.push({
-                    id: q.id,
-                    jawaban: stored !== undefined ? Number(stored) : null
+            
+            s.points.forEach(point => {
+                point.questions.forEach(q => {
+                    const stored = answersMap[q.id];
+                    aspekMap[kpiId].jawaban.push({
+                        id: q.id,
+                        jawaban: stored !== undefined ? Number(stored) : null
+                    });
                 });
             });
         });
 
-        // compute skor (average across all answered questions per aspek, normalized 0..1)
+        //
         Object.keys(aspekMap).forEach(k => {
             const obj = aspekMap[k];
             const answers = obj.jawaban;
@@ -524,7 +562,7 @@
         return Object.values(aspekMap);
     }
 
-    /* ====== Submit -> POST ke API sesuai backend ====== */
+    // Simpan jawaban ke backend
     finishBtn.addEventListener("click", () => {
         const hasil = kumpulkanJawaban();
         const karyawanId = $("#btnNilai").data("id");
@@ -564,7 +602,7 @@
             });
     });
 
-    /* ====== Reset saat modal tertutup ====== */
+    /* Reset saat modal tertutup */
     modalWizardEl.addEventListener("hidden.bs.modal", function() {
         wizardContent.innerHTML = "";
         stepsData = [];
@@ -573,7 +611,7 @@
         totalSteps = 0;
     });
 
-    /* ====== Utilitas kecil ====== */
+    
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)

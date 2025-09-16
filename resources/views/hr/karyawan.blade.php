@@ -396,90 +396,95 @@
 </div>
 
 <!-- Modal Detail Karyawan -->
-<div
-  class="modal fade"
-  id="detailkaryawan"
-  tabindex="-1"
-  aria-labelledby="detailkaryawanLabel"
-  aria-hidden="true">
+<div class="modal fade" id="detailkaryawan" tabindex="-1" aria-labelledby="detailkaryawanLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="detailkaryawanLabel">
-          Detail Data Karyawan
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"></button>
+        <h5 class="modal-title" id="detailkaryawanLabel">Detail Data Karyawan</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="photo-container">
-          <img
-            id="detailPhoto"
-            class="employee-photo"
-            src="https://via.placeholder.com/150"
-            alt="Foto Karyawan" />
+        <div class="row mb-4">
+          <div class="col-md-4 text-center">
+            <div class="photo-container mb-3">
+              <img id="detailPhoto" class="employee-photo rounded-circle" 
+                   src="https://via.placeholder.com/150" alt="Foto Karyawan" 
+                   style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #f8f9fa; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            </div>
+            <div class="employee-id-badge">
+              <span class="badge bg-primary fs-6" id="detailIdBadge">ID: -</span>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <h4 id="detailNama" class="mb-3">-</h4>
+            <div class="detail-badge-container mb-1">
+              <span class="badge bg-info fs-6 p-2" id="detailGender">-</span>
+              <span class="badge fs-5 p-2" id="detailStatusBadge">-</span>
+            </div>
+            <div class="employee-contact">
+              <p class="mb-1"><i class="icofont-email me-2"></i><span id="detailEmail">-</span></p>
+              <p class="mb-0"><i class="icofont-phone me-2"></i><span id="detailTelp">-</span></p>
+            </div>
+            <div class="mt-3">
+              <a id="whatsappBtn" class="btn btn-success text-white" target="_blank">
+                <i class="icofont-whatsapp me-2"></i>Hubungi via WhatsApp
+              </a>
+            </div>
+          </div>
         </div>
 
         <div class="row">
           <div class="col-md-6">
-            <div class="detail-section">
-              <h6>Informasi Pribadi</h6>
-              <div class="detail-item">
-                <div class="detail-label">ID Karyawan</div>
-                <div class="detail-value" id="detailId">-</div>
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="icofont-briefcase me-2"></i>Informasi Pekerjaan</h6>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Nama Lengkap</div>
-                <div class="detail-value" id="detailNama">-</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Jenis Kelamin</div>
-                <div class="detail-value" id="detailGender">-</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Email</div>
-                <div class="detail-value" id="detailEmail">-</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">No. Telepon</div>
-                <div class="detail-value" id="detailTelp">-</div>
+              <div class="card-body">
+                <div class="detail-item mb-2">
+                  <div class="detail-label small text-muted">Divisi</div>
+                  <div class="detail-value fw-medium" id="detailDivisi">-</div>
+                </div>
+                <div class="detail-item mb-2">
+                  <div class="detail-label small text-muted">Jabatan</div>
+                  <div class="detail-value fw-medium" id="detailJabatan">-</div>
+                </div>
+                <div class="detail-item mb-0">
+                  <div class="detail-label small text-muted">Tanggal Masuk</div>
+                  <div class="detail-value fw-medium" id="detailJoinDate">-</div>
+                </div>
               </div>
             </div>
           </div>
 
           <div class="col-md-6">
-            <div class="detail-section">
-              <h6>Informasi Pekerjaan</h6>
-              <div class="detail-item">
-                <div class="detail-label">Divisi</div>
-                <div class="detail-value" id="detailDivisi">-</div>
+            <div class="card">
+              <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="icofont-user me-2"></i>Informasi Pribadi</h6>
               </div>
-              <div class="detail-item">
-                <div class="detail-label">Jabatan</div>
-                <div class="detail-value" id="detailJabatan">-</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Status</div>
-                <div class="detail-value" id="detailStatus">-</div>
-              </div>
-              <div class="detail-item">
-                <div class="detail-label">Tanggal Masuk</div>
-                <div class="detail-value" id="detailJoinDate">-</div>
+              <div class="card-body">
+                <div class="detail-item mb-2">
+                  <div class="detail-label small text-muted">ID Karyawan</div>
+                  <div class="detail-value fw-medium" id="detailId">-</div>
+                </div>
+                <div class="detail-item mb-2">
+                  <div class="detail-label small text-muted">Nama Lengkap</div>
+                  <div class="detail-value fw-medium" id="detailNamaFull">-</div>
+                </div>
+                <div class="detail-item mb-2">
+                  <div class="detail-label small text-muted">Jenis Kelamin</div>
+                  <div class="detail-value fw-medium" id="detailGenderFull">-</div>
+                </div>
+                <div class="detail-item mb-0">
+                  <div class="detail-label small text-muted">Status Karyawan</div>
+                  <div class="detail-value fw-medium" id="detailStatusFull">-</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal">
-          Tutup
-        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
       </div>
     </div>
   </div>
@@ -645,7 +650,7 @@
                   </tr>
                 </thead>
                 <tbody id="jabatanListBody">
-                  <!-- Data jabatan akan diisi oleh JavaScript -->
+
                 </tbody>
               </table>
             </div>
@@ -775,36 +780,6 @@
         renderManagedJabatanList();
       }
     });
-
-    // // Load jabatan untuk dropdown TAMBAH KARYAWAN berdasarkan divisi yang dipilih
-    // $('#divisiKaryawan').change(function() {
-    //   const divisiId = $(this).val();
-    //   if (divisiId) {
-    //     loadJabatanOptionsForAdd(divisiId);
-    //   } else {
-    //     $('#jabatanKaryawan').html('<option value="" selected>Pilih Jabatan</option>');
-    //   }
-    // });
-
-    // Fungsi khusus untuk load jabatan di form TAMBAH KARYAWAN
-    // function loadJabatanOptionsForAdd(divisiId = null) {
-    //   $.get('/api/roles')
-    //     .done(res => {
-    //       let opts = '<option value="" selected>Pilih Jabatan</option>';
-    //       const data = res.data || res;
-
-    //       data.forEach(d => {
-    //         if (!divisiId || d.division_id == divisiId) {
-    //           opts += `<option value="${d.id_jabatan}">${d.nama_jabatan}</option>`;
-    //         }
-    //       });
-    //       $('#jabatanKaryawan').html(opts);
-    //     })
-    //     .fail(err => {
-    //       console.error('Gagal load data jabatan:', err);
-    //       $('#jabatanKaryawan').html('<option value="">Gagal memuat data</option>');
-    //     });
-    // }
 
     // Fungsi untuk load jabatan di modal manage
     function loadJabatanOptionsForManage(divisiId = null) {
@@ -1222,7 +1197,7 @@
         });
     }
 
-    // EDIT KARYAWAN - DIPERBAIKI (tanpa divisi)
+    // EDIT KARYAWAN
     $('#myProjectTable').on('click', '.edit-btn', function() {
       const rowData = table.row($(this).closest('tr')).data();
       $('#editId').val(rowData.id_karyawan);
@@ -1285,12 +1260,31 @@
     // Detail Karyawan
     $('#myProjectTable').on('click', '.btn-detail', function() {
       const rowData = table.row($(this).closest('tr')).data();
+      
+      // Set data dasar
       $('#detailId').text(rowData.id_karyawan);
+      $('#detailIdBadge').text('ID: ' + rowData.id_karyawan);
       $('#detailNama').text(rowData.nama);
+      $('#detailNamaFull').text(rowData.nama);
       $('#detailGender').text(rowData.gender);
+      $('#detailGenderFull').text(rowData.gender);
       $('#detailEmail').text(rowData.user.email);
       $('#detailTelp').text(rowData.no_telp);
 
+      // Set status dengan badge yang sesuai
+      let statusBadge = '';
+      if (rowData.status === 'Aktif') {
+        statusBadge = '<span class="badge bg-success">Aktif</span>';
+      } else if (rowData.status === 'Cuti') {
+        statusBadge = '<span class="badge bg-warning">Cuti</span>';
+      } else {
+        statusBadge = '<span class="badge bg-danger">Non-Aktif</span>';
+      }
+      
+      $('#detailStatusBadge').html(statusBadge);
+      $('#detailStatusFull').html(rowData.status || 'Aktif');
+      $('#detailStatusFull').removeClass().addClass('detail-value fw-medium');
+      
       if (rowData.roles && rowData.roles.length > 0) {
         const divisions = [...new Set(rowData.roles.map(role => role.division?.nama_divisi).filter(Boolean))];
         $('#detailDivisi').text(divisions.join(', ') || '-');
@@ -1300,13 +1294,43 @@
         $('#detailJabatan').text('-');
       }
 
-      $('#detailStatus').text(rowData.status || 'Aktif');
-      $('#detailJoinDate').text(new Date(rowData.created_at).toLocaleDateString('id-ID'));
-      $('#detailPhoto').attr('src', rowData.photo_url || 'https://via.placeholder.com/150');
+
+      $('#detailJoinDate').text(new Date(rowData.created_at).toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }));
+
+
+      let photoUrl;
+      if (rowData.foto) {
+        photoUrl = '/storage/' + rowData.foto;
+      } else {
+        // Default avatar berdasarkan gender
+        if (rowData.gender === 'Wanita') {
+          photoUrl = 'assets/images/xs/avatar2.jpg';
+        } else {
+          photoUrl = 'assets/images/xs/avatar1.jpg';
+        }
+      }
+
+      // Atur tombol WhatsApp
+    const whatsappBtn = $('#whatsappBtn');
+    if (rowData.no_telp) {
+      const phoneNumber = rowData.no_telp.replace(/\D/g, ''); // Hapus karakter non-digit
+      whatsappBtn.attr('href', `https://wa.me/${phoneNumber}`);
+      whatsappBtn.show();
+    } else {
+      whatsappBtn.hide();
+    }
+
+
+      $('#detailPhoto').attr('src', photoUrl);
+      
       $('#detailkaryawan').modal('show');
     });
 
-    // Inisialisasi awal
     loadJabatanOptionsForAdd();
     loadDaftarJabatan();
   });

@@ -262,7 +262,7 @@
           document.getElementById('presentCount').textContent = data.summary.hadir || 0;
           document.getElementById('absentCount').textContent = data.summary.mangkir || 0;
           document.getElementById('permissionCount').textContent = data.summary.izin || 0;
-          document.getElementById('lateCount').textContent = data.summary.terlambat || 0;
+          document.getElementById('lateCount').textContent = data.summary.jumlah_terlambat || 0;
           
           // Sembunyikan loading, tampilkan content
           document.getElementById('attendanceLoading').classList.add('d-none');

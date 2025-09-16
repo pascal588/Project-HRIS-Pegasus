@@ -396,9 +396,9 @@
               const employeesTableBody = document.getElementById('employeesTableBody');
               employeesTableBody.innerHTML = '';
               
-              // Untuk sementara, kita asumsikan kepala divisi adalah yang memiliki role "Kepala-divisi"
+              // Untuk sementara, kita asumsikan kepala divisi adalah yang memiliki role "Kepala Divisi"
               data.data.forEach(employee => {
-                const isHead = employee.roles && employee.roles.some(role => role.nama_jabatan === 'Kepala-divisi');
+                const isHead = employee.roles && employee.roles.some(role => role.nama_jabatan === 'Kepala Divisi');
                 const row = document.createElement('tr');
                 if (isHead) row.classList.add('current-head');
                 

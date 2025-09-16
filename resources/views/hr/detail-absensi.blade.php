@@ -167,6 +167,8 @@
                                         <th>Jam Masuk</th>
                                         <th>Jam Keluar</th>
                                         <th>Lama Kerja</th>
+                                        <th>Istirahat</th>
+                                        <th>Lama Lembur</th>
                                         <th>Terlambat</th>
                                         <th>Pulang Cepat</th>
                                         <th>Keterangan</th>
@@ -294,6 +296,8 @@ $(document).ready(function() {
                                     <td>${attendance.clock_in || attendance.daily_attendance_clock_in || '-'}</td>
                                     <td>${attendance.clock_out || attendance.daily_attendance_clock_out || '-'}</td>
                                     <td>${attendance.total_attendance || '-'}</td>
+                                    <td>${attendance.total_break_duration || '-'}</td>
+                                    <td>${attendance.total_overtime || '-'}</td>
                                     <td>${attendance.late ? attendance.late + ' menit' : '-'}</td>
                                     <td>${attendance.early_leave ? attendance.early_leave + ' menit' : '-'}</td>
                                     <td>

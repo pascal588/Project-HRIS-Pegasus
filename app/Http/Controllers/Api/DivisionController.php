@@ -29,9 +29,9 @@ public function index()
         
         $jumlah_karyawan = $employeeIds->unique()->count();
 
-        // Kepala divisi bisa ambil dari role tertentu, misal 'Kepala-divisi'
+        // Kepala divisi bisa ambil dari role tertentu, misal 'Kepala Divisi'
         $kepala = $division->roles->flatMap(fn($role) => $role->employees)
-                    ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan','Kepala-divisi')->first()?->id_jabatan);
+                    ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan','Kepala Divisi')->first()?->id_jabatan);
 
         $kepala_nama = $kepala?->nama ?? '-';
 
@@ -182,15 +182,15 @@ public function updateHead(Request $request, $divisionId)
         
         $division = Division::findOrFail($divisionId);
         
-        // Cari role Kepala-divisi untuk divisi ini
+        // Cari role Kepala Divisi untuk divisi ini
         $headRole = Role::where('division_id', $divisionId)
-                       ->where('nama_jabatan', 'Kepala-divisi')
+                       ->where('nama_jabatan', 'Kepala Divisi')
                        ->first();
         
         if (!$headRole) {
-            // Jika role Kepala-divisi belum ada, buat baru
+            // Jika role Kepala Divisi belum ada, buat baru
             $headRole = Role::create([
-                'nama_jabatan' => 'Kepala-divisi',
+                'nama_jabatan' => 'Kepala Divisi',
                 'division_id' => $divisionId
             ]);
         }

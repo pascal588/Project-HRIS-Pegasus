@@ -9,6 +9,7 @@ use App\Models\KpiQuestion;
 use App\Models\KpiQuestionHasEmployee;
 use App\Models\KpiHasEmployee;
 use App\Models\Employee;
+use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,10 +28,9 @@ class KpiController extends Controller
      */
     public function storeKpi(Request $request)
     {
-        $isBulk = $request->has('kpis'); // cek apakah bulk
+        $isBulk = $request->has('kpis');
 
         if ($isBulk) {
-            // validasi bulk
             $request->validate([
                 'is_global' => 'required|boolean',
                 'division_id' => 'nullable|integer|exists:divisions,id_divisi',
@@ -52,7 +52,6 @@ class KpiController extends Controller
 
             return response()->json(['message' => 'Semua KPI berhasil disimpan!']);
         } else {
-            // validasi single
             $request->validate([
                 'nama' => 'required|string|max:100',
                 'deskripsi' => 'nullable|string',
@@ -79,7 +78,6 @@ class KpiController extends Controller
      */
     private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = null)
     {
-        // buat / update KPI
         $kpi = isset($kpiData['id_kpi'])
             ? Kpi::findOrFail($kpiData['id_kpi'])
             : new Kpi();
@@ -90,7 +88,6 @@ class KpiController extends Controller
         $kpi->is_global = $isGlobal;
         $kpi->save();
 
-        // sub-aspek (points)
         foreach ($kpiData['points'] as $pointData) {
             $point = isset($pointData['id_point'])
                 ? KpiPoint::findOrFail($pointData['id_point'])
@@ -101,10 +98,7 @@ class KpiController extends Controller
             $point->kpis_id_kpi = $kpi->id_kpi;
             $point->save();
 
-            // pertanyaan
             foreach ($pointData['questions'] as $qData) {
-                // bulk: bentuknya array ['pertanyaan'=>'xxx']
-                // single: bentuknya string "xxx"
                 $pertanyaan = is_array($qData) ? $qData['pertanyaan'] : $qData;
 
                 $question = isset($qData['id_question'])
@@ -117,7 +111,6 @@ class KpiController extends Controller
             }
         }
 
-        // relasi division
         if ($isGlobal) {
             $allDivisions = DB::table('divisions')->pluck('id_divisi');
             foreach ($allDivisions as $divId) {
@@ -134,10 +127,8 @@ class KpiController extends Controller
         }
     }
 
-
     /**
-     * Ambil semua KPI yang tersedia untuk sebuah divisi
-     * Termasuk KPI global
+     * Ambil KPI per divisi
      */
     public function listKpiByDivision($divisionId)
     {
@@ -186,13 +177,11 @@ class KpiController extends Controller
             return response()->json(['message' => 'KPI tidak ditemukan'], 404);
         }
 
-        // hapus dari pivot
         DB::table('division_has_kpis')
             ->where('id_divisi', $divisionId)
             ->where('kpis_id_kpi', $kpiId)
             ->delete();
 
-        // optional: hapus KPI jika tidak ada relasi lagi
         $stillUsed = DB::table('division_has_kpis')->where('kpis_id_kpi', $kpiId)->exists();
         if (!$stillUsed) {
             Kpi::find($kpiId)?->delete();
@@ -200,7 +189,7 @@ class KpiController extends Controller
 
         return response()->json(['message' => 'KPI divisi berhasil dihapus']);
     }
-
+    
     public function updateDivisionKpi(Request $request, $divisionId, $kpiId)
     {
         $exists = DB::table('division_has_kpis')
@@ -218,21 +207,25 @@ class KpiController extends Controller
         return response()->json(['message' => 'KPI divisi berhasil diperbarui']);
     }
 
-
-
+    /**
+     * Ambil KPI beserta nilai tiap karyawan
+     */
     public function getDivisionKpi($divisionId, $tahun, $bulan)
     {
-        // Ambil semua karyawan di divisi
         $employees = Employee::where('divisions_id_divisi', $divisionId)->get();
-
         if ($employees->isEmpty()) {
             return response()->json(['message' => 'Tidak ada karyawan di divisi ini'], 404);
         }
 
-        // Ambil KPI beserta sub-aspek & pertanyaan
-        $kpis = Kpi::with('points.questions')->get();
-        $result = [];
+        // ✅ ambil KPI global + divisi
+        $globalKpis = Kpi::where('is_global', true)->with('points.questions')->get();
+        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+            $q->where('divisions.id_divisi', $divisionId);
+        })->with('points.questions')->get();
 
+        $kpis = $globalKpis->concat($divisionKpis)->unique('id_kpi')->values();
+
+        $result = [];
         foreach ($employees as $employee) {
             $employeeData = [
                 'employee_id' => $employee->id_karyawan,
@@ -241,7 +234,6 @@ class KpiController extends Controller
             ];
 
             foreach ($kpis as $kpi) {
-                // Nilai akhir dari tabel pivot kpi_has_employee
                 $nilaiAkhir = KpiHasEmployee::where('kpis_id_kpi', $kpi->id_kpi)
                     ->where('employees_id_karyawan', $employee->id_karyawan)
                     ->where('tahun', $tahun)
@@ -290,8 +282,6 @@ class KpiController extends Controller
             'employees' => $result
         ]);
     }
-
-
     /**
      * Update KPI beserta sub-aspek dan pertanyaan
      */
@@ -354,7 +344,7 @@ class KpiController extends Controller
     public function deleteKpi($kpiId)
     {
         $kpi = Kpi::findOrFail($kpiId);
-        $kpi->delete(); // Soft delete akan otomatis cascade ke sub-aspek & pertanyaan jika relasi sudah pakai softDeletes
+        $kpi->delete();
         return response()->json(['message' => 'KPI berhasil dihapus']);
     }
 
@@ -411,6 +401,28 @@ class KpiController extends Controller
                 $nilaiAkhir += $skorSubAspek;
             }
 
+            // Integrasi Absensi
+            $attendances = Attendance::where('employee_id', $employeeId)
+                ->whereYear('date', $tahun)
+                ->whereMonth('date', $bulan)
+                ->get();
+
+            if ($attendances->count() > 0) {
+                $totalHari = $attendances->count();
+                $hadir = $attendances->where('status', 'Present at workday (PW)')->count();
+                $sakit = $attendances->where('status', 'Sick (S)')->count();
+                $izin  = $attendances->where('status', 'Permission (I)')->count();
+                $alpa  = $attendances->where('status', 'Absent (A)')->count();
+
+                $skorAbsensi = max(0, ($hadir / $totalHari) * 100
+                    - ($alpa * 25)
+                    - ($sakit * 10)
+                    - ($izin * 10));
+
+                $bobotAbsensi = 20;
+                $nilaiAkhir += ($skorAbsensi * ($bobotAbsensi / 100));
+            }
+
             KpiHasEmployee::updateOrCreate(
                 [
                     'kpis_id_kpi' => $kpi->id_kpi,
@@ -422,7 +434,7 @@ class KpiController extends Controller
             );
         }
 
-        return response()->json(['message' => 'Nilai akhir KPI berhasil dihitung']);
+        return response()->json(['message' => 'Nilai akhir KPI berhasil dihitung (termasuk absensi)']);
     }
 
     /**

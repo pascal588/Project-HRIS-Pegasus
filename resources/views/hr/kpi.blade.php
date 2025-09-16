@@ -216,22 +216,23 @@
 
   function normalizeKpiFromServer(kpi) {
     return {
-      uid: uid("kpi"),
-      id: kpi.id || kpi.id_kpi || null,
-      nama: kpi.nama || "",
-      bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
-      subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
-        uid: uid("sub"),
-        id: pt.id || pt.id_point || null,
-        nama: pt.nama || "",
-        bobot: pt.bobot !== undefined ? pt.bobot : 0,
-        questions: (pt.questions || pt.kpi_questions || []).map((q) => ({
-          id: q.id_question || q.id || null,
-          pertanyaan: q.pertanyaan || "",
+        uid: uid("kpi"),
+        id: kpi.id || kpi.id_kpi || null,
+        nama: kpi.nama || "",
+        bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
+        is_global: kpi.is_global || false, // TAMBAHKAN INI
+        subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
+            uid: uid("sub"),
+            id: pt.id || pt.id_point || null,
+            nama: pt.nama || "",
+            bobot: pt.bobot !== undefined ? pt.bobot : 0,
+            questions: (pt.questions || pt.kpi_questions || []).map((q) => ({
+                id: q.id_question || q.id || null,
+                pertanyaan: q.pertanyaan || "",
+            })),
         })),
-      })),
     };
-  }
+}
 
   function addAspect() {
     if (currentMode === "division" && !currentDivisionId) {
@@ -257,12 +258,17 @@
     const aspectName = aspectObj.nama || "";
     const aspectWeight = aspectObj.bobot || 0;
     const subaspects = aspectObj.subaspects || [];
+    const isGlobal = aspectObj.is_global || false; // Tambahkan ini
 
     // Tab
     const li = document.createElement("li");
     li.className = "nav-item";
     li.id = `tab-btn-${aspectUid}`;
     li.setAttribute("role", "presentation");
+    
+    if (currentMode === "division" && isGlobal) {
+        li.classList.add("text-muted"); // Tampilkan berbeda untuk KPI global
+    }
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -284,28 +290,34 @@
     if (document.querySelectorAll("#topicContents .tab-pane").length === 0) {
       contentPane.classList.add("show", "active");
     }
+    const isReadOnly = currentMode === "division" && isGlobal;
     contentPane.id = `tab-${aspectUid}`;
     contentPane.setAttribute("role", "tabpanel");
     contentPane.dataset.aspectUid = aspectUid;
     contentPane.innerHTML = `
       <input type="hidden" class="aspect-id" value="${aspectId}">
+      <input type="hidden" class="aspect-is-global" value="${isGlobal}">
       <div class="mb-3">
         <label class="form-label">Nama aspek</label>
         <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
-          oninput="updateAspectTabTitle('${aspectUid}', this.value)">
+          oninput="updateAspectTabTitle('${aspectUid}', this.value)" ${isReadOnly ? 'readonly' : ''}>
       </div>
       <div class="mb-3">
         <label class="form-label">Bobot aspek (%)</label>
-        <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" oninput="updateInfo()">
+        <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" 
+          oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
       </div>
+      ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
       <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
         <h6>Subaspek</h6>
         ${subHtml}
       </div>
+      ${!isReadOnly ? `
       <div class="mt-2">
         <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
         <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
       </div>
+      ` : ''}
     `;
     document.getElementById("topicContents").appendChild(contentPane);
 

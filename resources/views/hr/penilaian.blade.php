@@ -163,7 +163,7 @@
         pageLength: 5,
         lengthMenu: [5, 10, 25, 50],
         ajax: {
-            url: "{{ url('api/employees/kepala-divisi') }}",
+            url: "{{ url('api/employees/Kepala Divisi') }}",
             dataSrc: 'data'
         },
         columns: [{
@@ -177,8 +177,7 @@
                 data: 'roles',
                 render: function(data) {
                     if (data && data.length > 0) {
-                        let kepala = data.find(r => r.nama_jabatan.toLowerCase().includes("kepala divisi"));
-                        if (kepala) return kepala.division?.nama_divisi ?? '-';
+                        // Ambil divisi dari role pertama (atau sesuai struktur data Anda)
                         return data[0].division?.nama_divisi ?? '-';
                     }
                     return '-';
@@ -192,14 +191,16 @@
                 data: null,
                 render: function(row) {
                     let divisi = "-";
-                    if (row.roles && row.roles.length > 0) divisi = row.roles[0].division?.nama_divisi ?? "-";
+                    if (row.roles && row.roles.length > 0) {
+                        divisi = row.roles[0].division?.nama_divisi ?? "-";
+                    }
                     return `
                     <button type="button" 
-                      class="btn btn-outline-secondary btn-nilai" 
-                      data-id="${row.id_karyawan}" 
-                      data-nama="${row.nama}" 
-                      data-divisi="${divisi}">
-                      <i class="icofont-edit text-success"></i>
+                    class="btn btn-outline-secondary btn-nilai" 
+                    data-id="${row.id_karyawan}" 
+                    data-nama="${row.nama}" 
+                    data-divisi="${divisi}">
+                    <i class="icofont-edit text-success"></i>
                     </button>`;
                 }
             }
@@ -221,40 +222,37 @@
         });
     });
 
-    /* ====== Ketika tombol "Nilai" di preview diklik: load KPI dan render wizard ====== */
     $("#btnNilai").on("click", function() {
-        if (!$(this).data('nama')) {
-            alert("Pilih karyawan dulu!");
-            return;
-        }
+    if (!$(this).data('nama')) {
+        alert("Pilih karyawan dulu!");
+        return;
+    }
 
-        let divisi = $(this).data("divisi");
-        let url = divisi && divisi !== "-" ? `/api/kpi-by-division/${encodeURIComponent(divisi)}` : `/api/kpi-global`;
+    let divisi = $(this).data("divisi");
+    
+    // Pastikan divisi tidak kosong atau "-"
+    if (!divisi || divisi === "-") {
+        alert("Divisi karyawan tidak valid!");
+        return;
+    }
 
-        fetch(url)
-            .then(res => res.json())
-            .then(res => {
-                // Response bisa memiliki struktur berbeda tergantung endpoint; kita normalisasi
-                // Kita tunggu objek: res.kpis OR res (array)
-                let kpisArray = [];
-                if (Array.isArray(res.kpis)) kpisArray = res.kpis;
-                else if (Array.isArray(res)) kpisArray = res;
-                else if (Array.isArray(res.data)) kpisArray = res.data;
-                else if (Array.isArray(res.kpis || res.data)) kpisArray = res.kpis || res.data;
-
-                buildStepsFromKpis(kpisArray);
-                currentStep = 1;
-                showStep(currentStep);
-
-                // Tampilkan modal
-                let modal = new bootstrap.Modal(modalWizardEl);
-                modal.show();
-            })
-            .catch(err => {
-                console.error("Error load KPI:", err);
-                alert("Gagal memuat data KPI");
-            });
-    });
+    // Encode divisi untuk URL
+    let encodedDivisi = encodeURIComponent(divisi);
+    let url = `/api/kpi-by-division-name/${encodedDivisi}`;
+    
+    // Atau jika menggunakan ID divisi, Anda perlu mengirim ID divisi, bukan nama
+    // let url = `/api/kpi-by-division/${divisiId}`;
+    
+    fetch(url)
+        .then(res => res.json())
+        .then(res => {
+            // ... kode sebelumnya
+        })
+        .catch(err => {
+            console.error("Error load KPI:", err);
+            alert("Gagal memuat data KPI");
+        });
+});
 
     /* ====== Build steps: 1 step per subaspek (point). Jika satu kpi punya >1 point, masing-masing jadi step ====== */
     function buildStepsFromKpis(kpis) {

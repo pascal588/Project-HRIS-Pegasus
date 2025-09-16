@@ -24,7 +24,7 @@
     
     if ($user && $user->employee && $user->employee->roles) {
         foreach ($user->employee->roles as $role) {
-            if ($role->nama_jabatan === 'Kepala-divisi') {
+            if ($role->nama_jabatan === 'Kepala Divisi') {
                 $isHead = true;
             } elseif ($role->nama_jabatan === 'HR') {
                 $isHR = true;
@@ -34,11 +34,11 @@
         }
     }
     
-    // Tentukan role utama (prioritas: HR > Kepala-divisi > Karyawan)
+    // Tentukan role utama (prioritas: HR > Kepala Divisi > Karyawan)
     if ($isHR) {
         $mainRole = 'HR';
     } elseif ($isHead) {
-        $mainRole = 'Kepala-divisi';
+        $mainRole = 'Kepala Divisi';
     } elseif ($isEmployee) {
         $mainRole = 'Karyawan';
     } else {
@@ -46,7 +46,7 @@
     }
     @endphp
 
-    @if($mainRole === 'Kepala-divisi')
+    @if($mainRole === 'Kepala Divisi')
         @include('template.sidebar-penilai')
     @elseif($mainRole === 'HR')
         @include('template.sidebar-hr')

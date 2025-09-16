@@ -31,7 +31,7 @@ Route::get('/divisions/{division}/gender-data', [DivisionController::class, 'get
 
 
 // Ambil semua kepala divisi 
-Route::get('/employees/kepala-divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+Route::get('/employees/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
 
 // ==== EMPLOYEES ====
 Route::apiResource('employees', EmployeeApiController::class);

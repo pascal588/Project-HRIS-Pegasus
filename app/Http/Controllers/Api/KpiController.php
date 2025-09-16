@@ -139,21 +139,61 @@ class KpiController extends Controller
      * Ambil semua KPI yang tersedia untuk sebuah divisi
      * Termasuk KPI global
      */
-    public function listKpiByDivision($divisionId)
-    {
-        $globalKpis = Kpi::where('is_global', true)->with('points.questions')->get();
-
-        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
-            $q->where('divisions.id_divisi', $divisionId);
-        })->with('points.questions')->get();
-
-        $allKpis = $globalKpis->concat($divisionKpis)->unique('id_kpi')->values();
-
-        return response()->json([
-            'division_id' => $divisionId,
-            'kpis' => $allKpis
-        ]);
+// Di KpiController.php - perbaiki method listKpiByDivision
+public function listKpiByDivision($divisionId)
+{
+    // Validasi divisi exists
+    $divisionExists = DB::table('divisions')->where('id_divisi', $divisionId)->exists();
+    if (!$divisionExists) {
+        return response()->json(['message' => 'Divisi tidak ditemukan'], 404);
     }
+
+    $globalKpis = Kpi::where('is_global', true)
+        ->with(['points.questions' => function($query) {
+            $query->orderBy('id_question');
+        }])
+        ->orderBy('id_kpi')
+        ->get();
+
+    $divisionKpis = Kpi::whereHas('divisions', function($q) use ($divisionId) {
+            $q->where('divisions.id_divisi', $divisionId);
+        })
+        ->with(['points.questions' => function($query) {
+            $query->orderBy('id_question');
+        }])
+        ->orderBy('id_kpi')
+        ->get();
+
+    $allKpis = $globalKpis->concat($divisionKpis)
+        ->unique('id_kpi')
+        ->values()
+        ->map(function($kpi) {
+            return [
+                'id_kpi' => $kpi->id_kpi,
+                'nama' => $kpi->nama,
+                'bobot' => $kpi->bobot,
+                'is_global' => $kpi->is_global,
+                'points' => $kpi->points->map(function($point) {
+                    return [
+                        'id_point' => $point->id_point,
+                        'nama' => $point->nama,
+                        'bobot' => $point->bobot,
+                        'questions' => $point->questions->map(function($question) {
+                            return [
+                                'id_question' => $question->id_question,
+                                'pertanyaan' => $question->pertanyaan
+                            ];
+                        })
+                    ];
+                })
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'data' => $allKpis
+    ]);
+}
 
     public function listGlobalKpi()
     {

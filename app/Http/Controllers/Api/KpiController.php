@@ -524,4 +524,26 @@ class KpiController extends Controller
             'scores' => $result
         ]);
     }
+
+// Untuk kepala divisi: ambil karyawan di divisinya
+public function getEmployeesByDivision($divisionId)
+{
+    $employees = Employee::whereHas('roles.division', function ($q) use ($divisionId) {
+        $q->where('id_divisi', $divisionId);
+    })
+    ->with('roles.division')
+    ->get();
+
+    return response()->json($employees);
+}
+
+public function getkepalaDivisionEmployees()
+{
+    $user = Auth::user();
+    $divisionId = optional(optional($user->roles->first())->division)->id_divisi;
+
+    return $this->getEmployeesByDivision($divisionId);
+}
+
+
 }

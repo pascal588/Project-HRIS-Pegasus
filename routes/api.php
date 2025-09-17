@@ -36,6 +36,9 @@ Route::get('/employees/Kepala Divisi', [EmployeeApiController::class, 'kepalaDiv
 // ==== EMPLOYEES ====
 Route::apiResource('employees', EmployeeApiController::class);
 
+// Untuk kepala divisi: ambil karyawan di divisinya
+Route::get('/api/employees-by-division/{divisionId}', [KpiController::class, 'getEmployeesByDivision']);
+
 // Update role karyawan
 Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
 

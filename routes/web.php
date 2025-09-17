@@ -50,6 +50,8 @@ Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
 });
 
 Route::middleware(['auth', 'nama_jabatan:Kepala Divisi'])->group(function () {
+    Route::get('/penilai/employees-by-division', [PenilaiController::class, 'getKaryawanDivisi'])
+        ->name('penilai.employees-by-division');
     Route::get('/dashboard-penilai', function() {
         return view('penilai.dashboard');
     })->name('penilai.dashboard');

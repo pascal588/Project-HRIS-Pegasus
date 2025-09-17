@@ -85,7 +85,11 @@ class KpiController extends Controller
         $kpi->nama = $kpiData['nama'];
         $kpi->deskripsi = $kpiData['deskripsi'] ?? null;
         $kpi->bobot = $kpiData['bobot'];
-        $kpi->is_global = $isGlobal;
+        if (!$kpi->exists) {
+            $kpi->is_global = $isGlobal;
+        } else {
+
+        }
         $kpi->save();
 
         foreach ($kpiData['points'] as $pointData) {

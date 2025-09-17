@@ -222,14 +222,14 @@
             alert("Gagal memuat data KPI");
         });
 }
-  function normalizeKpiFromServer(kpi) {
-    return {
-        uid: uid("kpi"),
-        id: kpi.id || kpi.id_kpi || null,
-        nama: kpi.nama || "",
-        bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
-        is_global: kpi.is_global || false, // Pastikan ini ada
-        subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
+        function normalizeKpiFromServer(kpi) {
+          return {
+            uid: uid("kpi"),
+            id: kpi.id || kpi.id_kpi || null,
+            nama: kpi.nama || "",
+            bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
+            is_global: kpi.is_global || false, // Pastikan ini ada
+            subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
             uid: uid("sub"),
             id: pt.id || pt.id_point || null,
             nama: pt.nama || "",
@@ -612,10 +612,25 @@
 
     if (!valid) return;
 
+    // Di function saveKPI(), perbaiki payload yang dikirim:
     const payload = {
       is_global: currentMode === "global" ? 1 : 0,
       division_id: currentMode === "division" ? currentDivisionId : null,
-      kpis: aspects,
+      kpis: aspects.map(aspect => {
+        // Untuk KPI yang sudah ada, pertahankan status global aslinya
+        if (aspect.id_kpi) {
+          return {
+            ...aspect,
+            // Kirim status global asli untuk KPI yang sudah ada
+            is_global: aspect.is_global || (currentMode === "global" ? 1 : 0)
+          };
+        }
+        // Untuk KPI baru, gunakan mode saat ini
+        return {
+          ...aspect,
+          is_global: currentMode === "global" ? 1 : 0
+        };
+      }),
     };
 
     console.log("Payload dikirim:", payload);

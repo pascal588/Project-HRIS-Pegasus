@@ -14,7 +14,7 @@ class EmployeeApiController extends Controller
 {
     // GET /api/employees
     function index()
-    {
+    { 
         $employees = Employee::with(['user', 'roles.division'])->get();
 
         // Tambahkan URL foto jika ada

@@ -71,6 +71,3 @@ Route::put('/kpi-global/{id}', [KpiController::class, 'updateGlobalKpi']);
 Route::get('/kpi-by-division/{divisionId}', [KpiController::class, 'listKpiByDivision']);
 Route::delete('/division/{divisionId}/kpi/{kpiId}', [KpiController::class, 'deleteDivisionKpi']);
 Route::put('/division/{divisionId}/kpi/{kpiId}', [KpiController::class, 'updateDivisionKpi']);
-
-// Simpan KPI baru (global atau division)
-Route::post('/kpi/save', [KpiController::class, 'storeKpi']);

@@ -22,4 +22,9 @@ class KpiHasEmployee extends Model
   {
     return $this->belongsTo(Employee::class, 'employees_id_karyawan', 'id_karyawan');
   }
+
+  public function subAspects()
+  {
+    return $this->hasMany(KpiPointHasEmployee::class, 'kpis_has_employee_id');
+  }
 }

@@ -88,7 +88,6 @@ class KpiController extends Controller
         if (!$kpi->exists) {
             $kpi->is_global = $isGlobal;
         } else {
-
         }
         $kpi->save();
 
@@ -449,11 +448,14 @@ class KpiController extends Controller
             $nilaiAkhir = 0;
 
             foreach ($kpi->points as $point) {
-                $total = $point->questions->sum(function ($q) use ($employeeId) {
+                $total = $point->questions->sum(function ($q) use ($employeeId, $tahun, $bulan) {
                     return KpiQuestionHasEmployee::where('kpi_question_id_question', $q->id_question)
                         ->where('employees_id_karyawan', $employeeId)
+                        ->whereYear('created_at', $tahun)   // filter tahun
+                        ->whereMonth('created_at', $bulan)  // filter bulan
                         ->value('nilai') ?? 0;
                 });
+
                 $count = $point->questions->count();
                 $avg = $count > 0 ? $total / $count : 0;
                 $skorSubAspek = ($avg * 2.5) * ($point->bobot / 100);
@@ -482,6 +484,7 @@ class KpiController extends Controller
                 $nilaiAkhir += ($skorAbsensi * ($bobotAbsensi / 100));
             }
 
+            // Simpan nilai akhir
             KpiHasEmployee::updateOrCreate(
                 [
                     'kpis_id_kpi' => $kpi->id_kpi,

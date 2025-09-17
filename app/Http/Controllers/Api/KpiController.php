@@ -98,10 +98,8 @@ class KpiController extends Controller
             $point->kpis_id_kpi = $kpi->id_kpi;
             $point->save();
 
-            //pertanyaan
+            // pertanyaan
             foreach ($pointData['questions'] as $qData) {
-                  // bulk: bentuknya array ['pertanyaan'=>'xxx']
-                // single: bentuknya string "xxx"
                 $pertanyaan = is_array($qData) ? $qData['pertanyaan'] : $qData;
 
                 $question = isset($qData['id_question'])
@@ -114,7 +112,7 @@ class KpiController extends Controller
             }
         }
 
-        //relasi division
+        // relasi division
         if ($isGlobal) {
             $allDivisions = DB::table('divisions')->pluck('id_divisi');
             foreach ($allDivisions as $divId) {
@@ -130,70 +128,76 @@ class KpiController extends Controller
             );
         }
     }
-   
-    
-    // Di KpiController.php - perbaiki method listKpiByDivision
-public function listKpiByDivision($divisionId)
-{
-    // Validasi divisi exists
-    $divisionExists = DB::table('divisions')->where('id_divisi', $divisionId)->exists();
-    if (!$divisionExists) {
-        return response()->json(['message' => 'Divisi tidak ditemukan'], 404);
-    }
 
-    $globalKpis = Kpi::where('is_global', true)
-        ->with(['points.questions' => function($query) {
-            $query->orderBy('id_question');
-        }])
-        ->orderBy('id_kpi')
-        ->get();
+    /**
+     * List KPI berdasarkan divisi (global + divisi spesifik)
+     */
+    public function listKpiByDivision($divisionId)
+    {
+        $divisionExists = DB::table('divisions')->where('id_divisi', $divisionId)->exists();
+        if (!$divisionExists) {
+            return response()->json(['message' => 'Divisi tidak ditemukan'], 404);
+        }
 
-    $divisionKpis = Kpi::whereHas('divisions', function($q) use ($divisionId) {
+        $globalKpis = Kpi::where('is_global', true)
+            ->with(['points.questions' => function ($query) {
+                $query->orderBy('id_question');
+            }])
+            ->orderBy('id_kpi')
+            ->get();
+
+        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
             $q->where('divisions.id_divisi', $divisionId);
         })
-        ->with(['points.questions' => function($query) {
-            $query->orderBy('id_question');
-        }])
-        ->orderBy('id_kpi')
-        ->get();
+            ->with(['points.questions' => function ($query) {
+                $query->orderBy('id_question');
+            }])
+            ->orderBy('id_kpi')
+            ->get();
 
-    $allKpis = $globalKpis->concat($divisionKpis)
-        ->unique('id_kpi')
-        ->values()
-        ->map(function($kpi) {
-            return [
-                'id' => $kpi->id_kpi,
-                'id_kpi' => $kpi->id_kpi,
-                'nama' => $kpi->nama,
-                'bobot' => $kpi->bobot,
-                'is_global' => $kpi->is_global,
-                'points' => $kpi->points->map(function($point) {
-                    return [
-                        'id' => $point->id_point,
-                        'id_point' => $point->id_point,
-                        'nama' => $point->nama,
-                        'bobot' => $point->bobot,
-                        'questions' => $point->questions->map(function($question) {
-                            return [
-                                'id' => $question->id_question,
-                                'id_question' => $question->id_question,
-                                'pertanyaan' => $question->pertanyaan
-                            ];
-                        })
-                    ];
-                })
-            ];
-        });
+        $allKpis = $globalKpis->concat($divisionKpis)
+            ->unique('id_kpi')
+            ->values()
+            ->map(function ($kpi) {
+                return [
+                    'id' => $kpi->id_kpi,
+                    'id_kpi' => $kpi->id_kpi,
+                    'nama' => $kpi->nama,
+                    'bobot' => $kpi->bobot,
+                    'is_global' => $kpi->is_global,
+                    'points' => $kpi->points->map(function ($point) {
+                        return [
+                            'id' => $point->id_point,
+                            'id_point' => $point->id_point,
+                            'nama' => $point->nama,
+                            'bobot' => $point->bobot,
+                            'questions' => $point->questions->map(function ($question) {
+                                return [
+                                    'id' => $question->id_question,
+                                    'id_question' => $question->id_question,
+                                    'pertanyaan' => $question->pertanyaan
+                                ];
+                            })
+                        ];
+                    })
+                ];
+            });
 
-    return response()->json($allKpis); // Langsung return array
-}
+        return response()->json($allKpis);
+    }
 
+    /**
+     * List KPI global
+     */
     public function listGlobalKpi()
     {
         $kpis = Kpi::where('is_global', true)->with('points.questions')->get();
         return response()->json(['kpis' => $kpis]);
     }
 
+    /**
+     * Delete KPI global
+     */
     public function deleteGlobalKpi($id)
     {
         $kpi = Kpi::where('is_global', true)->findOrFail($id);
@@ -201,6 +205,9 @@ public function listKpiByDivision($divisionId)
         return response()->json(['message' => 'KPI global berhasil dihapus']);
     }
 
+    /**
+     * Update KPI global
+     */
     public function updateGlobalKpi(Request $request, $id)
     {
         $kpi = Kpi::where('is_global', true)->findOrFail($id);
@@ -208,6 +215,9 @@ public function listKpiByDivision($divisionId)
         return response()->json(['message' => 'KPI global berhasil diperbarui']);
     }
 
+    /**
+     * Delete KPI divisi
+     */
     public function deleteDivisionKpi($divisionId, $kpiId)
     {
         $exists = DB::table('division_has_kpis')
@@ -232,6 +242,9 @@ public function listKpiByDivision($divisionId)
         return response()->json(['message' => 'KPI divisi berhasil dihapus']);
     }
 
+    /**
+     * Update KPI divisi
+     */
     public function updateDivisionKpi(Request $request, $divisionId, $kpiId)
     {
         $exists = DB::table('division_has_kpis')
@@ -250,7 +263,7 @@ public function listKpiByDivision($divisionId)
     }
 
     /**
-     * Ambil KPI beserta nilai tiap karyawan
+     * Ambil KPI beserta nilai tiap karyawan (global + divisi)
      */
     public function getDivisionKpi($divisionId, $tahun, $bulan)
     {
@@ -259,7 +272,6 @@ public function listKpiByDivision($divisionId)
             return response()->json(['message' => 'Tidak ada karyawan di divisi ini'], 404);
         }
 
-        // ✅ ambil KPI global + divisi
         $globalKpis = Kpi::where('is_global', true)->with('points.questions')->get();
         $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
             $q->where('divisions.id_divisi', $divisionId);
@@ -324,6 +336,7 @@ public function listKpiByDivision($divisionId)
             'employees' => $result
         ]);
     }
+
     /**
      * Update KPI beserta sub-aspek dan pertanyaan
      */
@@ -421,7 +434,7 @@ public function listKpiByDivision($divisionId)
     }
 
     /**
-     * Hitung nilai akhir KPI per karyawan
+     * Hitung nilai akhir KPI per karyawan (termasuk absensi)
      */
     public function calculateFinalScore($employeeId, $tahun, $bulan)
     {

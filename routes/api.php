@@ -42,6 +42,9 @@ Route::get('/api/employees-by-division/{divisionId}', [KpiController::class, 'ge
 // Update role karyawan
 Route::post('/employees/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
 
+// Untuk kepala divisi: ambil karyawan di divisinya kecuali kepala divisi
+Route::get('/employees-by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
+
 // ==== ROLES ====
 Route::apiResource('roles', RoleApiController::class);
 

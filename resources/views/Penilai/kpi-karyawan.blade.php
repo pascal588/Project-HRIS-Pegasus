@@ -180,8 +180,8 @@
         pageLength: 5,
         lengthMenu: [5, 10, 25, 50],
         ajax: {
-            url: "/api/employees-by-kepala-division",
-            dataSrc: "data"
+            url: "{{ url('api/employees-by-division-except-head') }}/{{ auth()->user()->employee->roles->first()->division_id ?? 'null' }}",
+            dataSrc: 'data'
         },
         columns: [{
                 data: null,
@@ -245,7 +245,6 @@
     });
 
     $("#btnNilai").on("click", function() {
-    let divisiId = $(this).data("divisi-id");
     if (!$(this).data('nama')) {
         alert("Pilih karyawan dulu!");
         return;

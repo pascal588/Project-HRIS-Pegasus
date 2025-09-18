@@ -188,4 +188,43 @@ class EmployeeApiController extends Controller
             'message' => 'Karyawan & user berhasil dihapus'
         ], 200);
     }
+
+    public function getEmployeesByDivisionExceptHead($divisionId)
+{
+    if ($divisionId === 'null' || !is_numeric($divisionId)) {
+        return response()->json(['data' => []]);
+    }
+
+    // Cari head role
+    $headRole = Role::where('division_id', $divisionId)
+                    ->where(function($q) {
+                        $q->where('nama_jabatan', 'like', '%kepala%')
+                          ->orWhere('nama_jabatan', 'like', '%head%');
+                    })->first();
+
+    // Dapatkan semua employee yang memiliki role di divisi ini
+    $employeeIds = DB::table('roles_has_employees')
+                    ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                    ->where('roles.division_id', $divisionId)
+                    ->pluck('roles_has_employees.employee_id');
+
+    // Jika ada head role, exclude employees dengan role tersebut
+    if ($headRole) {
+        $headEmployeeIds = DB::table('roles_has_employees')
+                            ->where('role_id', $headRole->id_jabatan)
+                            ->pluck('employee_id');
+        
+        $employeeIds = $employeeIds->diff($headEmployeeIds);
+    }
+
+    // Ambil data employees
+    $employees = Employee::whereIn('id_karyawan', $employeeIds)
+                        ->with(['roles' => function($query) use ($divisionId) {
+                            $query->where('division_id', $divisionId)
+                                  ->with('division'); // TAMBAHKAN INI
+                        }])
+                        ->get();
+
+    return response()->json(['data' => array_values($employees->toArray())]);
+}
 }

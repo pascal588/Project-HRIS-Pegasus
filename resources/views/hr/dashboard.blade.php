@@ -155,7 +155,7 @@
   <div class="container-fluid px-2">
     <div class="row g-2">
       <!-- KPI Divisi -->
-      <div class="col-12 col-lg-8">
+     <div class="col-12 col-lg-8">
         <div class="card h-100">
           <div class="card-header py-2 bg-transparent border-bottom-0">
             <h6 class="mb-0 fw-bold">KPI Divisi</h6>
@@ -163,7 +163,8 @@
           <div class="card-body p-2">
             <div
               class="ac-line-transparent"
-              id="apex-stacked-area"></div>
+              id="apex-stacked-area"
+            ></div>
           </div>
         </div>
       </div>
@@ -394,5 +395,167 @@ $(document).ready(function() {
     fetchEmployees();
     fetchDivisions();
 });
+</script>
+
+<script>
+  // KPI Divisi
+$(document).ready(function() {
+    var options = {
+        chart: {
+            height: 300,
+            type: 'area',
+            stacked: true,
+            toolbar: {
+                show: false,
+            },
+            events: {
+                selection: function(chart, e) {
+                console.log(new Date(e.xaxis.min) )
+                }
+            },
+        },
+
+        colors: ['#ff4560', '#f67280', '#c06c84'],
+        dataLabels: {
+            enabled: false
+        },
+
+        series: [
+            {
+                name: 'South',
+                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
+                    min: 10,
+                    max: 60
+                })
+            },{
+                name: 'North',
+                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
+                    min: 10,
+                    max: 20
+                })
+            },{
+                name: 'Central',
+                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
+                    min: 10,
+                    max: 15
+                })
+            }
+        ],
+
+        fill: {
+            type: 'gradient',
+            gradient: {
+                opacityFrom: 0.6,
+                opacityTo: 0.8,
+            }
+        },
+
+        legend: {
+            position: 'top',
+            horizontalAlign: 'right',
+            show: true,
+        },
+        xaxis: {
+            type: 'datetime',            
+        },
+        grid: {
+            yaxis: {
+                lines: {
+                    show: false,
+                }
+            },
+            padding: {
+                top: 20,
+                right: 0,
+                bottom: 0,
+                left: 0
+            },
+        },
+        stroke: {
+            show: true,
+            curve: 'smooth',
+            width: 2,
+        },
+    }
+
+    var chart = new ApexCharts(
+        document.querySelector("#apex-stacked-area"),
+        options
+    );
+    chart.render();
+    function generateDayWiseTimeSeries(baseval, count, yrange) {
+        var i = 0;
+        var series = [];
+        while (i < count) {
+            var x = baseval;
+            var y = Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min;
+
+            series.push([x, y]);
+            baseval += 86400000;
+            i++;
+        }
+        return series;
+    }
+});
+</script>
+
+<script>
+  // Distribusi Karyawan per Divisi
+    $(document).ready(function() {
+        
+        var options = {
+            series: [{
+                name: 'Ui/Ux Designer',
+                data: [45, 25, 44, 23, 25, 41, 32, 25, 22, 65, 22, 29]
+            }, {
+                name: 'App Development',
+                data: [45, 12, 25, 22, 19, 22, 29, 23, 23, 25, 41, 32]
+            }, {
+                name: 'Quality Assurance',
+                data: [45, 25, 32, 25, 22, 65, 44, 23, 25, 41, 22, 29]
+            }, {
+                name: 'Web Developer',
+                data: [32, 25, 22, 11, 22, 29, 16, 25, 9, 23, 25, 13]
+            }],
+            chart: {
+                type: 'bar',
+                height: 300,
+                stacked: true,
+                toolbar: {
+                    show: false
+                },
+                zoom: {
+                    enabled: true
+                }
+            },
+            colors: ['var(--chart-color1)','var(--chart-color2)','var(--chart-color3)','var(--chart-color4)'],
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    legend: {
+                        position: 'bottom',
+                        offsetX: -10,
+                        offsetY: 0
+                    }
+                }
+            }],
+            xaxis: {
+                categories: ['Jan','Feb','March','Apr','May','Jun','July','Aug','Sept','Oct','Nov','Dec'],
+            },
+            legend: {
+                position: 'top', // top, bottom
+                horizontalAlign: 'right', // left, right
+            },
+            dataLabels: {
+                enabled: false,
+            },
+            fill: {
+                opacity: 1
+            }
+        };
+
+        var chart = new ApexCharts(document.querySelector("#hiringsources"), options);
+        chart.render();
+    });
 </script>
 @endsection

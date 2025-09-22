@@ -7,117 +7,96 @@ use App\Models\Kpi;
 use App\Models\KpiPoint;
 use App\Models\KpiQuestion;
 use App\Models\KpiQuestionHasEmployee;
-use App\Models\KpiHasEmployee;
+use App\Models\KpiPointsHasEmployee;
 use App\Models\Employee;
 use App\Models\Attendance;
+use App\Models\Period;
+use App\Models\Division;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class KpiController extends Controller
 {
-    /**
-     * Ambil semua KPI beserta sub-aspek dan pertanyaan
-     */
+    // ================== KPI TEMPLATE ==================
     public function getAllKpis()
     {
-        return response()->json(Kpi::with('points.questions')->get());
+        $kpis = Kpi::whereNull('periode_id')->with(['points.questions', 'divisions'])->get();
+        return response()->json(['success' => true, 'data' => $kpis]);
     }
 
-    /**
-     * Simpan KPI beserta sub-aspek dan pertanyaan
-     */
     public function storeKpi(Request $request)
     {
-        $isBulk = $request->has('kpis');
+        $validator = Validator::make($request->all(), [
+            'is_global' => 'required|boolean',
+            'division_id' => 'nullable|integer|exists:divisions,id_divisi',
+            'kpis' => 'required|array|min:1',
+            'kpis.*.nama' => 'required|string|max:100',
+            'kpis.*.bobot' => 'required|numeric|min:0|max:100',
+            'kpis.*.points' => 'required|array|min:1',
+            'kpis.*.points.*.nama' => 'required|string|max:255',
+            'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
+            'kpis.*.points.*.questions' => 'required|array|min:1',
+            'kpis.*.points.*.questions.*.pertanyaan' => 'required|string|max:1000',
+        ]);
 
-        if ($isBulk) {
-            $request->validate([
-                'is_global' => 'required|boolean',
-                'division_id' => 'nullable|integer|exists:divisions,id_divisi',
-                'kpis' => 'required|array|min:1',
-                'kpis.*.nama' => 'required|string|max:100',
-                'kpis.*.bobot' => 'required|numeric|min:0|max:100',
-                'kpis.*.points' => 'required|array|min:1',
-                'kpis.*.points.*.nama' => 'required|string|max:255',
-                'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
-                'kpis.*.points.*.questions' => 'required|array|min:1',
-                'kpis.*.points.*.questions.*.pertanyaan' => 'required|string|max:1000',
-            ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
+        }
 
-            DB::transaction(function () use ($request) {
-                foreach ($request->kpis as $kpiData) {
-                    $this->saveSingleKpi($kpiData, $request->is_global, $request->division_id);
-                }
-            });
-
-            return response()->json(['message' => 'Semua KPI berhasil disimpan!']);
-        } else {
-            $request->validate([
-                'nama' => 'required|string|max:100',
-                'deskripsi' => 'nullable|string',
-                'bobot' => 'required|numeric|min:0|max:100',
-                'is_global' => 'required|boolean',
-                'division_id' => 'nullable|integer|exists:divisions,id_divisi',
-                'points' => 'required|array|min:1',
-                'points.*.nama' => 'required|string|max:255',
-                'points.*.bobot' => 'required|numeric|min:0|max:100',
-                'points.*.questions' => 'required|array|min:1',
-                'points.*.questions.*' => 'required|string|max:1000',
-            ]);
-
-            DB::transaction(function () use ($request) {
-                $this->saveSingleKpi($request->all(), $request->is_global, $request->division_id);
-            });
-
-            return response()->json(['message' => 'KPI berhasil disimpan!']);
+        DB::beginTransaction();
+        try {
+            $savedKpis = [];
+            foreach ($request->kpis as $kpiData) {
+                $kpi = $this->saveSingleKpi($kpiData, $request->is_global, $request->division_id, null);
+                $savedKpis[] = $kpi;
+            }
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'KPI templates saved', 'data' => $savedKpis], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to save KPI: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to save KPI: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Helper: simpan 1 KPI (bisa dipakai single/bulk)
-     */
-    private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = null)
+    private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = null, $periodeId = null)
     {
-        $kpi = isset($kpiData['id_kpi'])
-            ? Kpi::findOrFail($kpiData['id_kpi'])
-            : new Kpi();
-
+        $kpi = isset($kpiData['id_kpi']) ? Kpi::findOrFail($kpiData['id_kpi']) : new Kpi();
         $kpi->nama = $kpiData['nama'];
-        $kpi->deskripsi = $kpiData['deskripsi'] ?? null;
         $kpi->bobot = $kpiData['bobot'];
-        if (!$kpi->exists) {
-            $kpi->is_global = $isGlobal;
-        } else {
-        }
+        $kpi->is_global = $isGlobal;
+        $kpi->periode_id = $periodeId;
         $kpi->save();
 
-        foreach ($kpiData['points'] as $pointData) {
-            $point = isset($pointData['id_point'])
-                ? KpiPoint::findOrFail($pointData['id_point'])
-                : new KpiPoint(['kpis_id_kpi' => $kpi->id_kpi]);
+        if (isset($kpiData['points'])) {
+            $existingPointIds = [];
+            foreach ($kpiData['points'] as $pointData) {
+                $point = isset($pointData['id_point']) ? KpiPoint::findOrFail($pointData['id_point']) : new KpiPoint();
+                $point->kpis_id_kpi = $kpi->id_kpi;
+                $point->nama = $pointData['nama'];
+                $point->bobot = $pointData['bobot'];
+                $point->save();
+                $existingPointIds[] = $point->id_point;
 
-            $point->nama = $pointData['nama'];
-            $point->bobot = $pointData['bobot'];
-            $point->kpis_id_kpi = $kpi->id_kpi;
-            $point->save();
-
-            // pertanyaan
-            foreach ($pointData['questions'] as $qData) {
-                $pertanyaan = is_array($qData) ? $qData['pertanyaan'] : $qData;
-
-                $question = isset($qData['id_question'])
-                    ? KpiQuestion::findOrFail($qData['id_question'])
-                    : new KpiQuestion(['kpi_point_id' => $point->id_point]);
-
-                $question->pertanyaan = $pertanyaan;
-                $question->kpi_point_id = $point->id_point;
-                $question->save();
+                if (isset($pointData['questions'])) {
+                    $existingQuestionIds = [];
+                    foreach ($pointData['questions'] as $qData) {
+                        $question = isset($qData['id_question']) ? KpiQuestion::findOrFail($qData['id_question']) : new KpiQuestion();
+                        $question->kpi_point_id = $point->id_point;
+                        $question->pertanyaan = $qData['pertanyaan'];
+                        $question->save();
+                        $existingQuestionIds[] = $question->id_question;
+                    }
+                    KpiQuestion::where('kpi_point_id', $point->id_point)->whereNotIn('id_question', $existingQuestionIds)->delete();
+                }
             }
+            KpiPoint::where('kpis_id_kpi', $kpi->id_kpi)->whereNotIn('id_point', $existingPointIds)->delete();
         }
 
-        // relasi division
         if ($isGlobal) {
-            $allDivisions = DB::table('divisions')->pluck('id_divisi');
+            $allDivisions = Division::pluck('id_divisi');
             foreach ($allDivisions as $divId) {
                 DB::table('division_has_kpis')->updateOrInsert(
                     ['id_divisi' => $divId, 'kpis_id_kpi' => $kpi->id_kpi],
@@ -130,401 +109,247 @@ class KpiController extends Controller
                 ['created_at' => now(), 'updated_at' => now()]
             );
         }
+
+        return $kpi->load('points.questions');
     }
 
-    /**
-     * List KPI berdasarkan divisi (global + divisi spesifik)
-     */
+    public function getKpiTemplates(Request $request)
+    {
+        $query = Kpi::whereNull('periode_id');
+        if ($request->has('is_global')) $query->where('is_global', $request->is_global);
+        if ($request->has('division_id')) {
+            $query->whereHas('divisions', function ($q) use ($request) {
+                $q->where('divisions.id_divisi', $request->division_id);
+            });
+        }
+        $kpis = $query->with(['points.questions', 'divisions'])->get();
+        return response()->json(['success' => true, 'data' => $kpis]);
+    }
+
+    // ================== COPY KPI TO PERIOD ==================
+    public function copyTemplatesToPeriod($periodId)
+    {
+        $period = Period::findOrFail($periodId);
+        DB::beginTransaction();
+        try {
+            $copiedCount = 0;
+            $templates = Kpi::whereNull('periode_id')->with('points.questions', 'divisions')->get();
+            foreach ($templates as $template) {
+                $this->copyKpiToPeriod($template, $periodId);
+                $copiedCount++;
+            }
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Copied to period', 'copied_count' => $copiedCount]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to copy KPI: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed copy: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function copyKpiToPeriod(Kpi $template, $periodId)
+    {
+        $newKpi = $template->replicate();
+        $newKpi->periode_id = $periodId;
+        $newKpi->save();
+
+        foreach ($template->points as $point) {
+            $newPoint = $point->replicate();
+            $newPoint->kpis_id_kpi = $newKpi->id_kpi;
+            $newPoint->save();
+
+            foreach ($point->questions as $question) {
+                $newQuestion = $question->replicate();
+                $newQuestion->kpi_point_id = $newPoint->id_point;
+                $newQuestion->save();
+            }
+        }
+
+        foreach ($template->divisions as $division) {
+            DB::table('division_has_kpis')->insert([
+                'id_divisi' => $division->id_divisi,
+                'kpis_id_kpi' => $newKpi->id_kpi,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+        return $newKpi;
+    }
+
+    // ================== KPI BY PERIOD ==================
+    public function getKpisByPeriod($periodId)
+    {
+        $period = Period::findOrFail($periodId);
+        $kpis = Kpi::where('periode_id', $periodId)->with(['points.questions', 'divisions'])->get();
+        return response()->json(['success' => true, 'data' => ['period' => $period, 'kpis' => $kpis]]);
+    }
+
+    // ================== KPI BY DIVISION / GLOBAL ==================
     public function listKpiByDivision($divisionId)
     {
-        $divisionExists = DB::table('divisions')->where('id_divisi', $divisionId)->exists();
-        if (!$divisionExists) {
-            return response()->json(['message' => 'Divisi tidak ditemukan'], 404);
-        }
-
-        $globalKpis = Kpi::where('is_global', true)
-            ->with(['points.questions' => function ($query) {
-                $query->orderBy('id_question');
-            }])
-            ->orderBy('id_kpi')
-            ->get();
-
-        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+        $global = Kpi::where('is_global', true)->whereNull('periode_id')->with('points.questions')->get();
+        $div = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
             $q->where('divisions.id_divisi', $divisionId);
         })
-            ->with(['points.questions' => function ($query) {
-                $query->orderBy('id_question');
-            }])
-            ->orderBy('id_kpi')
-            ->get();
-
-        $allKpis = $globalKpis->concat($divisionKpis)
-            ->unique('id_kpi')
-            ->values()
-            ->map(function ($kpi) {
-                return [
-                    'id' => $kpi->id_kpi,
-                    'id_kpi' => $kpi->id_kpi,
-                    'nama' => $kpi->nama,
-                    'bobot' => $kpi->bobot,
-                    'is_global' => $kpi->is_global,
-                    'points' => $kpi->points->map(function ($point) {
-                        return [
-                            'id' => $point->id_point,
-                            'id_point' => $point->id_point,
-                            'nama' => $point->nama,
-                            'bobot' => $point->bobot,
-                            'questions' => $point->questions->map(function ($question) {
-                                return [
-                                    'id' => $question->id_question,
-                                    'id_question' => $question->id_question,
-                                    'pertanyaan' => $question->pertanyaan
-                                ];
-                            })
-                        ];
-                    })
-                ];
-            });
-
-        return response()->json($allKpis);
+            ->whereNull('periode_id')->with('points.questions')->get();
+        return response()->json(['success' => true, 'data' => $global->concat($div)->unique('id_kpi')->values()]);
     }
 
-    /**
-     * List KPI global
-     */
     public function listGlobalKpi()
     {
-        $kpis = Kpi::where('is_global', true)->with('points.questions')->get();
-        return response()->json(['kpis' => $kpis]);
+        $kpis = Kpi::where('is_global', true)->whereNull('periode_id')->with('points.questions')->get();
+        return response()->json(['success' => true, 'data' => $kpis]);
     }
 
-    /**
-     * Delete KPI global
-     */
-    public function deleteGlobalKpi($id)
+    // ================== CRUD ==================
+    public function updateKpi(Request $request, $id)
     {
-        $kpi = Kpi::where('is_global', true)->findOrFail($id);
+        $kpi = Kpi::findOrFail($id);
+        $kpi->update($request->only(['nama', 'bobot', 'is_global']));
+        return response()->json(['success' => true, 'message' => 'KPI updated', 'data' => $kpi]);
+    }
+
+    public function deleteKpi($id)
+    {
+        $kpi = Kpi::findOrFail($id);
         $kpi->delete();
-        return response()->json(['message' => 'KPI global berhasil dihapus']);
+        return response()->json(['success' => true, 'message' => 'KPI deleted']);
     }
 
-    /**
-     * Update KPI global
-     */
-    public function updateGlobalKpi(Request $request, $id)
-    {
-        $kpi = Kpi::where('is_global', true)->findOrFail($id);
-        $kpi->update($request->only(['nama', 'deskripsi', 'bobot']));
-        return response()->json(['message' => 'KPI global berhasil diperbarui']);
-    }
-
-    /**
-     * Delete KPI divisi
-     */
-    public function deleteDivisionKpi($divisionId, $kpiId)
-    {
-        $exists = DB::table('division_has_kpis')
-            ->where('id_divisi', $divisionId)
-            ->where('kpis_id_kpi', $kpiId)
-            ->exists();
-
-        if (!$exists) {
-            return response()->json(['message' => 'KPI tidak ditemukan'], 404);
-        }
-
-        DB::table('division_has_kpis')
-            ->where('id_divisi', $divisionId)
-            ->where('kpis_id_kpi', $kpiId)
-            ->delete();
-
-        $stillUsed = DB::table('division_has_kpis')->where('kpis_id_kpi', $kpiId)->exists();
-        if (!$stillUsed) {
-            Kpi::find($kpiId)?->delete();
-        }
-
-        return response()->json(['message' => 'KPI divisi berhasil dihapus']);
-    }
-
-    /**
-     * Update KPI divisi
-     */
-    public function updateDivisionKpi(Request $request, $divisionId, $kpiId)
-    {
-        $exists = DB::table('division_has_kpis')
-            ->where('id_divisi', $divisionId)
-            ->where('kpis_id_kpi', $kpiId)
-            ->exists();
-
-        if (!$exists) {
-            return response()->json(['message' => 'KPI tidak ditemukan'], 404);
-        }
-
-        $kpi = Kpi::findOrFail($kpiId);
-        $kpi->update($request->only(['nama', 'deskripsi', 'bobot']));
-
-        return response()->json(['message' => 'KPI divisi berhasil diperbarui']);
-    }
-
-    /**
-     * Ambil KPI beserta nilai tiap karyawan (global + divisi)
-     */
-    public function getDivisionKpi($divisionId, $tahun, $bulan)
-    {
-        $employees = Employee::where('divisions_id_divisi', $divisionId)->get();
-        if ($employees->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada karyawan di divisi ini'], 404);
-        }
-
-        $globalKpis = Kpi::where('is_global', true)->with('points.questions')->get();
-        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
-            $q->where('divisions.id_divisi', $divisionId);
-        })->with('points.questions')->get();
-
-        $kpis = $globalKpis->concat($divisionKpis)->unique('id_kpi')->values();
-
-        $result = [];
-        foreach ($employees as $employee) {
-            $employeeData = [
-                'employee_id' => $employee->id_karyawan,
-                'nama_karyawan' => $employee->nama_karyawan,
-                'kpis' => []
-            ];
-
-            foreach ($kpis as $kpi) {
-                $nilaiAkhir = KpiHasEmployee::where('kpis_id_kpi', $kpi->id_kpi)
-                    ->where('employees_id_karyawan', $employee->id_karyawan)
-                    ->where('tahun', $tahun)
-                    ->where('bulan', $bulan)
-                    ->value('nilai_akhir') ?? 0;
-
-                $points = [];
-                foreach ($kpi->points as $point) {
-                    $questions = [];
-                    foreach ($point->questions as $q) {
-                        $nilai = KpiQuestionHasEmployee::where('kpi_question_id_question', $q->id_question)
-                            ->where('employees_id_karyawan', $employee->id_karyawan)
-                            ->value('nilai') ?? null;
-
-                        $questions[] = [
-                            'id_question' => $q->id_question,
-                            'pertanyaan' => $q->pertanyaan,
-                            'nilai' => $nilai
-                        ];
-                    }
-
-                    $points[] = [
-                        'id_point' => $point->id_point,
-                        'nama' => $point->nama,
-                        'bobot' => $point->bobot,
-                        'questions' => $questions
-                    ];
-                }
-
-                $employeeData['kpis'][] = [
-                    'id_kpi' => $kpi->id_kpi,
-                    'nama' => $kpi->nama,
-                    'bobot' => $kpi->bobot,
-                    'nilai_akhir' => $nilaiAkhir,
-                    'points' => $points
-                ];
-            }
-
-            $result[] = $employeeData;
-        }
-
-        return response()->json([
-            'id_divisi' => $divisionId,
-            'tahun' => $tahun,
-            'bulan' => $bulan,
-            'employees' => $result
-        ]);
-    }
-
-    /**
-     * Update KPI beserta sub-aspek dan pertanyaan
-     */
-    public function updateKpi(Request $request, $kpiId)
-    {
-        $request->validate([
-            'nama' => 'required|string|max:100',
-            'deskripsi' => 'nullable|string',
-            'bobot' => 'required|numeric|min:0|max:100',
-            'is_global' => 'required|boolean',
-            'points' => 'required|array|min:1',
-            'points.*.id_point' => 'nullable|exists:kpi_points,id_point',
-            'points.*.nama' => 'required|string|max:255',
-            'points.*.bobot' => 'required|numeric|min:0|max:100',
-            'points.*.questions' => 'required|array|min:1',
-            'points.*.questions.*.id_question' => 'nullable|exists:kpi_questions,id_question',
-            'points.*.questions.*.pertanyaan' => 'required|string|max:1000',
-        ]);
-
-        DB::transaction(function () use ($request, $kpiId) {
-            $kpi = Kpi::findOrFail($kpiId);
-            $kpi->update([
-                'nama' => $request->nama,
-                'deskripsi' => $request->deskripsi,
-                'bobot' => $request->bobot,
-                'is_global' => $request->is_global,
-            ]);
-
-            foreach ($request->points as $pointData) {
-                $point = isset($pointData['id_point'])
-                    ? KpiPoint::findOrFail($pointData['id_point'])
-                    : KpiPoint::create([
-                        'kpis_id_kpi' => $kpi->id_kpi,
-                        'nama' => $pointData['nama'],
-                        'bobot' => $pointData['bobot'],
-                    ]);
-
-                $point->update(['nama' => $pointData['nama'], 'bobot' => $pointData['bobot']]);
-
-                foreach ($pointData['questions'] as $qData) {
-                    $question = isset($qData['id_question'])
-                        ? KpiQuestion::findOrFail($qData['id_question'])
-                        : new KpiQuestion(['kpi_point_id' => $point->id_point]);
-
-                    $question->pertanyaan = $qData['pertanyaan'];
-                    $question->kpi_point_id = $point->id_point;
-                    $question->save();
-                }
-            }
-        });
-
-        return response()->json([
-            'message' => 'KPI berhasil diperbarui'
-        ]);
-    }
-
-    /**
-     * Hapus KPI beserta sub-aspek dan pertanyaan
-     */
-    public function deleteKpi($kpiId)
-    {
-        $kpi = Kpi::findOrFail($kpiId);
-        $kpi->delete();
-        return response()->json(['message' => 'KPI berhasil dihapus']);
-    }
-
-    /**
-     * Simpan/update nilai karyawan per pertanyaan
-     */
+    // ================== EMPLOYEE SCORE ==================
     public function storeEmployeeScore(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'id_karyawan' => 'required|exists:employees,id_karyawan',
+            'periode_id' => 'required|exists:periods,id_periode',
             'hasil' => 'required|array|min:1',
             'hasil.*.jawaban' => 'required|array|min:1',
             'hasil.*.jawaban.*.id' => 'required|exists:kpi_questions,id_question',
             'hasil.*.jawaban.*.jawaban' => 'required|integer|min:1|max:4',
         ]);
 
-        foreach ($validated['hasil'] as $aspek) {
-            foreach ($aspek['jawaban'] as $jawaban) {
-                KpiQuestionHasEmployee::updateOrCreate(
-                    [
-                        'employees_id_karyawan' => $validated['id_karyawan'],
-                        'kpi_question_id_question' => $jawaban['id']
-                    ],
-                    ['nilai' => $jawaban['jawaban']]
-                );
-            }
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
         }
 
-        return response()->json([
-            'message' => 'Nilai karyawan berhasil disimpan'
-        ]);
-    }
-
-    /**
-     * Hitung nilai akhir KPI per karyawan (termasuk absensi)
-     */
-    public function calculateFinalScore($employeeId, $tahun, $bulan)
-    {
-        $employee = Employee::findOrFail($employeeId);
-        $kpis = Kpi::with('points.questions')->get();
-
-        foreach ($kpis as $kpi) {
-            $nilaiAkhir = 0;
-
-            foreach ($kpi->points as $point) {
-                $total = $point->questions->sum(function ($q) use ($employeeId, $tahun, $bulan) {
-                    return KpiQuestionHasEmployee::where('kpi_question_id_question', $q->id_question)
-                        ->where('employees_id_karyawan', $employeeId)
-                        ->whereYear('created_at', $tahun)   // filter tahun
-                        ->whereMonth('created_at', $bulan)  // filter bulan
-                        ->value('nilai') ?? 0;
-                });
-
-                $count = $point->questions->count();
-                $avg = $count > 0 ? $total / $count : 0;
-                $skorSubAspek = ($avg * 2.5) * ($point->bobot / 100);
-                $nilaiAkhir += $skorSubAspek;
-            }
-
-            // Integrasi Absensi
-            $attendances = Attendance::where('employee_id', $employeeId)
-                ->whereYear('date', $tahun)
-                ->whereMonth('date', $bulan)
-                ->get();
-
-            if ($attendances->count() > 0) {
-                $totalHari = $attendances->count();
-                $hadir = $attendances->where('status', 'Present at workday (PW)')->count();
-                $sakit = $attendances->where('status', 'Sick (S)')->count();
-                $izin  = $attendances->where('status', 'Permission (I)')->count();
-                $alpa  = $attendances->where('status', 'Absent (A)')->count();
-
-                $skorAbsensi = max(0, ($hadir / $totalHari) * 100
-                    - ($alpa * 25)
-                    - ($sakit * 10)
-                    - ($izin * 10));
-
-                $bobotAbsensi = 20;
-                $nilaiAkhir += ($skorAbsensi * ($bobotAbsensi / 100));
-            }
-
-            // Simpan nilai akhir
-            KpiHasEmployee::updateOrCreate(
-                [
-                    'kpis_id_kpi' => $kpi->id_kpi,
-                    'employees_id_karyawan' => $employeeId,
-                    'tahun' => $tahun,
-                    'bulan' => $bulan
-                ],
-                ['nilai_akhir' => $nilaiAkhir]
-            );
+        $period = Period::findOrFail($request->periode_id);
+        if (!$period->canBeEvaluated()) {
+            return response()->json(['success' => false, 'message' => 'Cannot input score, period status: ' . $period->status], 400);
         }
 
-        return response()->json(['message' => 'Nilai akhir KPI berhasil dihitung (termasuk absensi)']);
+        DB::beginTransaction();
+        try {
+            foreach ($request->hasil as $aspek) {
+                foreach ($aspek['jawaban'] as $jawaban) {
+                    KpiQuestionHasEmployee::updateOrCreate(
+                        ['employees_id_karyawan' => $request->id_karyawan, 'kpi_question_id_question' => $jawaban['id'], 'periode_id' => $request->periode_id],
+                        ['nilai' => $jawaban['jawaban']]
+                    );
+                }
+            }
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Scores saved']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed save score: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed save score'], 500);
+        }
     }
 
-    /**
-     * Ambil skor per aspek utama
-     */
-    public function getScoreByAspekUtama($employeeId, $tahun, $bulan)
+    // ================== CALCULATE FINAL SCORE ==================
+    public function calculateFinalScore($employeeId, $periodeId)
     {
+        $period = Period::findOrFail($periodeId);
         $employee = Employee::findOrFail($employeeId);
-        $kpis = Kpi::with('points')->get();
+
+        $kpis = Kpi::where('periode_id', $periodeId)->with(['points.questions'])->get();
         $result = [];
 
         foreach ($kpis as $kpi) {
-            $nilaiAkhir = KpiHasEmployee::where('kpis_id_kpi', $kpi->id_kpi)
-                ->where('employees_id_karyawan', $employeeId)
-                ->where('tahun', $tahun)
-                ->where('bulan', $bulan)
-                ->value('nilai_akhir') ?? 0;
-
-            $result[] = [
-                'aspek_utama' => $kpi->nama,
-                'bobot' => $kpi->bobot,
-                'nilai' => $nilaiAkhir
-            ];
+            $aspekTotal = 0;
+            foreach ($kpi->points as $point) {
+                $pointTotal = 0;
+                foreach ($point->questions as $q) {
+                    $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $q->id_question)
+                        ->where('periode_id', $periodeId)
+                        ->first()?->nilai ?? 0;
+                    $pointTotal += $score * ($point->bobot / 100);
+                }
+                $aspekTotal += $pointTotal * ($kpi->bobot / 100);
+            }
+            $result[] = ['aspek' => $kpi->nama, 'score' => $aspekTotal];
         }
 
-        return response()->json([
-            'employee' => $employee->nama_karyawan,
-            'scores' => $result
-        ]);
+        $totalScore = array_sum(array_column($result, 'score'));
+
+        return response()->json(['success' => true, 'data' => ['scores' => $result, 'total' => $totalScore]]);
+    }
+
+    // ================== GET SCORE PER ASPEK UTAMA ==================
+    public function getScoreByAspekUtama($employeeId, $periodeId)
+    {
+        $kpis = Kpi::where('periode_id', $periodeId)->with(['points.questions'])->get();
+        $scores = [];
+        foreach ($kpis as $kpi) {
+            $aspekScore = 0;
+            foreach ($kpi->points as $point) {
+                $pointScore = 0;
+                foreach ($point->questions as $q) {
+                    $pointScore += KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $q->id_question)
+                        ->where('periode_id', $periodeId)
+                        ->first()?->nilai ?? 0;
+                }
+                $aspekScore += $pointScore;
+            }
+            $scores[] = ['aspek' => $kpi->nama, 'score' => $aspekScore];
+        }
+        return response()->json(['success' => true, 'data' => $scores]);
+    }
+
+    // ================== GET EMPLOYEE KPI FOR PERIOD ==================
+    public function getEmployeeKpiForPeriod($employeeId, $periodId)
+    {
+        $kpis = Kpi::where('periode_id', $periodId)->with(['points.questions'])->get();
+        $data = [];
+        foreach ($kpis as $kpi) {
+            $pointsData = [];
+            foreach ($kpi->points as $point) {
+                $questionsData = [];
+                foreach ($point->questions as $q) {
+                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $q->id_question)
+                        ->where('periode_id', $periodId)
+                        ->first()?->nilai ?? null;
+                    $questionsData[] = ['question' => $q->pertanyaan, 'answer' => $answer];
+                }
+                $pointsData[] = ['point' => $point->nama, 'bobot' => $point->bobot, 'questions' => $questionsData];
+            }
+            $data[] = ['aspek' => $kpi->nama, 'bobot' => $kpi->bobot, 'points' => $pointsData];
+        }
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    // ================== ATTENDANCE SUMMARY ==================
+    public function getAttendanceSummary($employeeId, $periodeId)
+    {
+        $employee = Employee::findOrFail($employeeId);
+        $period = Period::findOrFail($periodeId);
+
+        $attendances = Attendance::where('employee_id', $employeeId)->where('periode_id', $periodeId)->get();
+
+        $summary = [
+            'total_days' => $attendances->count(),
+            'hadir' => $attendances->where('status', 'Present at workday (PW)')->count(),
+            'izin' => $attendances->where('status', 'Permission (I)')->count(),
+            'sakit' => $attendances->where('status', 'Sick (S)')->count(),
+            'mangkir' => $attendances->where('status', 'Absent (A)')->count(),
+            'terlambat' => $attendances->sum('late'),
+            'jumlah_terlambat' => $attendances->where('late', '>', 0)->count(),
+            'early_leave' => $attendances->sum('early_leave')
+        ];
+
+        return response()->json(['success' => true, 'data' => ['employee' => $employee->nama, 'period' => $period->nama, 'attendance_summary' => $summary]]);
     }
 }

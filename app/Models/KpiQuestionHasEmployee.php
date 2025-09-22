@@ -9,10 +9,7 @@ class KpiQuestionHasEmployee extends Model
 {
   use HasFactory;
 
-  // Nama tabel
   protected $table = 'kpi_question_has_employees';
-
-  // Fillable / mass assignable
   protected $fillable = [
     'kpi_question_id_question',
     'employees_id_karyawan',

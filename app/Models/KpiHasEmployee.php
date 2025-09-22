@@ -11,7 +11,14 @@ class KpiHasEmployee extends Model
   use HasFactory, SoftDeletes;
 
   protected $table = 'kpis_has_employees';
-  protected $fillable = ['kpis_id_kpi', 'employees_id_karyawan', 'tahun', 'bulan', 'nilai_akhir'];
+  protected $fillable = [
+    'kpis_id_kpi',
+    'employees_id_karyawan',
+    'periode_id',
+    'tahun',
+    'bulan',
+    'nilai_akhir',
+  ];
 
   public function kpi()
   {
@@ -23,8 +30,13 @@ class KpiHasEmployee extends Model
     return $this->belongsTo(Employee::class, 'employees_id_karyawan', 'id_karyawan');
   }
 
+  public function period()
+  {
+    return $this->belongsTo(Period::class, 'periode_id', 'id_periode');
+  }
+
   public function subAspects()
   {
-    return $this->hasMany(KpiPointHasEmployee::class, 'kpis_has_employee_id');
+    return $this->hasMany(KpiPointsHasEmployee::class, 'kpis_has_employee_id');
   }
 }

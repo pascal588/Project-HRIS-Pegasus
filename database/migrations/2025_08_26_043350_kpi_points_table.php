@@ -10,11 +10,17 @@ return new class extends Migration
     {
         Schema::create('kpi_points', function (Blueprint $table) {
             $table->id('id_point');
-            $table->foreignId('kpis_id_kpi')->constrained('kpis', 'id_kpi')->cascadeOnDelete();
-            $table->string('nama', 255); // nama sub-aspek (integritas 5%)
-            $table->decimal('bobot', 5, 2)->default(0); // bobot per sub-aspek
+            $table->foreignId('kpis_id_kpi')
+                ->constrained('kpis', 'id_kpi')
+                ->cascadeOnDelete();
+            $table->string('nama', 255);
+            $table->decimal('bobot', 5, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();
+
+            // Indexes
+            $table->index('kpis_id_kpi');
+            $table->index(['kpis_id_kpi', 'bobot']);
         });
     }
 

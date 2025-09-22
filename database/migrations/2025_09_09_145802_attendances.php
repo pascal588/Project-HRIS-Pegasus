@@ -11,7 +11,14 @@ return new class extends Migration
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('employee_id');
-            $table->string('period')->nullable();
+
+            // ✅ PERIODE_ID - Langsung ditambahkan di sini
+            $table->foreignId('periode_id')
+                ->nullable()
+                ->constrained('periods', 'id_periode')
+                ->onDelete('cascade');
+
+            $table->string('period')->nullable(); // Dipertahankan untuk kompatibilitas
             $table->date('date');
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
@@ -34,8 +41,22 @@ return new class extends Migration
             $table->string('timezone_clock_out')->nullable();
             $table->timestamps();
 
-            $table->foreign('employee_id')->references('id_karyawan')->on('employees')->onDelete('cascade');
+            // Foreign key constraints
+            $table->foreign('employee_id')
+                ->references('id_karyawan')
+                ->on('employees')
+                ->onDelete('cascade');
+
+            // Unique constraints
             $table->unique(['employee_id', 'date']);
+
+            // Indexes for performance
+            $table->index('employee_id');
+            $table->index('periode_id');
+            $table->index('period');
+            $table->index('date');
+            $table->index(['employee_id', 'periode_id']);
+            $table->index(['employee_id', 'date', 'periode_id']);
         });
     }
 

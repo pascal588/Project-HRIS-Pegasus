@@ -4,14 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Kpi extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'kpis';
     protected $primaryKey = 'id_kpi';
-    protected $fillable = ['nama', 'deskripsi', 'bobot', 'is_global'];
+    protected $fillable = [
+        'nama',
+        'bobot',
+        'is_global',
+        'periode_id',
+    ];
+
+    public function period()
+    {
+        return $this->belongsTo(Period::class, 'periode_id', 'id_periode');
+    }
 
     public function points()
     {

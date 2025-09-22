@@ -4,17 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class KpiPointHasEmployee extends Model
+class KpiPointsHasEmployee extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'kpi_points_has_employee';
-
     protected $fillable = [
         'kpis_has_employee_id',
         'kpi_point_id',
-        'nilai',
+        'bobot',
     ];
 
     public function kpiHasEmployee()
@@ -24,6 +24,6 @@ class KpiPointHasEmployee extends Model
 
     public function point()
     {
-        return $this->belongsTo(KpiPoint::class, 'kpi_point_id');
+        return $this->belongsTo(KpiPoint::class, 'kpi_point_id', 'id_point');
     }
 }

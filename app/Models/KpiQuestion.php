@@ -12,7 +12,10 @@ class KpiQuestion extends Model
 
     protected $table = 'kpi_questions';
     protected $primaryKey = 'id_question';
-    protected $fillable = ['kpi_point_id', 'pertanyaan'];
+    protected $fillable = [
+        'kpi_point_id',
+        'pertanyaan',
+    ];
 
     // Relasi ke sub-aspek
     public function point()
@@ -21,7 +24,7 @@ class KpiQuestion extends Model
     }
 
     // Relasi ke jawaban/nilai karyawan
-    public function employeeScores()
+    public function employeeAnswers()
     {
         return $this->hasMany(KpiQuestionHasEmployee::class, 'kpi_question_id_question', 'id_question');
     }

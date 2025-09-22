@@ -13,9 +13,12 @@ return new class extends Migration
             $table->foreignId('kpi_point_id')
                 ->constrained('kpi_points', 'id_point')
                 ->cascadeOnDelete();
-            $table->string('pertanyaan'); // teks pertanyaan
+            $table->string('pertanyaan');
             $table->timestamps();
             $table->softDeletes();
+
+            // Indexes
+            $table->index('kpi_point_id');
         });
     }
 

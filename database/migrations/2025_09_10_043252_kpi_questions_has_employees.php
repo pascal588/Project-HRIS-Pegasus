@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('kpi_question_has_employees', function (Blueprint $table) {
@@ -19,20 +16,20 @@ return new class extends Migration
             $table->foreignId('employees_id_karyawan')
                 ->constrained('employees', 'id_karyawan')
                 ->cascadeOnDelete();
-            $table->tinyInteger('nilai')->nullable(); // 1–4
+            $table->tinyInteger('nilai')->nullable(); // 1-4
+            $table->boolean('is_finalized')->default(false);
+            $table->timestamp('finalized_at')->nullable();
             $table->timestamps();
 
-            // Constraint biar 1 karyawan hanya punya 1 jawaban per pertanyaan
+            // Constraints
             $table->unique(['kpi_question_id_question', 'employees_id_karyawan'], 'uq_kpi_question_employee');
 
-            // Index untuk query cepat berdasarkan karyawan
+            // Indexes
             $table->index('employees_id_karyawan');
+            $table->index('is_finalized');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('kpi_question_has_employees');

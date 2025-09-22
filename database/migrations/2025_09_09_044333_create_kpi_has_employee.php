@@ -16,17 +16,25 @@ return new class extends Migration
             $table->foreignId('employees_id_karyawan')
                 ->constrained('employees', 'id_karyawan')
                 ->cascadeOnDelete();
+            $table->foreignId('periode_id')
+                ->constrained('periods', 'id_periode')
+                ->cascadeOnDelete();
             $table->year('tahun');
-            $table->tinyInteger('bulan'); // 1–12
-            $table->decimal('nilai_akhir', 8, 2)->nullable(); // hasil akhir KPI
+            $table->tinyInteger('bulan'); // 1-12
+            $table->decimal('nilai_akhir', 8, 2)->nullable();
+            $table->boolean('is_finalized')->default(false);
+            $table->timestamp('finalized_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            // Tidak boleh ada duplikat nilai KPI untuk periode yang sama
-            $table->unique(['kpis_id_kpi', 'employees_id_karyawan', 'tahun', 'bulan'], 'uq_kpi_employee_period');
+            // Constraints
+            $table->unique(['kpis_id_kpi', 'employees_id_karyawan', 'periode_id'], 'uq_kpi_employee_period');
 
-            // Optimisasi query by employee
+            // Indexes
             $table->index('employees_id_karyawan');
+            $table->index('periode_id');
+            $table->index(['tahun', 'bulan']);
+            $table->index('is_finalized');
         });
     }
 

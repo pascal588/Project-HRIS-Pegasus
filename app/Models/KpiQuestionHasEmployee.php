@@ -7,31 +7,39 @@ use Illuminate\Database\Eloquent\Model;
 
 class KpiQuestionHasEmployee extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  // Nama tabel
-  protected $table = 'kpi_question_has_employees';
+    protected $table = 'kpi_question_has_employees';
+    
+    protected $fillable = [
+        'periode_id',
+        'kpi_question_id_question',
+        'employees_id_karyawan',
+        'nilai',
+        'is_finalized',
+        'finalized_at',
+        
+    ];
 
-  // Fillable / mass assignable
-  protected $fillable = [
-    'kpi_question_id_question',
-    'employees_id_karyawan',
-    'nilai',
-  ];
+    protected $casts = [
+        'nilai' => 'integer',
+        'is_finalized' => 'boolean',
+        'finalized_at' => 'datetime'
+    ];
 
-  /**
-   * Relasi ke pertanyaan KPI
-   */
-  public function question()
-  {
-    return $this->belongsTo(KpiQuestion::class, 'kpi_question_id_question', 'id_question');
-  }
+    // Relationships
+    public function question()
+    {
+        return $this->belongsTo(KpiQuestion::class, 'kpi_question_id_question', 'id_question');
+    }
 
-  /**
-   * Relasi ke karyawan
-   */
-  public function employee()
-  {
-    return $this->belongsTo(Employee::class, 'employees_id_karyawan', 'id_karyawan');
-  }
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employees_id_karyawan', 'id_karyawan');
+    }
+
+    public function period()
+    {
+        return $this->belongsTo(Period::class, 'periode_id', 'id_periode');
+    }
 }

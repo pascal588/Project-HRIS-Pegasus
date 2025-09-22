@@ -287,37 +287,47 @@
       ]
     });
 
-    // Load KPI Data
+
     async function loadKpiData() {
       try {
-        const res = await fetch('/api/kpi');
+        const res = await fetch('/api/kpis'); // Pastikan endpoint ini benar
         if (!res.ok) throw new Error('Gagal fetch data');
-        kpiData = await res.json();
-        populateDropdowns(kpiData);
-        applyFilters();
+        const response = await res.json();
+        
+        // Pastikan struktur data sesuai dengan yang diharapkan
+        if (response.success && response.data) {
+          kpiData = response.data;
+          populateDropdowns(kpiData);
+          applyFilters();
+        } else {
+          throw new Error('Format data tidak valid');
+        }
       } catch (err) {
-        console.error(err);
-        alert('Gagal memuat data KPI.');
+        console.error('Error:', err);
+        alert('Gagal memuat data KPI: ' + err.message);
       }
     }
 
     function populateDropdowns(data) {
-      const bulanSet = new Set(),
-        tahunSet = new Set(),
-        divisiSet = new Set(),
-        jabatanSet = new Set();
-      data.forEach(item => {
-        const [month, year] = (item.period ?? 'Unknown Unknown').split(' ');
-        bulanSet.add(month);
-        tahunSet.add(year);
-        divisiSet.add(item.division);
-        jabatanSet.add(item.position);
-      });
-      fillSelect('#filterBulan', bulanSet);
-      fillSelect('#filterTahun', tahunSet);
-      fillSelect('#filterDivisi', divisiSet);
-      fillSelect('#filterJabatan', jabatanSet);
-    }
+    const bulanSet = new Set(),
+      tahunSet = new Set(),
+      divisiSet = new Set(),
+      jabatanSet = new Set();
+    
+    data.forEach(item => {
+      // Pastikan property yang diakses sesuai dengan response API
+      const [month, year] = (item.period || 'Unknown Unknown').split(' ');
+      bulanSet.add(month);
+      tahunSet.add(year);
+      divisiSet.add(item.division || item.divisi); // Coba kedua kemungkinan
+      jabatanSet.add(item.position || item.jabatan); // Coba kedua kemungkinan
+    });
+    
+    fillSelect('#filterBulan', bulanSet);
+    fillSelect('#filterTahun', tahunSet);
+    fillSelect('#filterDivisi', divisiSet);
+    fillSelect('#filterJabatan', jabatanSet);
+  }
 
     function fillSelect(selector, items) {
       const select = $(selector);

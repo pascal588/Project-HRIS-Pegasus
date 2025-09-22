@@ -1,6 +1,6 @@
 @extends('template.template')
 
-@section('title', 'KPI')
+@section('title', 'Management KPI Template')
 
 @section('content')
 <style>
@@ -13,6 +13,24 @@
   .nav-link:not(.active) {
     color: white !important;
   }
+
+  .global-kpi-badge {
+    background-color: #6c757d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+  }
+
+  .subaspect-card {
+    border-left: 4px solid #0d6efd;
+  }
+
+  .question-row {
+    border-left: 2px solid #6c757d;
+    padding-left: 10px;
+  }
 </style>
 
 <div class="body d-flex py-3">
@@ -20,9 +38,18 @@
     <div class="row justify-content-center">
       <div class="col-md-12">
         <div class="card mb-3 shadow-sm">
-          <div class="card-header bg-transparent border-0 row">
+          <div class="card-header bg-transparent border-0">
+            <h4 class="card-title">
+              <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+              Management KPI Template
+            </h4>
+             <button id="publishKpiModalBtn" class="btn btn-warning">
+              <i class="bi bi-send-check"></i> Publish semua KPI
+            </button>
+          </div>
+
+          <div class="card-body">
             <div class="row mb-3">
-              <!-- Dropdown mode -->
               <div class="col-md-6">
                 <label class="form-label fw-bold">Pilih Mode</label>
                 <select id="modeSelect" class="form-select">
@@ -32,7 +59,6 @@
                 </select>
               </div>
 
-              <!-- Dropdown divisi (default disembunyikan) -->
               <div class="col-md-6" id="divisionWrapper" style="display:none;">
                 <label class="form-label fw-bold">Pilih Divisi</label>
                 <select id="divisionSelect" class="form-select">
@@ -41,12 +67,18 @@
               </div>
             </div>
 
-            <!-- Card KPI -->
+            {{-- <!-- Info -->
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle"></i>
+              <strong>Template Mode:</strong> KPI yang diedit ini adalah template yang akan digunakan untuk semua periode setelah absensi di-import.
+            </div> --}}
+
+            <!-- Card Informasi -->
             <div class="card border-0 mb-4 shadow-sm">
               <div class="card-body">
                 <h5 class="card-title fw-bold mb-3">
-                  <i class="bi bi-bar-chart-fill text-primary me-2"></i>
-                  Informasi KPI
+                  <i class="bi bi-info-circle text-primary me-2"></i>
+                  Informasi KPI Template
                 </h5>
                 <div class="row g-3">
                   <div class="col-md-6">
@@ -80,7 +112,7 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-list-ol text-primary fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Jumlah aspek divisi</small>
+                        <small class="text-muted">Jumlah Aspek</small>
                         <div id="infoTopicCount" class="fw-semibold">0</div>
                       </div>
                     </div>
@@ -89,19 +121,68 @@
               </div>
             </div>
 
-            <!-- Modal Edit KPI -->
+            <!-- Tombol Action -->
+            <div class="d-flex justify-content-between mb-4">
+              <button id="addTopicBtn" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Tambah Aspek KPI
+              </button>
+              <button id="saveKPIBtn" class="btn btn-success">
+                <i class="bi bi-check-circle"></i> Simpan Template KPI
+              </button>
+            </div>
+
+            <!-- Modal -->
+          <div class="modal fade" id="publishKpiModal" tabindex="-1" aria-labelledby="publishKpiModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+              <div class="modal-content">
+                
+                <!-- Header -->
+                <div class="modal-header">
+                  <h5 class="modal-title" id="publishKpiModalLabel">Publish KPI ke Periode</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <!-- Body -->
+                <div class="modal-body">
+                  <!-- Daftar Periode yang Tersedia -->
+                  <div class="mb-3">
+                    <label class="form-label fw-bold">Pilih Periode</label>
+                    <div id="periodeListContainer">
+                      <div class="text-center">
+                        <div class="spinner-border" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Memuat data periode...</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Atur Deadline -->
+                  <div class="mb-3">
+                    <label for="deadline" class="form-label fw-bold">Atur Deadline Evaluasi (hari)</label>
+                    <input type="number" class="form-control" id="deadline" placeholder="Masukkan jumlah hari" min="1" max="60" value="7">
+                    <small class="text-muted">Jumlah hari untuk periode evaluasi KPI</small>
+                  </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                  <button type="button" class="btn btn-primary" id="publishBtn">Publish KPI</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+            <!-- Content KPI -->
             <div class="card mb-5 shadow-sm">
-              <div class="card-header bg-primary">
+              <div class="card-header bg-primary text-white">
                 <div class="nav-tabs-wrapper mb-2">
                   <ul class="nav nav-tabs" id="topicTabs"></ul>
-                  <div class="ms-auto">
-                    <button id="addTopicBtn" class="btn btn-light btn-sm">+ Tambah aspek</button>
-                    <button id="saveKPIBtn" class="btn btn-success btn-sm ms-2">Simpan KPI</button>
-                  </div>
                 </div>
               </div>
               <div class="card-body">
-                <div class="p-3 tab-content mb-2" id="topicContents"></div>
+                <div class="tab-content" id="topicContents"></div>
               </div>
             </div>
           </div>
@@ -113,26 +194,64 @@
 @endsection
 
 @section('script')
-<script>
-  let _uidCounter = 0;
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<script>
+  // ==================== GLOBAL VARIABLES ====================
+  let _uidCounter = 0;
+  let currentDivisionId = "";
+  let currentMode = "";
+
+  // ==================== UTILITY FUNCTIONS ====================
   function uid(prefix = "id") {
     _uidCounter++;
     return `${prefix}_${Date.now()}_${_uidCounter}`;
   }
 
-  let currentDivisionId = "";
-  let currentMode = ""; // "global" atau "division"
-  const divisionSelect = document.getElementById("divisionSelect");
+  function showAlert(icon, title, text) {
+    return Swal.fire({
+      icon: icon,
+      title: title,
+      text: text,
+      confirmButtonColor: '#3085d6',
+    });
+  }
 
+  function escapeAttr(text) {
+    if (text === null || text === undefined) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // ==================== INITIALIZATION ====================
   $(document).ready(function() {
-    $("#modeSelect").on("change", onModeChange);
+    initializeEventListeners();
     loadDivisions();
-    $(divisionSelect).on("change", changeDivision);
-    $("#addTopicBtn").on("click", addAspect);
-    $("#saveKPIBtn").on("click", saveKPI);
+    loadKpiTemplates();
   });
 
+  function initializeEventListeners() {
+    // Gunakan off() untuk menghapus listener sebelumnya
+    $("#modeSelect").off('change').on("change", onModeChange);
+    $("#divisionSelect").off('change').on("change", changeDivision);
+    $("#addTopicBtn").off('click').on("click", addAspect);
+    $("#saveKPIBtn").off('click').on("click", saveKPI);
+    
+    // Modal publish - inisialisasi sekali saja
+    $('#publishKpiModalBtn').off('click').on('click', function() {
+        loadAvailablePeriods();
+        $('#publishKpiModal').modal('show');
+    });
+    
+    $('#publishBtn').off('click').on('click', publishKpiToPeriod);
+}
+
+  // ==================== MODE & DIVISION HANDLING ====================
   function onModeChange() {
     currentMode = $("#modeSelect").val();
     if (currentMode === "division") {
@@ -142,117 +261,107 @@
       $("#divisionSelect").val("");
       currentDivisionId = "";
     }
-
-    if (currentMode === "global") {
-      $("#infoDivision").text("Global");
-      loadKpiData();
-    } else {
-      $("#infoDivision").text("-");
-      clearKPIForm();
-    }
+    loadKpiTemplates();
   }
 
   function loadDivisions() {
-    $.getJSON("/api/divisions")
-      .done(function(response) {
-        divisionSelect.innerHTML = '<option value="">Pilih Divisi</option>';
-        if (response && response.success && response.data) {
+    $.ajax({
+      url: "/api/divisions",
+      method: "GET",
+      success: function(response) {
+        if (response.success) {
+          $("#divisionSelect").empty().append('<option value="">Pilih Divisi</option>');
           response.data.forEach((division) => {
-            const option = document.createElement("option");
-            option.value = division.id_divisi;
-            option.textContent = division.nama_divisi;
-            divisionSelect.appendChild(option);
+            $("#divisionSelect").append(new Option(division.nama_divisi, division.id_divisi));
           });
         }
-      })
-      .fail(function(xhr) {
-        console.error("Error loading divisions:", xhr.responseText || xhr.statusText);
-      });
+      },
+      error: function(xhr) {
+        console.error("Error loading divisions:", xhr);
+        showAlert('error', 'Error', 'Gagal memuat data divisi');
+      }
+    });
   }
 
   function changeDivision() {
-    currentDivisionId = divisionSelect.value;
+    currentDivisionId = $("#divisionSelect").val();
     if (currentDivisionId) {
       $("#infoDivision").text($("#divisionSelect option:selected").text());
-      if (currentMode === "division") loadKpiData();
+      loadKpiTemplates();
     } else {
       $("#infoDivision").text("-");
       clearKPIForm();
     }
   }
 
-  function clearKPIForm() {
-    $("#topicTabs").empty();
-    $("#topicContents").empty();
-    updateInfo();
+  // ==================== KPI DATA LOADING ====================
+  function loadKpiTemplates() {
+    let url = '/api/kpis/templates';
+    const params = [];
+
+    if (currentMode) params.push(`is_global=${currentMode === 'global' ? 1 : 0}`);
+    if (currentMode === 'division' && currentDivisionId) params.push(`division_id=${currentDivisionId}`);
+
+    if (params.length) url += '?' + params.join('&');
+
+    $.ajax({
+      url: url,
+      method: "GET",
+      success: function(response) {
+        if (response.success) {
+          clearKPIForm();
+          response.data.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
+          updateInfo();
+        }
+      },
+      error: function(xhr) {
+        console.error("Error loading KPI templates:", xhr);
+        showAlert('error', 'Error', 'Gagal memuat template KPI');
+      }
+    });
   }
 
-  function loadKpiData() {
-    clearKPIForm();
-    let url = '';
-    
-    if (currentMode === "division" && currentDivisionId) {
-        url = `/api/kpi-by-division/${currentDivisionId}`;
-    } else if (currentMode === "global") {
-        url = `/api/kpi-global`;
-    } else {
-        return;
-    }
-
-    $.getJSON(url)
-        .done(function(response) {
-            // Perhatikan struktur response yang berbeda
-            let kpis = [];
-            
-            if (currentMode === "division") {
-                // Response dari /api/kpi-by-division/{id} langsung array KPI
-                kpis = response || [];
-            } else if (currentMode === "global") {
-                // Response dari /api/kpi-global adalah {kpis: array}
-                kpis = response.kpis || [];
-            }
-
-            if (kpis.length) {
-                kpis.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
-                updateInfo();
-            }
-        })
-        .fail(function(xhr) {
-            console.error("Error loading KPI data:", xhr.responseText || xhr.statusText);
-            alert("Gagal memuat data KPI");
-        });
-}
-        function normalizeKpiFromServer(kpi) {
-          return {
-            uid: uid("kpi"),
-            id: kpi.id || kpi.id_kpi || null,
-            nama: kpi.nama || "",
-            bobot: kpi.bobot !== undefined ? kpi.bobot : 0,
-            is_global: kpi.is_global || false, // Pastikan ini ada
-            subaspects: (kpi.points || kpi.kpi_points || []).map((pt) => ({
+  function normalizeKpiFromServer(kpi) {
+    console.log('Normalizing KPI:', kpi); // Debug
+    return {
+        uid: uid("kpi"),
+        id: kpi.id_kpi || null,
+        nama: kpi.nama || "",
+        bobot: kpi.bobot || 0,
+        is_global: kpi.is_global || false,
+        points: (kpi.points || []).map((pt) => ({
             uid: uid("sub"),
-            id: pt.id || pt.id_point || null,
+            id: pt.id_point || null,
             nama: pt.nama || "",
-            bobot: pt.bobot !== undefined ? pt.bobot : 0,
-            questions: (pt.questions || pt.kpi_questions || []).map((q) => ({
-                id: q.id_question || q.id || null,
+            bobot: pt.bobot || 0,
+            questions: (pt.questions || []).map((q) => ({
+                id: q.id_question || null,
                 pertanyaan: q.pertanyaan || "",
             })),
         })),
     };
 }
 
+  // ==================== UI RENDERING ====================
+  function clearKPIForm() {
+    $("#topicTabs").empty();
+    $("#topicContents").empty();
+    updateInfo();
+  }
+
   function addAspect() {
     if (currentMode === "division" && !currentDivisionId) {
-      alert("Pilih divisi dulu!");
+      showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
       return;
     }
+
     const aspect = {
       uid: uid("aspect"),
       id: null,
       nama: "",
       bobot: 0,
-      subaspects: [],
+      is_global: currentMode === "global",
+      points: [],
     };
 
     renderAspect(aspect, true);
@@ -261,133 +370,134 @@
   }
 
   function renderAspect(aspectObj, newlyCreated = false) {
-    const aspectUid = aspectObj.uid || uid("aspect");
+    const aspectUid = aspectObj.uid;
     const aspectId = aspectObj.id || "";
     const aspectName = aspectObj.nama || "";
     const aspectWeight = aspectObj.bobot || 0;
-    const subaspects = aspectObj.subaspects || [];
     const isGlobal = aspectObj.is_global || false;
+    const points = aspectObj.points || [];
 
-    // Tab - tambahkan class khusus untuk KPI global
-    const li = document.createElement("li");
-    li.className = "nav-item";
-    li.id = `tab-btn-${aspectUid}`;
-    li.setAttribute("role", "presentation");
-    
-    if (currentMode === "division" && isGlobal) {
-        li.classList.add("text-muted"); // Tampilkan berbeda untuk KPI global
-    }
+    // Create tab
+    const tabHtml = `
+<li class="nav-item" id="tab-btn-${aspectUid}">
+  <button class="nav-link" id="tab-${aspectUid}-tab" data-bs-toggle="tab"
+    data-bs-target="#tab-${aspectUid}" type="button" role="tab">
+    ${escapeAttr(aspectName) || "Aspek Baru"}
+    ${isGlobal ? '<span class="global-kpi-badge">Global</span>' : ''}
+  </button>
+</li>
+`;
+    $("#topicTabs").append(tabHtml);
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "nav-link";
-    btn.id = `tab-${aspectUid}-tab`;
-    btn.setAttribute("data-bs-toggle", "tab");
-    btn.setAttribute("data-bs-target", `#tab-${aspectUid}`);
-    btn.setAttribute("role", "tab");
-    btn.textContent = aspectName || "Aspek Baru";
-    li.appendChild(btn);
-    document.getElementById("topicTabs").appendChild(li);
-
-    // Content - tambahkan kondisi readonly untuk KPI global
+    // Create content
     let subHtml = "";
-    subaspects.forEach((sa) => (subHtml += subaspectTemplate(aspectUid, sa, isGlobal)));
+    points.forEach((sa) => (subHtml += subaspectTemplate(aspectUid, sa, isGlobal)));
 
-    const contentPane = document.createElement("div");
-    contentPane.className = "tab-pane fade";
-    if (document.querySelectorAll("#topicContents .tab-pane").length === 0) {
-        contentPane.classList.add("show", "active");
-    }
+    // KPI Global menjadi read-only ketika di mode Divisi
     const isReadOnly = currentMode === "division" && isGlobal;
-    contentPane.id = `tab-${aspectUid}`;
-    contentPane.setAttribute("role", "tabpanel");
-    contentPane.dataset.aspectUid = aspectUid;
-    contentPane.innerHTML = `
-        <input type="hidden" class="aspect-id" value="${aspectId}">
-        <input type="hidden" class="aspect-is-global" value="${isGlobal}">
-        <div class="mb-3">
-            <label class="form-label">Nama aspek</label>
-            <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
-                oninput="updateAspectTabTitle('${aspectUid}', this.value)" ${isReadOnly ? 'readonly' : ''}>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Bobot aspek (%)</label>
-            <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}" min="0" max="100" 
-                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
-        </div>
-        ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
-        <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
-            <h6>Subaspek</h6>
-            ${subHtml}
-        </div>
-        ${!isReadOnly ? `
-        <div class="mt-2">
-            <button class="btn btn-outline-primary btn-sm" type="button" onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
-            <button class="btn btn-danger btn-sm" type="button" onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
-        </div>
-        ` : ''}
-    `;
-    document.getElementById("topicContents").appendChild(contentPane);
+    
+    const contentHtml = `
+<div class="tab-pane fade" id="tab-${aspectUid}" role="tabpanel">
+  <input type="hidden" class="aspect-id" value="${aspectId}">
+  <input type="hidden" class="aspect-is-global" value="${isGlobal}">
+  <div class="mb-3">
+    <label class="form-label">Nama aspek</label>
+    <input type="text" class="form-control aspect-name" value="${escapeAttr(aspectName)}"
+      oninput="updateAspectTabTitle('${aspectUid}', this.value)" ${isReadOnly ? 'readonly' : ''}>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Bobot aspek (%)</label>
+    <input type="number" class="form-control aspect-weight" value="${Number(aspectWeight)}"
+      min="0" max="100" oninput="updateAspectWeight('${aspectUid}', this.value)"
+      ${isReadOnly ? 'readonly' : ''}>
+  </div>
+  ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
+  <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
+    <h6>Subaspek</h6>
+    ${subHtml}
+  </div>
+  ${!isReadOnly ? `
+  <div class="mt-2">
+    <button class="btn btn-outline-primary btn-sm" type="button"
+      onclick="addSubaspect('${aspectUid}')">+ Tambah Subaspek</button>
+    <button class="btn btn-danger btn-sm" type="button"
+      onclick="confirmRemoveAspect('${aspectUid}')">Hapus aspek</button>
+  </div>
+  ` : ''}
+</div>
+`;
+    $("#topicContents").append(contentHtml);
 
-    if (subaspects.length === 0 && !isReadOnly) addSubaspect(aspectUid);
+    if (points.length === 0 && !isReadOnly) addSubaspect(aspectUid);
+    if (newlyCreated || $("#topicTabs .nav-link").length === 1) setActiveTab(aspectUid);
     updateInfo();
 }
 
-  function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
+ function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
     const suid = saObj.uid || uid("sub");
     const sid = saObj.id || "";
     const sname = saObj.nama || "";
     const sweight = saObj.bobot || 0;
     const questions = saObj.questions || [];
+    
+    // Subaspek menjadi read-only jika termasuk dalam KPI Global di mode Divisi
     const isReadOnly = currentMode === "division" && isGlobalAspect;
 
     let qHtml = "";
     questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
 
     return `
-      <div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
-        <input type="hidden" class="subaspect-id" value="${sid}">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <div style="flex:1">
-            <label class="form-label">Nama Subaspek</label>
-            <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}" 
-                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
-          </div>
-          <div style="width:140px; margin-left:10px">
-            <label class="form-label">Bobot (%)</label>
-            <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}" min="0" max="100" 
-                oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
-          </div>
-          ${!isReadOnly ? `
-          <div style="margin-left:10px">
-            <label class="form-label">&nbsp;</label>
-            <button class="btn btn-sm btn-outline-danger d-block" type="button" onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
-          </div>
-          ` : ''}
-        </div>
-        <div class="questions-list" id="questions-${suid}">
-          ${qHtml}
-        </div>
-        ${!isReadOnly ? `
-        <div class="mt-2">
-          <button class="btn btn-outline-secondary btn-sm" type="button" onclick="addQuestionToSub('${suid}')">+ Tambah Pertanyaan</button>
-        </div>
-        ` : ''}
-      </div>
-    `;
+<div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
+  <input type="hidden" class="subaspect-id" value="${sid}">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div style="flex:1">
+      <label class="form-label">Nama Subaspek</label>
+      <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}"
+        oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
+    </div>
+    <div style="width:140px; margin-left:10px">
+      <label class="form-label">Bobot (%)</label>
+      <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}"
+        min="0" max="100" oninput="updateSubaspectWeight('${suid}', this.value, '${aspectUid}')"
+        ${isReadOnly ? 'readonly' : ''}>
+    </div>
+    ${!isReadOnly ? `
+    <div style="margin-left:10px">
+      <label class="form-label">&nbsp;</label>
+      <button class="btn btn-sm btn-outline-danger d-block" type="button"
+        onclick="confirmRemoveSubaspect('${suid}')">Hapus</button>
+    </div>
+    ` : ''}
+  </div>
+  <div class="questions-list" id="questions-${suid}">
+    ${qHtml}
+  </div>
+  ${!isReadOnly ? `
+  <div class="mt-2">
+    <button class="btn btn-outline-secondary btn-sm" type="button"
+      onclick="addQuestionToSub('${suid}')">+ Tambah Pertanyaan</button>
+  </div>
+  ` : ''}
+</div>
+`;
 }
 
-  function questionInputTemplate(suid, q = {}) {
-    const qid = q.id_question || q.id || "";
+  function questionInputTemplate(suid, q = {}, isReadOnly = false) {
+    const qid = q.id || "";
     const qtext = q.pertanyaan || "";
     return `
-      <div class="input-group mb-2 question-row" data-question-id="${escapeAttr(qid)}">
-        <input type="text" class="form-control question-text" value="${escapeAttr(qtext)}" placeholder="Masukkan pertanyaan">
-        <button class="btn btn-outline-danger" type="button" onclick="confirmRemoveQuestionInSub(this, '${suid}')">Hapus</button>
-      </div>
-    `;
-  }
+<div class="input-group mb-2 question-row" data-question-id="${escapeAttr(qid)}">
+  <input type="text" class="form-control question-text" value="${escapeAttr(qtext)}"
+    placeholder="Masukkan pertanyaan" ${isReadOnly ? 'readonly' : ''}>
+  ${!isReadOnly ? `
+  <button class="btn btn-outline-danger" type="button"
+    onclick="confirmRemoveQuestionInSub(this, '${suid}')">Hapus</button>
+  ` : ''}
+</div>
+`;
+}
 
+  // ==================== SUBASPECT & QUESTION MANAGEMENT ====================
   function addSubaspect(aspectUid) {
     const sub = {
       uid: uid("sub"),
@@ -407,29 +517,94 @@
     updateInfo();
   }
 
+  function updateAspectWeight(aspectUid, weight) {
+    const totalSubWeight = $(`#subaspects-${aspectUid} .subaspect-weight`)
+      .map((_, el) => Number(el.value) || 0)
+      .get()
+      .reduce((a, b) => a + b, 0);
+
+    if (totalSubWeight > weight) {
+      $(`#subaspects-${aspectUid} .subaspect-weight`).each(function() {
+        const subWeight = Number(this.value) || 0;
+        const newSubWeight = Math.floor((subWeight / totalSubWeight) * weight);
+        $(this).val(newSubWeight);
+      });
+    }
+
+    updateInfo();
+  }
+
+  function updateSubaspectWeight(subUid, weight, aspectUid) {
+    const aspectWeight = Number($(`#tab-${aspectUid} .aspect-weight`).val()) || 0;
+    const currentSubWeights = $(`#subaspects-${aspectUid} .subaspect-weight`)
+      .map((_, el) => Number(el.value) || 0)
+      .get();
+
+    const totalSubWeight = currentSubWeights.reduce((a, b) => a + b, 0);
+
+    if (totalSubWeight > aspectWeight) {
+      $(`#subaspects-${aspectUid} .subaspect-weight`).each(function() {
+        const subWeight = Number(this.value) || 0;
+        const newSubWeight = Math.floor((subWeight / totalSubWeight) * aspectWeight);
+        $(this).val(newSubWeight);
+      });
+    }
+
+    updateInfo();
+  }
+
+  // ==================== DELETE CONFIRMATIONS ====================
   function confirmRemoveQuestionInSub(btn, subUid) {
-    const row = btn.closest(".question-row");
-    const qid = row ? row.dataset.questionId : null;
+    const row = $(btn).closest(".question-row");
+    const qid = row.data("question-id") || null;
+
     if (qid) {
-      if (!confirm("Yakin hapus pertanyaan ini dari server?")) return;
-      $.ajax({
-        url: `/api/kpi-question/${qid}`,
-        method: "DELETE",
-        success: function(resp) {
-          if (row) row.remove();
-          alert(resp.message || "Pertanyaan dihapus");
-          updateInfo();
-        },
-        error: function(xhr) {
-          console.error("Error deleting question:", xhr.responseText || xhr.statusText);
-          alert("Gagal menghapus pertanyaan");
-        },
+      Swal.fire({
+        title: 'Hapus Pertanyaan?',
+        text: "Pertanyaan ini akan dihapus dari server",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `/api/kpi-question/${qid}`,
+            method: "DELETE",
+            success: function(resp) {
+              if (resp.success) {
+                row.remove();
+                showAlert('success', 'Berhasil', resp.message || 'Pertanyaan dihapus');
+                updateInfo();
+              } else {
+                showAlert('error', 'Error', resp.message || 'Gagal menghapus pertanyaan');
+              }
+            },
+            error: function(xhr) {
+              console.error("Error deleting question:", xhr);
+              showAlert('error', 'Error', 'Gagal menghapus pertanyaan');
+            }
+          });
+        }
       });
     } else {
-      if (confirm("Hapus pertanyaan ini?") && row) {
-        row.remove();
-        updateInfo();
-      }
+      Swal.fire({
+        title: 'Hapus Pertanyaan?',
+        text: "Pertanyaan ini akan dihapus dari form",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          row.remove();
+          updateInfo();
+        }
+      });
     }
   }
 
@@ -437,96 +612,174 @@
     const pane = $(`#tab-${aspectUid}`);
     const aspectId = pane.find(".aspect-id").val();
     const isGlobal = pane.find(".aspect-is-global").val() === "true";
-    
-    // Jika KPI global di mode divisi, jangan izinkan hapus
+
+    // Cegah penghapusan KPI Global di mode Divisi
     if (currentMode === "division" && isGlobal) {
-        alert("KPI Global tidak dapat dihapus dari mode Divisi. Gunakan mode Global untuk mengelola KPI Global.");
+        showAlert('warning', 'Peringatan', 'KPI Global tidak dapat dihapus dari mode Divisi. Gunakan mode Global untuk mengelola KPI Global.');
         return;
     }
 
     if (aspectId) {
-        if (!confirm("Yakin hapus aspek ini?")) return;
-        $.ajax({
-            url: currentMode === "global" ?
-                `/api/kpi-global/${aspectId}` :
-                `/api/division/${currentDivisionId}/kpi/${aspectId}`,
+      Swal.fire({
+        title: 'Hapus Aspek?',
+        text: "Aspek ini akan dihapus dari server",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const url = `/api/kpis/${aspectId}`;
+
+          $.ajax({
+            url: url,
             method: "DELETE",
             success: function(resp) {
+              if (resp.success) {
                 removeAspectFromUI(aspectUid);
-                alert(resp.message || "Aspek dihapus");
-                loadKpiData();
+                showAlert('success', 'Berhasil', resp.message || 'Aspek dihapus');
+                loadKpiTemplates();
+              } else {
+                showAlert('error', 'Error', resp.message || 'Gagal menghapus aspek');
+              }
             },
             error: function(xhr) {
-                console.error("Error deleting aspect:", xhr.responseText || xhr.statusText);
-                alert("Gagal menghapus aspek");
-            },
-        });
-    } else {
-        if (confirm("Hapus aspek ini?")) {
-            removeAspectFromUI(aspectUid);
-            updateInfo();
+              console.error("Error deleting aspect:", xhr);
+              showAlert('error', 'Error', 'Gagal menghapus aspek');
+            }
+          });
         }
+      });
+    } else {
+      Swal.fire({
+        title: 'Hapus Aspek?',
+        text: "Aspek ini akan dihapus dari form",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          removeAspectFromUI(aspectUid);
+          updateInfo();
+        }
+      });
     }
-}
+  }
 
   function confirmRemoveSubaspect(subUid) {
     const subCard = $(`#sub-${subUid}`);
     const idPoint = subCard.find(".subaspect-id").val();
+
     if (idPoint) {
-      if (!confirm("Yakin hapus subaspek ini dari server?")) return;
-      $.ajax({
-        url: `/api/kpi-point/${idPoint}`,
-        method: "DELETE",
-        success: function(resp) {
-          subCard.remove();
-          alert(resp.message || "Subaspek dihapus");
-          updateInfo();
-        },
-        error: function(xhr) {
-          console.error("Error deleting subaspect:", xhr.responseText || xhr.statusText);
-          alert("Gagal menghapus subaspek");
-        },
+      Swal.fire({
+        title: 'Hapus Subaspek?',
+        text: "Subaspek ini akan dihapus dari server",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          $.ajax({
+            url: `/api/kpi-point/${idPoint}`,
+            method: "DELETE",
+            success: function(resp) {
+              if (resp.success) {
+                subCard.remove();
+                showAlert('success', 'Berhasil', resp.message || 'Subaspek dihapus');
+                updateInfo();
+              } else {
+                showAlert('error', 'Error', resp.message || 'Gagal menghapus subaspek');
+              }
+            },
+            error: function(xhr) {
+              console.error("Error deleting subaspect:", xhr);
+              showAlert('error', 'Error', 'Gagal menghapus subaspek');
+            }
+          });
+        }
       });
     } else {
-      if (confirm("Hapus subaspek ini?")) {
-        subCard.remove();
-        updateInfo();
-      }
+      Swal.fire({
+        title: 'Hapus Subaspek?',
+        text: "Subaspek ini akan dihapus dari form",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          subCard.remove();
+          updateInfo();
+        }
+      });
     }
   }
 
+  // ==================== UI UTILITIES ====================
   function removeAspectFromUI(aspectUid) {
     $(`#tab-btn-${aspectUid}`).remove();
     $(`#tab-${aspectUid}`).remove();
     const first = $("#topicTabs .nav-link").first();
-    if (first.length) new bootstrap.Tab(first.get(0)).show();
+    if (first.length) new bootstrap.Tab(first[0]).show();
     updateInfo();
   }
 
   function updateAspectTabTitle(uid, text) {
-    const el = document.querySelector(`#tab-btn-${uid} button`);
-    if (el) el.textContent = text || "Aspek Baru";
+    const el = $(`#tab-btn-${uid} button`);
+    if (el.length) {
+      const badge = el.find('.global-kpi-badge');
+      el.html(escapeAttr(text) || "Aspek Baru");
+      if (badge.length) el.append(badge);
+    }
   }
 
   function setActiveTab(uid) {
-    const btn = document.querySelector(`#tab-${uid}-tab`);
-    if (!btn) return;
-    new bootstrap.Tab(btn).show();
+    const btn = $(`#tab-${uid}-tab`);
+    if (btn.length) {
+      new bootstrap.Tab(btn[0]).show();
+    }
   }
+
+  function updateInfo() {
+    const weights = $(".aspect-weight")
+        .map((_, el) => {
+            const $el = $(el);
+            // Hanya hitung bobot untuk KPI divisi (bukan global)
+            if (currentMode === "division" && $el.closest('.tab-pane').find('.aspect-is-global').val() === "true") {
+                return 0;
+            }
+            return Number($el.val()) || 0;
+        })
+        .get();
+    
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    $("#infoTotalWeight").text(totalWeight + "%");
+    $("#infoTopicCount").text($("#topicContents .tab-pane").length);
+}
 
   function saveKPI() {
     if (!currentMode) {
-        alert("Pilih mode (Global/Divisi) terlebih dahulu.");
+        showAlert('warning', 'Peringatan', 'Pilih mode (Global/Divisi) terlebih dahulu.');
         return;
     }
     if (currentMode === "division" && !currentDivisionId) {
-        alert("Pilih divisi dulu!");
+        showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
         return;
     }
 
     const kpiPanes = $("#topicContents .tab-pane");
     if (kpiPanes.length === 0) {
-        alert("Tambahkan minimal 1 aspek KPI!");
+        showAlert('warning', 'Peringatan', 'Tambahkan minimal 1 aspek KPI!');
         return;
     }
 
@@ -536,148 +789,447 @@
     kpiPanes.each(function() {
         const $pane = $(this);
         const idKpi = $pane.find(".aspect-id").val() || null;
-        const isGlobal = $pane.find(".aspect-is-global").val() === "true";
+        
+        // ⚠️ FIX: Ambil nilai is_global dari data yang sudah ada
+        const isGlobalExisting = $pane.find(".aspect-is-global").val() === "true";
+        
+        // ⚠️ FIX: Untuk KPI baru, gunakan currentMode. Untuk KPI existing, pertahankan nilai aslinya
+        const isGlobal = idKpi ? isGlobalExisting : (currentMode === "global");
+        
         const nama = $pane.find(".aspect-name").val().trim();
         const bobot = Number($pane.find(".aspect-weight").val()) || 0;
 
-        // Jika di mode divisi dan KPI global, skip karena tidak boleh diubah
+        // ⚠️ FILTER PENTING: Di mode divisi, hanya kirim KPI divisi (bukan global)
         if (currentMode === "division" && isGlobal) {
-            return true; // continue ke next iteration
+            console.log('Skipping global KPI in division mode:', nama);
+            return true; // Skip KPI Global
         }
 
         if (!nama) {
-            alert("Nama KPI tidak boleh kosong!");
+            showAlert('warning', 'Peringatan', 'Nama KPI tidak boleh kosong!');
             valid = false;
             return false;
         }
 
-      const points = [];
-      let totalPointWeight = 0;
+        const points = [];
+        let totalPointWeight = 0;
 
-      $pane.find(".subaspect-card").each(function() {
-        const $sub = $(this);
-        const idPoint = $sub.find(".subaspect-id").val() || null;
-        const subNama = $sub.find(".subaspect-name").val().trim();
-        const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
+        $pane.find(".subaspect-card").each(function() {
+            const $sub = $(this);
+            const idPoint = $sub.find(".subaspect-id").val() || null;
+            const subNama = $sub.find(".subaspect-name").val().trim();
+            const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
 
-        if (!subNama) {
-          alert("Nama subaspek tidak boleh kosong!");
-          valid = false;
-          return false;
-        }
+            if (!subNama) {
+                showAlert('warning', 'Peringatan', 'Nama subaspek tidak boleh kosong!');
+                valid = false;
+                return false;
+            }
 
-        totalPointWeight += subBobot;
+            totalPointWeight += subBobot;
 
-        const questions = [];
-        $sub.find(".question-row").each(function() {
-          const qid = $(this).data("question-id") || null;
-          const qText = $(this).find(".question-text").val().trim();
-          if (qText) {
-            questions.push({
-              id_question: qid,
-              pertanyaan: qText,
+            const questions = [];
+            $sub.find(".question-row").each(function() {
+                const qid = $(this).data("question-id") || null;
+                const qText = $(this).find(".question-text").val().trim();
+                if (qText) {
+                    questions.push({
+                        id_question: qid,
+                        pertanyaan: qText,
+                    });
+                }
             });
-          }
+
+            if (questions.length === 0) {
+                showAlert('warning', 'Peringatan', 'Subaspek harus memiliki minimal 1 pertanyaan!');
+                valid = false;
+                return false;
+            }
+
+            points.push({
+                id_point: idPoint,
+                nama: subNama,
+                bobot: subBobot,
+                questions: questions,
+            });
         });
 
-        if (questions.length === 0) {
-          alert("Subaspek harus memiliki minimal 1 pertanyaan!");
-          valid = false;
-          return false;
+        if (!valid) return false;
+
+        if (totalPointWeight > 100) {
+            showAlert('warning', 'Peringatan', 'Total bobot subaspek tidak boleh lebih dari 100%');
+            valid = false;
+            return false;
         }
 
-        points.push({
-          id_point: idPoint,
-          nama: subNama,
-          bobot: subBobot,
-          questions: questions,
+         aspects.push({
+            id_kpi: idKpi,
+            nama: nama,
+            bobot: bobot,
+            // ⚠️ FIX: Pertahankan status is_global yang original untuk KPI existing
+            is_global: isGlobal,
+            points: points,
         });
-      });
-
-      if (!valid) return false;
-
-      if (totalPointWeight > 100) {
-        alert("Total bobot subaspek tidak boleh lebih dari 100%");
-        valid = false;
-        return false;
-      }
-
-      aspects.push({
-        id_kpi: idKpi,
-        nama: nama,
-        bobot: bobot,
-        points: points,
-      });
     });
 
     if (!valid) return;
 
-    // Di function saveKPI(), perbaiki payload yang dikirim:
+    // Validasi: Di mode divisi, pastikan ada KPI divisi yang akan disimpan
+    if (currentMode === "division" && aspects.length === 0) {
+        showAlert('info', 'Informasi', 'Tidak ada KPI Divisi yang akan disimpan. KPI Global tidak dapat diedit di mode Divisi.');
+        return;
+    }
+
     const payload = {
-      is_global: currentMode === "global" ? 1 : 0,
-      division_id: currentMode === "division" ? currentDivisionId : null,
-      kpis: aspects.map(aspect => {
-        // Untuk KPI yang sudah ada, pertahankan status global aslinya
-        if (aspect.id_kpi) {
-          return {
-            ...aspect,
-            // Kirim status global asli untuk KPI yang sudah ada
-            is_global: aspect.is_global || (currentMode === "global" ? 1 : 0)
-          };
-        }
-        // Untuk KPI baru, gunakan mode saat ini
-        return {
-          ...aspect,
-          is_global: currentMode === "global" ? 1 : 0
-        };
-      }),
+        is_global: currentMode === "global",
+        division_id: currentMode === "division" ? currentDivisionId : null,
+        kpis: aspects
     };
 
-    console.log("Payload dikirim:", payload);
+    console.log('Payload to save:', payload); // Debug
+
+    Swal.fire({
+        title: 'Menyimpan KPI',
+        text: 'Sedang menyimpan template KPI...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading()
+        }
+    });
 
     $.ajax({
-      url: "/api/kpi/save",
-      method: "POST",
-      contentType: "application/json",
-      processData: false,
-      headers: {
-        Accept: "application/json"
-      },
-      data: JSON.stringify(payload),
-      success: function(response) {
-        alert(response.message || "KPI berhasil disimpan!");
-        loadKpiData();
-      },
-      error: function(xhr) {
-        console.error("Error saving KPI:", xhr.responseText || xhr.statusText);
-        let msg = "Gagal menyimpan KPI";
-        try {
-          const errResp = JSON.parse(xhr.responseText);
-          if (errResp && errResp.errors)
-            msg += "\n" + Object.values(errResp.errors).flat().join("\n");
-        } catch (e) {}
-        alert(msg);
-      },
+        url: "/api/kpis",
+        method: "POST",
+        contentType: "application/json",
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'Accept': 'application/json'
+        },
+        data: JSON.stringify(payload),
+        success: function(response) {
+            Swal.close();
+            if (response.success) {
+                showAlert('success', 'Berhasil', response.message || 'Template KPI berhasil disimpan!');
+                loadKpiTemplates(); // Reload data
+            } else {
+                showAlert('error', 'Error', response.message || 'Gagal menyimpan template KPI');
+            }
+        },
+        error: function(xhr) {
+            Swal.close();
+            console.error("Error saving KPI:", xhr);
+            let msg = "Gagal menyimpan template KPI";
+            try {
+                const errResp = xhr.responseJSON;
+                if (errResp && errResp.message) msg = errResp.message;
+                if (errResp && errResp.errors) {
+                    msg += "\n" + Object.values(errResp.errors).flat().join("\n");
+                }
+            } catch (e) {}
+            showAlert('error', 'Error', msg);
+        }
     });
-  }
+}
 
-  function escapeAttr(text) {
-    if (text === null || text === undefined) return "";
-    return String(text)
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
+  // ==================== LOAD TOTAL WEIGHT ====================
+function loadTotalWeight() {
+    if (currentMode === "division" && currentDivisionId) {
+        $.ajax({
+            url: `/api/kpis/division/${currentDivisionId}/total-weight`,
+            method: "GET",
+            success: function(response) {
+                if (response.success) {
+                    const totalWeight = response.data.total_weight;
+                    $("#infoTotalDivisionWeight").text(totalWeight + "%");
+                    
+                    // Highlight if total weight exceeds 100%
+                    if (totalWeight > 100) {
+                        $("#infoTotalDivisionWeight").addClass("text-danger");
+                    } else {
+                        $("#infoTotalDivisionWeight").removeClass("text-danger");
+                    }
+                }
+            },
+            error: function(xhr) {
+                console.error("Error loading total weight:", xhr);
+            }
+        });
+    } else {
+        $("#infoTotalDivisionWeight").text("0%").removeClass("text-danger");
+    }
+}
 
-  function updateInfo() {
-    const weights = $(".aspect-weight")
-      .map((_, el) => Number(el.value) || 0)
-      .get();
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    $("#infoTotalWeight").text(totalWeight + "%");
-    $("#infoTopicCount").text($("#topicContents .tab-pane").length);
-  }
-</script> 
+// Panggil fungsi ini setelah loadKpiTemplates()
+function loadKpiTemplates() {
+    let url = '';
+    const params = [];
+
+    // Tentukan endpoint berdasarkan mode
+    if (currentMode === "global") {
+        url = '/api/kpis/templates';
+        params.push(`is_global=1`);
+    } else if (currentMode === "division" && currentDivisionId) {
+        // Gunakan endpoint yang mengembalikan KPI Global + Divisi
+        url = `/api/kpis/division/${currentDivisionId}`;
+    } else {
+        // Mode divisi tapi belum pilih divisi
+        clearKPIForm();
+        return;
+    }
+
+    if (params.length) url += '?' + params.join('&');
+
+    console.log('Loading KPI from:', url); // Debug
+
+    $.ajax({
+        url: url,
+        method: "GET",
+        success: function(response) {
+            if (response.success) {
+                clearKPIForm();
+                if (response.data && response.data.length > 0) {
+                    response.data.forEach((kpi) => renderAspect(normalizeKpiFromServer(kpi), false));
+                } else {
+                    showNoDataMessage();
+                }
+                updateInfo();
+                
+                // Load total weight untuk mode divisi
+                if (currentMode === "division" && currentDivisionId) {
+                    loadTotalWeight();
+                }
+            }
+        },
+        error: function(xhr) {
+            console.error("Error loading KPI templates:", xhr);
+            showAlert('error', 'Error', 'Gagal memuat template KPI');
+        }
+    });
+}
+
+function showNoDataMessage() {
+    const html = `
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle me-2"></i>
+            Tidak ada template KPI untuk mode ${currentMode === 'global' ? 'Global' : 'Divisi'} ini.
+            ${currentMode === 'division' ? 'Pilih divisi lain atau buat template baru.' : 'Buat template KPI Global baru.'}
+        </div>
+    `;
+    $("#topicContents").html(html);
+}
+
+function changeDivision() {
+    currentDivisionId = $("#divisionSelect").val();
+    if (currentDivisionId) {
+        $("#infoDivision").text($("#divisionSelect option:selected").text());
+        loadKpiTemplates();
+        loadTotalWeight(); // Load total weight
+    } else {
+        $("#infoDivision").text("-");
+        clearKPIForm();
+    }
+}
+
+// ==================== INITIALIZATION ====================
+$(document).ready(function() {
+    initializeEventListeners();
+    loadDivisions();
+    loadKpiTemplates();
+    
+    // // Inisialisasi modal publish
+    initializePublishModal();
+});
+
+function initializePublishModal() {
+    // Event listener untuk tombol publish
+    $('#publishKpiModalBtn').on('click', function() {
+        loadAvailablePeriods();
+        $('#publishKpiModal').modal('show');
+    });
+    
+    $('#publishBtn').on('click', publishKpiToPeriod);
+}
+
+function loadAvailablePeriods() {
+    $('#periodeListContainer').html(`
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Memuat data periode...</p>
+        </div>
+    `);
+    
+    $.ajax({
+        url: '/api/kpis/available-periods-publishing',
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                const periods = response.data;
+                let periodHtml = '';
+                
+                if (periods.length > 0) {
+                    periods.forEach(period => {
+                        const startDate = new Date(period.tanggal_mulai).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                        const endDate = new Date(period.tanggal_selesai).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                        
+                        periodHtml += `
+                            <div class="form-check mb-3 p-3 border rounded">
+                                <input class="form-check-input period-radio" type="radio" 
+                                    name="selectedPeriod" value="${period.id_periode}" 
+                                    id="period${period.id_periode}">
+                                <label class="form-check-label w-100" for="period${period.id_periode}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong class="d-block">${period.nama}</strong>
+                                            <small class="text-muted">${startDate} - ${endDate}</small>
+                                        </div>
+                                        <span class="badge bg-${period.status === 'active' ? 'success' : 'warning'}">
+                                            ${period.status === 'active' ? 'Aktif' : 'Draft'}
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
+                        `;
+                    });
+                } else {
+                    periodHtml = `
+                        <div class="alert alert-warning text-center">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Tidak ada periode yang tersedia untuk publish KPI.
+                            <br>
+                            <small>Pastikan sudah mengimport absensi dan periode memiliki status aktif/draft.</small>
+                        </div>
+                    `;
+                }
+                
+                $('#periodeListContainer').html(periodHtml);
+            } else {
+                $('#periodeListContainer').html(`
+                    <div class="alert alert-danger">
+                        Gagal memuat data periode: ${response.message || 'Unknown error'}
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading periods:', xhr);
+            $('#periodeListContainer').html(`
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Gagal memuat data periode. Silakan refresh halaman dan coba lagi.
+                </div>
+            `);
+        }
+    });
+}
+
+function publishKpiToPeriod() {
+    const selectedPeriod = $('input[name="selectedPeriod"]:checked').val();
+    const deadlineDays = $('#deadline').val();
+    
+    if (!selectedPeriod) {
+        showAlert('warning', 'Peringatan', 'Pilih periode terlebih dahulu!');
+        return;
+    }
+    
+    if (!deadlineDays || deadlineDays < 1 || deadlineDays > 60) {
+        showAlert('warning', 'Peringatan', 'Masukkan deadline yang valid (1-60 hari)!');
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Publish KPI?',
+        html: `KPI akan dipublish ke periode terpilih dengan deadline evaluasi <strong>${deadlineDays} hari</strong>. 
+              <br><br>Setelah dipublish, periode akan aktif untuk penilaian KPI.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Publish Sekarang!',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Tampilkan loading
+            Swal.fire({
+                title: 'Memproses...',
+                text: 'Sedang mempublish KPI ke periode',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            $.ajax({
+                url: '/api/kpis/publish-to-period',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    period_id: selectedPeriod,
+                    deadline_days: parseInt(deadlineDays)
+                }),
+                success: function(response) {
+                    Swal.close();
+                    
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            html: `KPI berhasil dipublish ke periode <strong>${response.data.period.nama}</strong>!<br><br>
+                                  <small>Periode evaluasi: ${response.data.evaluation_period.start} - ${response.data.evaluation_period.end}</small>`,
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            $('#publishKpiModal').modal('hide');
+                            
+                            // Redirect ke halaman penilaian setelah 2 detik
+                            setTimeout(() => {
+                                window.location.href = '/penilaian';
+                            }, 2000);
+                        });
+                    } else {
+                        showAlert('error', 'Gagal', response.message || 'Terjadi kesalahan saat mempublish KPI');
+                    }
+                },
+                error: function(xhr) {
+                    Swal.close();
+                    console.error('Error publishing KPI:', xhr);
+                    
+                    let errorMessage = 'Gagal mempublish KPI';
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.message) {
+                            errorMessage = errorResponse.message;
+                        }
+                        if (errorResponse.errors) {
+                            errorMessage += '<br>' + Object.values(errorResponse.errors).join('<br>');
+                        }
+                    } catch (e) {
+                        errorMessage = 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+                    }
+                    
+                    Swal.fire({
+                        title: 'Gagal!',
+                        html: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+    });
+}
+</script>
 @endsection

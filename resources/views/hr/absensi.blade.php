@@ -154,7 +154,7 @@
                   @csrf
                   <div class="mb-3">
                     <label for="file" class="form-label">Pilih File Excel</label>
-                    <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.xls" required>
+                    <input class="form-control" type="file" id="file" name="files[]" accept=".xlsx,.xls" multiple required>
                   </div>
                 </form>
               </div>

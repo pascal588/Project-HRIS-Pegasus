@@ -842,43 +842,52 @@
       $('#manageJabatanModal').modal('show');
     });
 
-    // Handler tombol tambah jabatan di modal manage
-    $('#tambahJabatanBtn').click(function() {
-      const selectedJabatan = $('#manageJabatanSelect option:selected');
-      const jabatanId = selectedJabatan.val();
-      const jabatanNama = selectedJabatan.text();
-      const divisiId = selectedJabatan.data('division');
-      const selectedDivisiId = $('#manageDivisiSelect').val();
+// Handler tombol tambah jabatan di modal manage
+$('#tambahJabatanBtn').click(function() {
+    const selectedJabatan = $('#manageJabatanSelect option:selected');
+    const jabatanId = selectedJabatan.val();
+    const jabatanNama = selectedJabatan.text();
+    const divisiId = selectedJabatan.data('division');
+    const selectedDivisiId = $('#manageDivisiSelect').val();
 
-      if (!jabatanId) {
+    if (!jabatanId) {
         alert('Pilih jabatan terlebih dahulu!');
         return;
-      }
+    }
 
-      if (!selectedDivisiId) {
+    if (!selectedDivisiId) {
         alert('Pilih divisi terlebih dahulu!');
         return;
-      }
+    }
 
-      // Pastikan jabatan sesuai dengan divisi yang dipilih
-      if (divisiId != selectedDivisiId) {
+    // Pastikan jabatan sesuai dengan divisi yang dipilih
+    if (divisiId != selectedDivisiId) {
         alert('Jabatan ini tidak sesuai dengan divisi yang dipilih!');
         return;
-      }
+    }
 
-      if (managedRoles.find(role => role.id === jabatanId)) {
+    // CEK KHUSUS UNTUK JABATAN KEPALA DIVISI
+    if (jabatanNama.toLowerCase().includes('kepala') || jabatanNama.toLowerCase().includes('head')) {
+        // Hapus semua kepala divisi yang sudah ada di divisi ini
+        managedRoles = managedRoles.filter(role => 
+            !(role.nama.toLowerCase().includes('kepala') || role.nama.toLowerCase().includes('head')) ||
+            role.division_id != selectedDivisiId
+        );
+    }
+
+    if (managedRoles.find(role => role.id === jabatanId)) {
         alert('Jabatan ini sudah ditambahkan!');
         return;
-      }
+    }
 
-      managedRoles.push({
+    managedRoles.push({
         id: jabatanId,
         nama: jabatanNama,
         division_id: divisiId
-      });
-
-      renderManagedJabatanList();
     });
+
+    renderManagedJabatanList();
+});
 
     // Fungsi untuk render list jabatan di modal manage
     function renderManagedJabatanList() {
@@ -903,47 +912,88 @@
     });
 
     // Simpan perubahan jabatan
-    $('#simpanJabatanBtn').click(function() {
-      const karyawanId = $('#manageKaryawanId').val();
-      const divisiId = $('#manageDivisiSelect').val();
-      const roleIds = managedRoles.map(role => role.id);
+// Simpan perubahan jabatan
+$('#simpanJabatanBtn').click(function() {
+    const karyawanId = $('#manageKaryawanId').val();
+    const divisiId = $('#manageDivisiSelect').val();
+    const roleIds = managedRoles.map(role => role.id);
 
-      if (!divisiId) {
+    if (!divisiId) {
         alert('Pilih divisi terlebih dahulu!');
         return;
-      }
+    }
 
-      if (roleIds.length === 0) {
+    if (roleIds.length === 0) {
         alert('Pilih setidaknya satu jabatan!');
         return;
-      }
+    }
 
-      $.ajax({
-          url: '/api/employees/' + karyawanId + '/roles',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({
-            role_ids: roleIds,
-            division_id: divisiId
-          }),
-          dataType: 'json'
+    // CEK APAKAH ADA JABATAN KEPALA DIVISI YANG BARU
+    const kepalaDivisiRoles = managedRoles.filter(role => 
+        role.nama.toLowerCase().includes('kepala') || role.nama.toLowerCase().includes('head')
+    );
+
+    if (kepalaDivisiRoles.length > 0) {
+        // Jika ya, hapus kepala divisi sebelumnya dari divisi yang sama
+        const kepalaDivisiId = kepalaDivisiRoles[0].id;
+        
+        // Kirim informasi tambahan untuk menghapus kepala divisi lama
+        $.ajax({
+            url: '/api/employees/' + karyawanId + '/roles',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                role_ids: roleIds,
+                division_id: divisiId,
+                is_head_update: true,
+                head_role_id: kepalaDivisiId
+            }),
+            dataType: 'json'
         })
         .done((response) => {
-          if (response.success) {
-            $('#manageJabatanModal').modal('hide');
-            managedRoles = [];
-            table.ajax.reload(null, false);
-            alert('Jabatan berhasil diperbarui!');
-          } else {
-            alert('Gagal update jabatan: ' + (response.message || 'Unknown error'));
-          }
+            if (response.success) {
+                $('#manageJabatanModal').modal('hide');
+                managedRoles = [];
+                table.ajax.reload(null, false);
+                alert('Jabatan berhasil diperbarui! Kepala divisi sebelumnya telah dicabut.');
+            } else {
+                alert('Gagal update jabatan: ' + (response.message || 'Unknown error'));
+            }
         })
         .fail(err => {
-          const errorMsg = err.responseJSON?.message || err.statusText;
-          alert('Gagal update jabatan: ' + errorMsg);
-          console.error('Error details:', err);
+            const errorMsg = err.responseJSON?.message || err.statusText;
+            alert('Gagal update jabatan: ' + errorMsg);
+            console.error('Error details:', err);
         });
-    });
+    } else {
+        // Jika tidak ada jabatan kepala divisi, simpan seperti biasa
+        $.ajax({
+            url: '/api/employees/' + karyawanId + '/roles',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                role_ids: roleIds,
+                division_id: divisiId
+            }),
+            dataType: 'json'
+        })
+        .done((response) => {
+            if (response.success) {
+                $('#manageJabatanModal').modal('hide');
+                managedRoles = [];
+                table.ajax.reload(null, false);
+                alert('Jabatan berhasil diperbarui!');
+            } else {
+                alert('Gagal update jabatan: ' + (response.message || 'Unknown error'));
+            }
+        })
+        .fail(err => {
+            const errorMsg = err.responseJSON?.message || err.statusText;
+            alert('Gagal update jabatan: ' + errorMsg);
+            console.error('Error details:', err);
+        });
+    }
+});
 
     // FUNGSI UNTUK MODAL TAMBAH JABATAN
     // Load daftar jabatan untuk modal tambah jabatan
@@ -1061,75 +1111,41 @@
 
     // TAMBAH KARYAWAN - FIXED (auto bikin role Karyawan di divisi manapun)
     $('#tambahKaryawanBtn').click(function() {
-      const idKaryawan = $('#idKaryawan').val(); 
-      const nama = $('#namaKaryawan').val();
-      const divisiId = $('#divisiKaryawan').val();
-      const gender = $('#genderKaryawan').val();
-      const telp = $('#telpKaryawan').val();
-      const email = $('#emailKaryawan').val();
+  const idKaryawan = $('#idKaryawan').val(); 
+  const nama = $('#namaKaryawan').val();
+  const divisiId = $('#divisiKaryawan').val();
+  const gender = $('#genderKaryawan').val();
+  const telp = $('#telpKaryawan').val();
+  const email = $('#emailKaryawan').val();
 
-      if (!idKaryawan || !nama || !divisiId || !gender || !telp || !email) {
-        alert('Semua field harus diisi!');
-        return;
+  if (!idKaryawan || !nama || !divisiId || !gender || !telp || !email) {
+    alert('Semua field harus diisi!');
+    return;
+  }
+
+  // Cari role "Karyawan" yang sudah ada di divisi ini
+  $.get('/api/roles')
+    .done(rolesResponse => {
+      const roles = rolesResponse.data || rolesResponse;
+      
+      // Cari role Karyawan di divisi yang dipilih
+      const roleKaryawan = roles.find(role => 
+        role.nama_jabatan.toLowerCase() === 'karyawan' && 
+        role.division_id == divisiId
+      );
+
+      if (roleKaryawan) {
+        // Jika ditemukan, gunakan role yang sudah ada
+        simpanKaryawan(roleKaryawan.id_jabatan, idKaryawan, nama, gender, telp, email);
+      } else {
+        // Jika tidak ditemukan, buat role baru
+        buatRoleKaryawanBaru(divisiId, idKaryawan, nama, gender, telp, email);
       }
-
-      // Langsung buat role "Karyawan" di divisi yang dipilih
-      $.ajax({
-          url: '/api/roles',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({
-            nama_jabatan: 'Karyawan',
-            division_id: divisiId
-          }),
-          dataType: 'json'
-        })
-        .done(roleResponse => {
-          if (roleResponse.success) {
-            // Role berhasil dibuat, sekarang simpan karyawan
-            const roleId = roleResponse.data.id_jabatan;
-
-            const payload = {
-              id_karyawan: idKaryawan,
-              nama: nama,
-              gender: gender,
-              no_telp: telp,
-              email: email,
-              role_id: roleId,
-              status: 'Aktif'
-            };
-
-            $.ajax({
-                url: '/api/employees',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                dataType: 'json'
-              })
-              .done((response) => {
-                if (response.success) {
-                  $('#formTambahKaryawan')[0].reset();
-                  $('#addkaryawan').modal('hide');
-                  table.ajax.reload(null, false);
-                  alert('Karyawan berhasil ditambahkan!');
-                } else {
-                  alert('Gagal tambah karyawan: ' + (response.message || 'Unknown error'));
-                }
-              })
-              .fail(err => {
-                const errorMsg = err.responseJSON?.message || err.statusText;
-                alert('Gagal tambah karyawan: ' + errorMsg);
-              });
-          } else {
-            // Coba lagi dengan mencari role yang sudah ada
-            cariRoleKaryawan(divisiId, nama, gender, telp, email);
-          }
-        })
-        .fail(err => {
-          // Jika gagal buat role, mungkin sudah ada, cari yang sudah ada
-          cariRoleKaryawan(divisiId, nama, gender, telp, email);
-        });
+    })
+    .fail(err => {
+      alert('Gagal memuat data roles: ' + (err.responseJSON?.message || err.statusText));
     });
+});
 
     // Fungsi untuk cari role Karyawan yang sudah ada
     function cariRoleKaryawan(divisiId,idKaryawan, nama, gender, telp, email) {
@@ -1162,40 +1178,66 @@
         });
     }
 
-    // Fungsi untuk simpan karyawan
-    function simpanKaryawan(roleId, nama, gender, telp, email, idKaryawan) {
-      const payload = {
-        id_karyawan: idKaryawan,
-        nama: nama,
-        gender: gender,
-        no_telp: telp,
-        email: email,
-        role_id: roleId,
-        status: 'Aktif'
-      };
-
-      $.ajax({
-          url: '/api/employees',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify(payload),
-          dataType: 'json'
-        })
-        .done((response) => {
-          if (response.success) {
-            $('#formTambahKaryawan')[0].reset();
-            $('#addkaryawan').modal('hide');
-            table.ajax.reload(null, false);
-            alert('Karyawan berhasil ditambahkan!');
-          } else {
-            alert('Gagal tambah karyawan: ' + (response.message || 'Unknown error'));
-          }
-        })
-        .fail(err => {
-          const errorMsg = err.responseJSON?.message || err.statusText;
-          alert('Gagal tambah karyawan: ' + errorMsg);
-        });
+    // Fungsi untuk buat role Karyawan baru
+function buatRoleKaryawanBaru(divisiId, idKaryawan, nama, gender, telp, email) {
+  $.ajax({
+    url: '/api/roles',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({
+      nama_jabatan: 'Karyawan',
+      division_id: divisiId
+    }),
+    dataType: 'json'
+  })
+  .done(roleResponse => {
+    if (roleResponse.success) {
+      // Role berhasil dibuat, sekarang simpan karyawan
+      const roleId = roleResponse.data.id_jabatan;
+      simpanKaryawan(roleId, idKaryawan, nama, gender, telp, email);
+    } else {
+      alert('Gagal membuat role Karyawan: ' + (roleResponse.message || 'Unknown error'));
     }
+  })
+  .fail(err => {
+    alert('Gagal membuat role Karyawan: ' + (err.responseJSON?.message || err.statusText));
+  });
+}
+
+    // Fungsi untuk simpan karyawan
+    function simpanKaryawan(roleId, idKaryawan, nama, gender, telp, email) {
+  const payload = {
+    id_karyawan: idKaryawan,
+    nama: nama,
+    gender: gender,
+    no_telp: telp,
+    email: email,
+    role_id: roleId,
+    status: 'Aktif'
+  };
+
+  $.ajax({
+    url: '/api/employees',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify(payload),
+    dataType: 'json'
+  })
+  .done((response) => {
+    if (response.success) {
+      $('#formTambahKaryawan')[0].reset();
+      $('#addkaryawan').modal('hide');
+      table.ajax.reload(null, false);
+      alert('Karyawan berhasil ditambahkan!');
+    } else {
+      alert('Gagal tambah karyawan: ' + (response.message || 'Unknown error'));
+    }
+  })
+  .fail(err => {
+    const errorMsg = err.responseJSON?.message || err.statusText;
+    alert('Gagal tambah karyawan: ' + errorMsg);
+  });
+}
 
     // EDIT KARYAWAN
     $('#myProjectTable').on('click', '.edit-btn', function() {

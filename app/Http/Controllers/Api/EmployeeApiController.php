@@ -144,34 +144,58 @@ class EmployeeApiController extends Controller
     }
 
     // POST /api/employees/{employee}/roles - UPDATE ROLES SAJA
-    public function updateRoles(Request $request, Employee $employee)
-    {
-        $request->validate([
-            'role_ids' => 'required|array',
-            'role_ids.*' => 'exists:roles,id_jabatan'
-        ]);
+public function updateRoles(Request $request, Employee $employee)
+{
+    $request->validate([
+        'role_ids' => 'required|array',
+        'role_ids.*' => 'exists:roles,id_jabatan',
+        'is_head_update' => 'sometimes|boolean',
+        'head_role_id' => 'sometimes|exists:roles,id_jabatan'
+    ]);
 
-        try {
-            DB::transaction(function () use ($request, $employee) {
-                // Sync multiple roles
-                $employee->roles()->sync($request->role_ids);
-            });
+    try {
+        DB::transaction(function () use ($request, $employee) {
+            // Jika ini adalah update kepala divisi
+            if ($request->is_head_update && $request->head_role_id) {
+                // Cari kepala divisi sebelumnya di divisi yang sama
+                $headRole = Role::find($request->head_role_id);
+                
+                if ($headRole) {
+                    // Hapus semua karyawan yang memiliki role kepala divisi di divisi ini
+                    $previousHeads = DB::table('roles_has_employees')
+                        ->where('role_id', $request->head_role_id)
+                        ->get();
+                    
+                    foreach ($previousHeads as $previousHead) {
+                        if ($previousHead->employee_id != $employee->id_karyawan) {
+                            DB::table('roles_has_employees')
+                                ->where('role_id', $request->head_role_id)
+                                ->where('employee_id', $previousHead->employee_id)
+                                ->delete();
+                        }
+                    }
+                }
+            }
 
-            // Reload data dengan division information
-            $employee->load(['user', 'roles.division']);
+            // Sync multiple roles
+            $employee->roles()->sync($request->role_ids);
+        });
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Jabatan karyawan berhasil diperbarui',
-                'data' => $employee
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal memperbarui jabatan: ' . $e->getMessage()
-            ], 500);
-        }
+        // Reload data dengan division information
+        $employee->load(['user', 'roles.division']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Jabatan karyawan berhasil diperbarui',
+            'data' => $employee
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memperbarui jabatan: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     // DELETE /api/employees/{id}
     public function destroy(Employee $employee)

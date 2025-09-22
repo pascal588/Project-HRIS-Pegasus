@@ -13,12 +13,11 @@ use Illuminate\Support\Facades\Cache;
 
 class AttendanceApiController extends Controller
 {
-    // GET /api/attendances
     public function index(Request $request)
     {
         $query = Attendance::with('employee');
         
-        // Filter by period
+        // Filter period
         if ($request->has('period')) {
             $period = explode(' - ', $request->period);
             if (count($period) === 2) {
@@ -28,12 +27,12 @@ class AttendanceApiController extends Controller
             }
         }
         
-        // Filter by employee
+        // Filter employee
         if ($request->has('employee_id')) {
             $query->where('employee_id', $request->employee_id);
         }
         
-        // Filter by division
+        // Filter division
         if ($request->has('division_id')) {
             $query->whereHas('employee.roles', function($q) use ($request) {
                 $q->where('division_id', $request->division_id);
@@ -48,11 +47,11 @@ class AttendanceApiController extends Controller
         ], 200);
     }
 
-// POST /api/attendances/import
+
 public function import(Request $request)
 {
     $request->validate([
-        'file' => 'required|mimes:xlsx,xls'
+        'files.*' => 'required|mimes:xlsx,xls'
     ]);
 
     try {
@@ -61,7 +60,6 @@ public function import(Request $request)
         $worksheet = $spreadsheet->getActiveSheet();
         $rows = $worksheet->toArray();
 
-        // Get employee ID and period from Excel
         $employeeId = null;
         $period = null;
         
@@ -96,13 +94,11 @@ public function import(Request $request)
             ], 400);
         }
 
-        // Find header rows - kita perlu membaca dua baris header
         $headerRowIndex1 = null;
         $headerRowIndex2 = null;
         $columnMapping = [];
         
         foreach ($rows as $index => $row) {
-            // Cari baris dengan "No", "Date", "Status"
             if (in_array('No', $row) && in_array('Date', $row) && in_array('Status', $row)) {
                 $headerRowIndex1 = $index;
                 $headerRowIndex2 = $index + 1; // Baris header kedua ada di bawahnya
@@ -177,7 +173,7 @@ public function import(Request $request)
                     'timezone_clock_out' => $this->getCellValue($row, $columnMapping, 'timezone_clock_out'),
                 ];
 
-                // Check if attendance already exists
+                // Check attendance sudah ada
                 $existing = Attendance::where('employee_id', $employeeId)
                     ->where('date', $attendanceData['date'])
                     ->first();
@@ -243,7 +239,7 @@ private function createColumnMapping($headerRow1, $headerRow2)
         $mapping['daily_attendance_overtime_out'] = $this->findSubColumnIndex($headerRow2, 'Overtime Out', $dailyAttendanceIndex);
     }
 
-    // Mapping untuk kolom lainnya
+    
     $mapping['late'] = array_search('Late', $headerRow1);
     $mapping['early_leave'] = array_search('Early Leave', $headerRow1);
     
@@ -302,7 +298,7 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
     }
 }
 
-    // Helper method to find column index with multiple possible names
+    // Helper method indec dari nama
     private function findColumnIndex($row, $possibleNames)
     {
         foreach ($possibleNames as $name) {
@@ -314,14 +310,13 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
         return null;
     }
 
-    // Refresh periods cache after import
+    // Refresh periods cache habis import
     private function refreshPeriodsCache()
     {
-        // Clear cache
         Cache::forget('attendance_periods');
     }
 
-    // Helper methods for parsing data
+    // Helper methods untuk parsing data
     private function parseTime($value)
     {
         if (empty($value) || $value === '-') {
@@ -350,7 +345,7 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
             return null;
         }
         
-        // Handle time duration like "8:18"
+        // Handle time duration
         if (strpos($value, ':') !== false) {
             $parts = explode(':', $value);
             $hours = (int) $parts[0];
@@ -362,7 +357,6 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
         return null;
     }
 
-    // GET /api/attendances/summary
     public function getSummary(Request $request)
     {
         $query = Attendance::with('employee.roles.division');
@@ -384,7 +378,7 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
         
         $attendances = $query->get();
         
-        // Group by employee and calculate summary
+        // Buat summary per employee
         $summary = [];
         foreach ($attendances->groupBy('employee_id') as $employeeId => $records) {
             $employee = $records->first()->employee;
@@ -414,7 +408,6 @@ private function getCellValue($row, $columnMapping, $key, $type = 'string')
         ], 200);
     }
 
-// GET /api/attendances/periods
 public function getPeriods()
 {
     $refresh = request()->has('refresh') && request()->refresh == 'true';
@@ -424,7 +417,6 @@ public function getPeriods()
     }
     
     $periods = Cache::remember('attendance_periods', 3600, function () {
-        // Ambil semua periode unik dari database
         $uniquePeriods = Attendance::select('period')
             ->whereNotNull('period')
             ->where('period', '!=', '')
@@ -442,7 +434,6 @@ public function getPeriods()
     ], 200);
 }
 
-    // GET /api/attendances/{id}
     public function show($id)
     {
         try {
@@ -460,7 +451,6 @@ public function getPeriods()
         }
     }
 
-// GET /api/attendances/employee/{employee_id}
 public function getEmployeeAttendance($employee_id, Request $request)
 {
     try {
@@ -473,14 +463,14 @@ public function getEmployeeAttendance($employee_id, Request $request)
         
         $query = Attendance::where('employee_id', $employee_id);
         
-        // Filter by period if provided
+        // Filter dari period
         if ($request->has('period') && !empty($request->period)) {
             $query->where('period', $request->period);
         }
         
         $attendances = $query->orderBy('date', 'desc')->get();
         
-        // Calculate summary
+        // Buat summary
         $summary = [
             'hadir' => $attendances->where('status', 'Present at workday (PW)')->count(),
             'izin' => $attendances->where('status', 'Permission (I)')->count(),
@@ -492,7 +482,7 @@ public function getEmployeeAttendance($employee_id, Request $request)
             })->count(),
         ];
         
-        // Get unique periods for this employee
+        // Dapatkan semua periode unik untuk dropdown filter
         $periods = Attendance::where('employee_id', $employee_id)
             ->whereNotNull('period')
             ->where('period', '!=', '')

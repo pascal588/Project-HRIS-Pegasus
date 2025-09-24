@@ -36,19 +36,19 @@ Route::prefix('divisions')->group(function () {
 
 // ==================== EMPLOYEE ROUTES ====================
 Route::prefix('employees')->group(function () {
-  Route::get('/', [EmployeeApiController::class, 'index']);
-  Route::post('/', [EmployeeApiController::class, 'store']);
-
-  // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
-  Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
-  Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
-  Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
-  Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
-
-  // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
-  Route::get('/{employee}', [EmployeeApiController::class, 'show']);
-  Route::put('/{employee}', [EmployeeApiController::class, 'update']);
-  Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
+    Route::get('/', [EmployeeApiController::class, 'index']);
+    Route::post('/', [EmployeeApiController::class, 'store']);
+    
+    // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
+    Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+    Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
+    Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
+    Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
+    
+    // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
+    Route::get('/{employee}', [EmployeeApiController::class, 'show']);
+    Route::put('/{employee}', [EmployeeApiController::class, 'update']);
+    Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
 });
 
 // ==================== ROLE ROUTES ====================

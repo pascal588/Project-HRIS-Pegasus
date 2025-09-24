@@ -34,12 +34,13 @@ class KpiController extends Controller
             'kpis' => 'required|array|min:1',
             'kpis.*.nama' => 'required|string|max:100',
             'kpis.*.bobot' => 'required|numeric|min:0|max:100',
-            'kpis.*.is_global' => 'required|boolean', // Tambahkan validasi ini
+            'kpis.*.is_global' => 'required|boolean',
             'kpis.*.points' => 'required|array|min:1',
             'kpis.*.points.*.nama' => 'required|string|max:255',
             'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
-            'kpis.*.points.*.questions' => 'required|array|min:1',
-            'kpis.*.points.*.questions.*.pertanyaan' => 'required|string|max:1000',
+            // ⚠️ FIX: Questions tidak wajib (karena absensi boleh tanpa questions)
+            'kpis.*.points.*.questions' => 'sometimes|array',
+            'kpis.*.points.*.questions.*.pertanyaan' => 'required_with:kpis.*.points.*.questions|string|max:1000',
         ]);
 
         // Validasi tambahan: Jika is_global=false, division_id harus ada
@@ -62,11 +63,45 @@ class KpiController extends Controller
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
         }
 
+        // ⚠️ FIX: Validasi CUSTOM - Hanya sub-aspek absensi yang boleh tanpa pertanyaan
+        $errors = [];
+        foreach ($request->kpis as $kpiIndex => $kpiData) {
+            foreach ($kpiData['points'] as $pointIndex => $pointData) {
+                $pointName = $pointData['nama'] ?? '';
+                $isAbsensi = stripos($pointName, 'absensi') !== false;
+                $hasQuestions = !empty($pointData['questions']) && count($pointData['questions']) > 0;
+
+                // ⚠️ VALIDASI PENTING: Jika bukan absensi dan tidak ada questions, ERROR
+                if (!$isAbsensi && !$hasQuestions) {
+                    $errors["kpis.{$kpiIndex}.points.{$pointIndex}.questions"] = [
+                        "Sub-aspek '{$pointName}' harus memiliki minimal 1 pertanyaan"
+                    ];
+                }
+
+                // ⚠️ VALIDASI: Jika absensi, tidak perlu ada questions (tapi boleh ada jika ingin)
+                // Tidak ada validasi khusus untuk absensi tanpa questions
+
+                // Validasi setiap pertanyaan (jika ada)
+                if ($hasQuestions) {
+                    foreach ($pointData['questions'] as $questionIndex => $questionData) {
+                        if (empty($questionData['pertanyaan'] ?? '')) {
+                            $errors["kpis.{$kpiIndex}.points.{$pointIndex}.questions.{$questionIndex}.pertanyaan"] = [
+                                "Pertanyaan tidak boleh kosong"
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $errors], 422);
+        }
+
         DB::beginTransaction();
         try {
             $savedKpis = [];
             foreach ($request->kpis as $kpiData) {
-                // ⚠️ FIX: Gunakan is_global dari masing-masing KPI, bukan dari request utama
                 $kpiIsGlobal = $kpiData['is_global'] ?? $request->is_global;
                 $kpi = $this->saveSingleKpi($kpiData, $kpiIsGlobal, $request->division_id, null);
                 $savedKpis[] = $kpi;
@@ -86,7 +121,6 @@ class KpiController extends Controller
         $kpi->nama = $kpiData['nama'];
         $kpi->bobot = $kpiData['bobot'];
 
-        // ⚠️ FIX: Hanya update is_global jika KPI baru
         if (!$kpi->exists) {
             $kpi->is_global = $isGlobal;
         }
@@ -101,10 +135,14 @@ class KpiController extends Controller
                 $point->kpis_id_kpi = $kpi->id_kpi;
                 $point->nama = $pointData['nama'];
                 $point->bobot = $pointData['bobot'];
-                $point->save();
+                $point->save(); // ⚠️ HAPUS baris is_absensi di atas
                 $existingPointIds[] = $point->id_point;
 
-                if (isset($pointData['questions'])) {
+                // ⚠️ FIX: Deteksi absensi dari NAMA (tanpa simpan di database)
+                $isAbsensi = stripos($pointData['nama'], 'absensi') !== false;
+
+                if (isset($pointData['questions']) && count($pointData['questions']) > 0) {
+                    // Jika ada questions, simpan (baik untuk absensi maupun non-absensi)
                     $existingQuestionIds = [];
                     foreach ($pointData['questions'] as $qData) {
                         $question = isset($qData['id_question']) ? KpiQuestion::findOrFail($qData['id_question']) : new KpiQuestion();
@@ -113,7 +151,20 @@ class KpiController extends Controller
                         $question->save();
                         $existingQuestionIds[] = $question->id_question;
                     }
-                    KpiQuestion::where('kpi_point_id', $point->id_point)->whereNotIn('id_question', $existingQuestionIds)->delete();
+                    // Hapus questions yang tidak ada lagi
+                    KpiQuestion::where('kpi_point_id', $point->id_point)
+                        ->whereNotIn('id_question', $existingQuestionIds)
+                        ->delete();
+                } else {
+                    // Jika tidak ada questions yang dikirim
+                    if (!$isAbsensi) {
+                        // ⚠️ Untuk non-absensi, harusnya tidak sampai di sini karena sudah divalidasi
+                        // Tapi sebagai safety net, kita hapus questions yang ada
+                        KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
+                    } else {
+                        // ⚠️ Untuk absensi, boleh tanpa questions - hapus semua questions yang ada
+                        KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
+                    }
                 }
             }
             KpiPoint::where('kpis_id_kpi', $kpi->id_kpi)->whereNotIn('id_point', $existingPointIds)->delete();

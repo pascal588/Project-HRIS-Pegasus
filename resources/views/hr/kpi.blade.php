@@ -840,7 +840,9 @@
           }
         });
 
-        if (questions.length === 0) {
+        const isAbsensiSubaspect = subNama.toLowerCase().includes('absensi');
+
+        if (questions.length === 0 && !isAbsensiSubaspect) {
           showAlert('warning', 'Peringatan', 'Subaspek harus memiliki minimal 1 pertanyaan!');
           valid = false;
           return false;
@@ -851,6 +853,7 @@
           nama: subNama,
           bobot: subBobot,
           questions: questions,
+          is_absensi: isAbsensiSubaspect
         });
       });
 

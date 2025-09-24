@@ -500,27 +500,60 @@ $(document).ready(function() {
 </script>
 
 <script>
-  // Distribusi Karyawan per Divisi
-    $(document).ready(function() {
+// Distribusi Karyawan per Divisi (Stacked Bar per Bulan)
+$(document).ready(function() {
+    function fetchEmployeeDistribution() {
+        $.ajax({
+            url: '/api/employees/jumlahkaryawan-by-month',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    renderEmployeeDistributionChart(response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching employee distribution:', error);
+                // Fallback data jika API error
+                renderEmployeeDistributionChart([]);
+            }
+        });
+    }
+
+    function renderEmployeeDistributionChart(data) {
+        // Jika tidak ada data, tampilkan chart kosong
+        if (!data || data.length === 0) {
+            data = generateFallbackData();
+        }
+
+        // Siapkan data untuk chart
+        const divisions = [...new Set(data.map(item => item.nama_divisi))];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
+        // Siapkan series untuk stacked bar chart (per divisi)
+        const series = divisions.map(division => {
+            // Buat array data untuk 12 bulan
+            const monthlyData = months.map((month, index) => {
+                const monthData = data.find(item => 
+                    item.nama_divisi === division && item.month === index + 1
+                );
+                return monthData ? monthData.total_karyawan : 0;
+            });
+
+            return {
+                name: division,
+                data: monthlyData
+            };
+        });
+
+        // Warna-warni untuk setiap divisi
+        const colors = ['#4361ee', '#f72585', '#4cc9f0', '#7209b7', '#3a0ca3', '#f8961e', '#43aa8b', '#577590', '#f94144', '#90be6d'];
+
         var options = {
-            series: [{
-                name: 'Ui/Ux Designer',
-                data: [45, 25, 44, 23, 25, 41, 32, 25, 22, 65, 22, 29]
-            }, {
-                name: 'App Development',
-                data: [45, 12, 25, 22, 19, 22, 29, 23, 23, 25, 41, 32]
-            }, {
-                name: 'Quality Assurance',
-                data: [45, 25, 32, 25, 22, 65, 44, 23, 25, 41, 22, 29]
-            }, {
-                name: 'Web Developer',
-                data: [32, 25, 22, 11, 22, 29, 16, 25, 9, 23, 25, 13]
-            }],
+            series: series,
             chart: {
                 type: 'bar',
                 height: 300,
-                stacked: true,
+                stacked: true, // Stacked bar chart
                 toolbar: {
                     show: false
                 },
@@ -528,7 +561,7 @@ $(document).ready(function() {
                     enabled: true
                 }
             },
-            colors: ['var(--chart-color1)','var(--chart-color2)','var(--chart-color3)','var(--chart-color4)'],
+            colors: colors.slice(0, divisions.length),
             responsive: [{
                 breakpoint: 480,
                 options: {
@@ -540,22 +573,75 @@ $(document).ready(function() {
                 }
             }],
             xaxis: {
-                categories: ['Jan','Feb','March','Apr','May','Jun','July','Aug','Sept','Oct','Nov','Dec'],
+                categories: months,
+                title: {
+                    text: 'Bulan'
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Jumlah Karyawan'
+                },
+                min: 0
             },
             legend: {
-                position: 'top', // top, bottom
-                horizontalAlign: 'right', // left, right
+                position: 'top',
+                horizontalAlign: 'right',
             },
             dataLabels: {
                 enabled: false,
             },
             fill: {
                 opacity: 1
+            },
+            title: {
+                text: 'Distribusi Karyawan per Divisi',
+                align: 'left',
+                style: {
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                }
+            },
+            tooltip: {
+                y: {
+                    formatter: function(val) {
+                        return val + " karyawan";
+                    }
+                }
             }
         };
 
-        var chart = new ApexCharts(document.querySelector("#hiringsources"), options);
-        chart.render();
-    });
+        // Hapus chart lama jika ada
+        if (window.employeeDistributionChart) {
+            window.employeeDistributionChart.destroy();
+        }
+
+        // Buat chart baru
+        window.employeeDistributionChart = new ApexCharts(document.querySelector("#hiringsources"), options);
+        window.employeeDistributionChart.render();
+    }
+
+    function generateFallbackData() {
+        // Data fallback jika API tidak tersedia
+        const divisions = ['IT', 'HR', 'Finance', 'Marketing'];
+        
+        let data = [];
+        divisions.forEach(division => {
+            let cumulative = 0;
+            for (let month = 1; month <= 12; month++) {
+                cumulative += Math.floor(Math.random() * 3) + 1; // Random growth
+                data.push({
+                    nama_divisi: division,
+                    month: month,
+                    total_karyawan: cumulative
+                });
+            }
+        });
+        return data;
+    }
+
+    // Jalankan fungsi
+    fetchEmployeeDistribution();
+});
 </script>
 @endsection

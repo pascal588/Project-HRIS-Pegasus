@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Division;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -250,5 +251,49 @@ public function updateRoles(Request $request, Employee $employee)
                         ->get();
 
     return response()->json(['data' => array_values($employees->toArray())]);
+}
+
+
+public function getEmployeeTotalByMonth()
+{
+    try {
+        $currentYear = date('Y');
+        $currentMonth = date('n'); // Bulan sekarang (1-12)
+        
+        $data = [];
+        $divisions = Division::all();
+
+        foreach ($divisions as $division) {
+            $cumulativeCount = 0;
+            
+            for ($month = 1; $month <= $currentMonth; $month++) {
+                // Hitung jumlah karyawan yang bergabung sampai bulan tertentu
+                $count = Employee::whereHas('roles', function($query) use ($division) {
+                        $query->where('division_id', $division->id_divisi);
+                    })
+                    ->whereYear('employees.created_at', '<=', $currentYear)
+                    ->whereMonth('employees.created_at', '<=', $month)
+                    ->distinct('employees.id_karyawan')
+                    ->count();
+
+                $data[] = [
+                    'nama_divisi' => $division->nama_divisi,
+                    'month' => $month,
+                    'total_karyawan' => $count
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal memuat data distribusi karyawan: ' . $e->getMessage()
+        ], 500);
+    }
 }
 }

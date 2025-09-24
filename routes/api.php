@@ -45,6 +45,9 @@ Route::prefix('employees')->group(function () {
     Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
     Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
     
+    // Tambahkan route ini
+    Route::get('/jumlahkaryawan-by-month', [EmployeeApiController::class, 'getEmployeeTotalByMonth']);
+
     // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
     Route::get('/{employee}', [EmployeeApiController::class, 'show']);
     Route::put('/{employee}', [EmployeeApiController::class, 'update']);

@@ -319,73 +319,70 @@ class KpiController extends Controller
     }
 
     // ================== DELETE KPI POINT ==================
-// ================== DELETE KPI POINT ==================
-public function deleteKpiPoint($id)
-{
-    DB::beginTransaction();
-    try {
-        $point = KpiPoint::findOrFail($id);
-        
-        // Log untuk debugging
-        Log::info("Deleting KPI Point ID: {$id}");
-        
-        // Hapus semua questions terkait terlebih dahulu
-        $questionsCount = KpiQuestion::where('kpi_point_id', $id)->delete();
-        Log::info("Deleted {$questionsCount} questions for point ID: {$id}");
-        
-        // Hapus point
-        $point->delete();
-        
-        DB::commit();
-        
-        Log::info("Successfully deleted KPI point ID: {$id}");
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Sub-aspek berhasil dihapus'
-        ]);
-        
-    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-        DB::rollBack();
-        Log::error("KPI Point not found: {$id}");
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Sub-aspek tidak ditemukan'
-        ], 404);
-        
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Failed to delete KPI point: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal menghapus sub-aspek: ' . $e->getMessage()
-        ], 500);
-    }
-}
+    // ================== DELETE KPI POINT ==================
+    public function deleteKpiPoint($id)
+    {
+        DB::beginTransaction();
+        try {
+            $point = KpiPoint::findOrFail($id);
 
-// ================== DELETE KPI QUESTION ==================
-public function deleteKpiQuestion($id)
-{
-    try {
-        $question = KpiQuestion::findOrFail($id);
-        $question->delete();
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Pertanyaan berhasil dihapus'
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Failed to delete KPI question: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal menghapus pertanyaan: ' . $e->getMessage()
-        ], 500);
+            // Log untuk debugging
+            Log::info("Deleting KPI Point ID: {$id}");
+
+            // Hapus semua questions terkait terlebih dahulu
+            $questionsCount = KpiQuestion::where('kpi_point_id', $id)->delete();
+            Log::info("Deleted {$questionsCount} questions for point ID: {$id}");
+
+            // Hapus point
+            $point->delete();
+
+            DB::commit();
+
+            Log::info("Successfully deleted KPI point ID: {$id}");
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sub-aspek berhasil dihapus'
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            Log::error("KPI Point not found: {$id}");
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Sub-aspek tidak ditemukan'
+            ], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to delete KPI point: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus sub-aspek: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    // ================== DELETE KPI QUESTION ==================
+    public function deleteKpiQuestion($id)
+    {
+        try {
+            $question = KpiQuestion::findOrFail($id);
+            $question->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pertanyaan berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to delete KPI question: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus pertanyaan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function storeEmployeeScore(Request $request)
     {
@@ -428,8 +425,7 @@ public function deleteKpiQuestion($id)
 
             // 1️⃣ Simpan jawaban pertanyaan
             foreach ($request->hasil as $aspekIndex => $aspek) {
-                Log::info("Processing Aspek {$aspekIndex}: {$aspek['id_aspek']}");
-                foreach ($aspek['jawaban'] as $jawabanIndex => $jawaban) {
+                foreach ($aspek['jawaban'] as $jawaban) {
                     $saved = KpiQuestionHasEmployee::updateOrCreate(
                         [
                             'employees_id_karyawan' => $employeeId,
@@ -439,12 +435,7 @@ public function deleteKpiQuestion($id)
                         ['nilai' => $jawaban['jawaban'], 'updated_at' => now()]
                     );
 
-                    if ($saved) {
-                        $savedCount++;
-                        Log::info("✅ Jawaban disimpan: Question ID {$jawaban['id']}, Nilai {$jawaban['jawaban']}");
-                    } else {
-                        Log::error("❌ Gagal simpan jawaban: Question ID {$jawaban['id']}");
-                    }
+                    if ($saved) $savedCount++;
                 }
             }
 
@@ -456,56 +447,16 @@ public function deleteKpiQuestion($id)
             $totalDays = $attendances->count();
             $hadir = $attendances->where('status', 'Present at workday (PW)')->count();
             $mangkir = $attendances->where('status', 'Absent (A)')->count();
-            Log::info("Absensi -> Total: $totalDays, Hadir: $hadir, Mangkir: $mangkir");
 
             // 3️⃣ Hitung nilai akhir per KPI/aspek
             $kpis = Kpi::where('periode_id', $periodeId)->with(['points.questions'])->get();
             $aspectScores = [];
 
-            foreach ($kpis as $kpiIndex => $kpi) {
+            foreach ($kpis as $kpi) {
                 $aspekTotal = 0;
-                Log::info("Processing KPI {$kpiIndex}: {$kpi->nama} (ID {$kpi->id})");
 
-                foreach ($kpi->points as $pointIndex => $point) {
-                    $pointTotal = 0;
-                    Log::info("  Point {$pointIndex}: {$point->nama} (Bobot {$point->bobot})");
-
-                    foreach ($point->questions as $qIndex => $q) {
-                        $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
-                            ->where('kpi_question_id_question', $q->id_question)
-                            ->where('periode_id', $periodeId)
-                            ->first()?->nilai ?? 0;
-
-                        $pointTotal += $score;
-                        Log::info("    Question {$qIndex} (ID {$q->id_question}) -> Nilai: $score");
-                    }
-
-                    $avgQuestionScore = $point->questions->count() > 0 ? $pointTotal / $point->questions->count() : 0;
-
-                    if ($point->is_absensi) {
-                        $x = ($hadir * 3) + ($mangkir * -2);
-                        $y = $totalDays * 2;
-                        $attendancePercent = $y > 0 ? ($x / $y) * 100 : 0;
-
-                        if ($attendancePercent >= 100) $scale = 10;
-                        elseif ($attendancePercent >= 90) $scale = 8;
-                        elseif ($attendancePercent >= 80) $scale = 6;
-                        elseif ($attendancePercent >= 65) $scale = 4;
-                        elseif ($attendancePercent >= 50) $scale = 2;
-                        else $scale = 0;
-
-                        $subFinal = $scale * ($point->bobot / 100);
-                        Log::info("    Absensi -> Percent: $attendancePercent, Scale: $scale, SubFinal: $subFinal");
-                    } else {
-                        $subFinal = $avgQuestionScore * ($point->bobot / 100);
-                        Log::info("    Non-Absensi -> AvgScore: $avgQuestionScore, SubFinal: $subFinal");
-                    }
-
-                    $aspekTotal += $subFinal;
-                }
-
-                // 4️⃣ Simpan ke kpis_has_employees (per KPI/aspek)
-                DB::table('kpis_has_employees')->updateOrInsert(
+                // Simpan/ambil kpis_has_employee_id dulu
+                $kpisHasEmployee = DB::table('kpis_has_employees')->updateOrInsert(
                     [
                         'kpis_id_kpi' => $kpi->id_kpi,
                         'employees_id_karyawan' => $employeeId,
@@ -519,12 +470,69 @@ public function deleteKpiQuestion($id)
                     ]
                 );
 
-                Log::info("✅ KPI '{$kpi->nama}' disimpan -> Nilai Akhir: $aspekTotal");
+                $kpisHasEmployeeId = DB::table('kpis_has_employees')
+                    ->where('kpis_id_kpi', $kpi->id_kpi)
+                    ->where('employees_id_karyawan', $employeeId)
+                    ->where('periode_id', $periodeId)
+                    ->value('id');
+
+                foreach ($kpi->points as $point) {
+                    $pointTotal = 0;
+
+                    foreach ($point->questions as $q) {
+                        $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                            ->where('kpi_question_id_question', $q->id_question)
+                            ->where('periode_id', $periodeId)
+                            ->first()?->nilai ?? 0;
+
+                        $pointTotal += $score;
+                    }
+
+                    $avgQuestionScore = $point->questions->count() > 0 ? $pointTotal / $point->questions->count() : 0;
+
+                    // Hitung subFinal
+                    if ($point->is_absensi) {
+                        $x = ($hadir * 3) + ($mangkir * -2);
+                        $y = $totalDays * 2;
+                        $attendancePercent = $y > 0 ? ($x / $y) * 100 : 0;
+
+                        if ($attendancePercent >= 100) $scale = 10;
+                        elseif ($attendancePercent >= 90) $scale = 8;
+                        elseif ($attendancePercent >= 80) $scale = 6;
+                        elseif ($attendancePercent >= 65) $scale = 4;
+                        elseif ($attendancePercent >= 50) $scale = 2;
+                        else $scale = 0;
+
+                        $subFinal = $scale * ($point->bobot / 100);
+                    } else {
+                        $subFinal = $avgQuestionScore * ($point->bobot / 100);
+                    }
+
+                    $aspekTotal += $subFinal;
+
+                    // 4️⃣ Simpan bobot sub-KPI ke kpi_points_has_employee
+                    DB::table('kpi_points_has_employee')->updateOrInsert(
+                        [
+                            'kpis_has_employee_id' => $kpisHasEmployeeId,
+                            'kpi_point_id' => $point->id_point,
+                        ],
+                        [
+                            'bobot' => $point->bobot,
+                            'updated_at' => now(),
+                            'created_at' => now(),
+                        ]
+                    );
+                }
+
+                // Update nilai akhir KPI/aspek
+                DB::table('kpis_has_employees')
+                    ->where('id', $kpisHasEmployeeId)
+                    ->update(['nilai_akhir' => $aspekTotal]);
+
                 $aspectScores[] = ['aspek' => $kpi->nama, 'score' => $aspekTotal];
             }
 
             DB::commit();
-            Log::info("=== END KPI SCORE SAVE === Total jawaban disimpan: $savedCount");
 
             return response()->json([
                 'success' => true,
@@ -534,8 +542,6 @@ public function deleteKpiQuestion($id)
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('❌ Gagal menyimpan nilai: ' . $e->getMessage());
-            Log::error('Stack trace: ' . $e->getTraceAsString());
 
             return response()->json([
                 'success' => false,
@@ -543,7 +549,6 @@ public function deleteKpiQuestion($id)
             ], 500);
         }
     }
-
 
     // ================== ATTENDANCE SUMMARY ==================
     public function getAttendanceSummary($employeeId, $periodeId)

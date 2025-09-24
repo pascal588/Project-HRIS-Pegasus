@@ -14,6 +14,7 @@ class Attendance extends Model
 
     protected $fillable = [
         'employee_id',
+        'periode_id',
         'date',
         'period',
         'status',
@@ -38,5 +39,10 @@ class Attendance extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id_karyawan');
+    }
+
+    public function period()
+    {
+        return $this->belongsTo(Period::class, 'periode_id', 'id_periode');
     }
 }

@@ -18,28 +18,28 @@ class PeriodController extends Controller
     public function index(Request $request)
     {
         $query = Period::withCount(['attendances', 'kpis', 'kpiEvaluations']);
-        
+
         // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
-        
+
         // Filter by tanggal
         if ($request->has('start_date')) {
             $query->where('tanggal_mulai', '>=', $request->start_date);
         }
-        
+
         if ($request->has('end_date')) {
             $query->where('tanggal_selesai', '<=', $request->end_date);
         }
-        
+
         // Filter by attendance uploaded
         if ($request->has('attendance_uploaded')) {
             $query->where('attendance_uploaded', $request->attendance_uploaded);
         }
-        
+
         $periods = $query->orderBy('tanggal_mulai', 'desc')->get();
-        
+
         return response()->json([
             'success' => true,
             'data' => $periods
@@ -56,7 +56,7 @@ class PeriodController extends Controller
                 'kpiEvaluations.employee',
                 'kpiEvaluations.kpi'
             ])->findOrFail($id);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $period
@@ -84,13 +84,13 @@ class PeriodController extends Controller
         ]);
 
         // Cek apakah ada periode yang overlap
-        $overlap = Period::where(function($q) use ($validated) {
+        $overlap = Period::where(function ($q) use ($validated) {
             $q->whereBetween('tanggal_mulai', [$validated['tanggal_mulai'], $validated['tanggal_selesai']])
-              ->orWhereBetween('tanggal_selesai', [$validated['tanggal_mulai'], $validated['tanggal_selesai']])
-              ->orWhere(function($q) use ($validated) {
-                  $q->where('tanggal_mulai', '<=', $validated['tanggal_mulai'])
-                    ->where('tanggal_selesai', '>=', $validated['tanggal_selesai']);
-              });
+                ->orWhereBetween('tanggal_selesai', [$validated['tanggal_mulai'], $validated['tanggal_selesai']])
+                ->orWhere(function ($q) use ($validated) {
+                    $q->where('tanggal_mulai', '<=', $validated['tanggal_mulai'])
+                        ->where('tanggal_selesai', '>=', $validated['tanggal_selesai']);
+                });
         })->exists();
 
         if ($overlap) {
@@ -114,7 +114,7 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             // Tidak bisa update periode yang sudah locked
             if ($period->status === 'locked') {
                 return response()->json([
@@ -154,7 +154,7 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             // Tidak bisa hapus periode yang sudah ada datanya
             if ($period->attendances()->exists() || $period->kpiEvaluations()->exists()) {
                 return response()->json([
@@ -182,7 +182,7 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             $period->update([
                 'attendance_uploaded' => true,
                 'attendance_uploaded_at' => now(),
@@ -207,7 +207,7 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             if ($period->status === 'locked') {
                 return response()->json([
                     'success' => false,
@@ -238,7 +238,7 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             if ($period->status !== 'locked') {
                 return response()->json([
                     'success' => false,
@@ -269,12 +269,12 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             $totalEmployees = Employee::where('status', 'Aktif')->count();
             $evaluatedEmployees = KpiHasEmployee::where('periode_id', $id)
                 ->distinct('employees_id_karyawan')
                 ->count();
-                
+
             $evaluationProgress = $totalEmployees > 0 ? ($evaluatedEmployees / $totalEmployees) * 100 : 0;
 
             return response()->json([
@@ -301,11 +301,11 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             $attendances = Attendance::where('periode_id', $id)
                 ->with('employee')
                 ->get();
-                
+
             $summary = [
                 'total_record_absensi' => $attendances->count(),
                 'jumlah_hadir' => $attendances->where('status', 'Present at workday (PW)')->count(),
@@ -315,7 +315,7 @@ class PeriodController extends Controller
                 'jumlah_non_kerja' => $attendances->where('status', 'Non-working day (NW)')->count(),
                 'total_keterlambatan' => $attendances->sum('late'),
                 'total_pulang_cepat' => $attendances->sum('early_leave'),
-                'persentase_kehadiran' => $attendances->count() > 0 ? 
+                'persentase_kehadiran' => $attendances->count() > 0 ?
                     ($attendances->where('status', 'Present at workday (PW)')->count() / $attendances->count()) * 100 : 0
             ];
 
@@ -336,18 +336,18 @@ class PeriodController extends Controller
     {
         try {
             $period = Period::findOrFail($id);
-            
+
             $kpiEvaluations = KpiHasEmployee::where('periode_id', $id)
                 ->with(['employee', 'kpi'])
                 ->get();
-                
+
             $summary = [
                 'total_evaluasi_kpi' => $kpiEvaluations->count(),
                 'nilai_rata_rata' => $kpiEvaluations->avg('nilai_akhir'),
                 'nilai_tertinggi' => $kpiEvaluations->max('nilai_akhir'),
                 'nilai_terendah' => $kpiEvaluations->min('nilai_akhir'),
                 'karyawan_terevaluasi' => $kpiEvaluations->unique('employees_id_karyawan')->count(),
-                'distribusi_kpi' => $kpiEvaluations->groupBy('kpis_id_kpi')->map(function($group) {
+                'distribusi_kpi' => $kpiEvaluations->groupBy('kpis_id_kpi')->map(function ($group) {
                     return [
                         'nama_kpi' => $group->first()->kpi->nama,
                         'nilai_rata_rata' => $group->avg('nilai_akhir'),
@@ -375,27 +375,27 @@ class PeriodController extends Controller
             'tahun' => 'required|integer|min:2020|max:2030',
             'bulan' => 'nullable|integer|min:1|max:12'
         ]);
-        
+
         $tahun = $request->tahun;
         $bulan = $request->bulan;
-        
-        $query = Period::where(function($q) use ($tahun) {
-                $q->whereYear('tanggal_mulai', $tahun)
-                  ->orWhereYear('tanggal_selesai', $tahun);
-            });
-            
+
+        $query = Period::where(function ($q) use ($tahun) {
+            $q->whereYear('tanggal_mulai', $tahun)
+                ->orWhereYear('tanggal_selesai', $tahun);
+        });
+
         if ($bulan) {
-            $query->where(function($q) use ($bulan) {
+            $query->where(function ($q) use ($bulan) {
                 $q->whereMonth('tanggal_mulai', $bulan)
-                  ->orWhereMonth('tanggal_selesai', $bulan);
+                    ->orWhereMonth('tanggal_selesai', $bulan);
             });
         }
-        
+
         $periods = $query->withCount(['attendances', 'kpiEvaluations'])
             ->orderBy('tanggal_mulai')
             ->get();
-            
-        $rekapBulanan = $periods->map(function($period) {
+
+        $rekapBulanan = $periods->map(function ($period) {
             return [
                 'periode_id' => $period->id_periode,
                 'nama_periode' => $period->nama,
@@ -407,7 +407,7 @@ class PeriodController extends Controller
                 'attendance_uploaded' => $period->attendance_uploaded
             ];
         });
-        
+
         return response()->json([
             'success' => true,
             'tahun' => $tahun,
@@ -422,15 +422,15 @@ class PeriodController extends Controller
         $request->validate([
             'tahun' => 'required|integer|min:2020|max:2030'
         ]);
-        
+
         $tahun = $request->tahun;
-        
+
         $periods = Period::whereYear('tanggal_mulai', $tahun)
             ->orWhereYear('tanggal_selesai', $tahun)
             ->withCount(['attendances', 'kpiEvaluations'])
             ->orderBy('tanggal_mulai')
             ->get();
-            
+
         $rekapTahunan = [
             'tahun' => $tahun,
             'total_periode' => $periods->count(),
@@ -439,7 +439,7 @@ class PeriodController extends Controller
             'periode_aktif' => $periods->where('status', 'active')->count(),
             'periode_terkunci' => $periods->where('status', 'locked')->count(),
             'periode_draft' => $periods->where('status', 'draft')->count(),
-            'detail_periode' => $periods->map(function($period) {
+            'detail_periode' => $periods->map(function ($period) {
                 return [
                     'periode_id' => $period->id_periode,
                     'nama_periode' => $period->nama,
@@ -449,7 +449,7 @@ class PeriodController extends Controller
                 ];
             })
         ];
-        
+
         return response()->json([
             'success' => true,
             'data' => $rekapTahunan
@@ -462,17 +462,17 @@ class PeriodController extends Controller
         try {
             $uniquePeriods = Attendance::whereNotNull('period')
                 ->where('period', '!=', '')
-                ->whereNotIn('period', function($query) {
+                ->whereNotIn('period', function ($query) {
                     $query->select('nama')->from('periods');
                 })
                 ->distinct()
                 ->pluck('period');
-                
+
             $dibuatCount = 0;
-            
+
             foreach ($uniquePeriods as $namaPeriod) {
                 $dates = $this->parseNamaPeriod($namaPeriod);
-                
+
                 if ($dates) {
                     Period::create([
                         'nama' => $namaPeriod,
@@ -484,10 +484,10 @@ class PeriodController extends Controller
                     $dibuatCount++;
                 }
             }
-            
+
             // Link attendance ke period
             $this->linkAttendancesToPeriods();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Berhasil membuat $dibuatCount periode baru dari data absensi",
@@ -508,15 +508,15 @@ class PeriodController extends Controller
             // Format: "August-2023" atau "August 2023 - September 2023"
             if (strpos($namaPeriod, '-') !== false) {
                 $parts = array_map('trim', explode('-', $namaPeriod));
-                
+
                 if (count($parts) === 2) {
                     $bulan = $parts[0];
                     $tahun = $parts[1];
-                    
+
                     if (is_numeric($tahun)) {
                         $startDate = Carbon::createFromFormat('F Y', "$bulan $tahun")->startOfMonth();
                         $endDate = $startDate->copy()->endOfMonth();
-                        
+
                         return [
                             'start_date' => $startDate,
                             'end_date' => $endDate
@@ -524,7 +524,7 @@ class PeriodController extends Controller
                     }
                 }
             }
-            
+
             return null;
         } catch (\Exception $e) {
             return null;
@@ -538,7 +538,7 @@ class PeriodController extends Controller
             ->where('period', '!=', '')
             ->whereNull('periode_id')
             ->get();
-            
+
         foreach ($attendances as $attendance) {
             $period = Period::where('nama', $attendance->period)->first();
             if ($period) {
@@ -555,24 +555,24 @@ class PeriodController extends Controller
             $expiredPeriods = Period::where('editing_end_date', '<', now())
                 ->where('status', 'active')
                 ->get();
-                
+
             $dikunciCount = 0;
             foreach ($expiredPeriods as $period) {
                 $period->update(['status' => 'locked']);
                 $dikunciCount++;
             }
-            
+
             // Auto-activate periods yang attendance sudah diupload tapi masih draft
             $periodsToActivate = Period::where('attendance_uploaded', true)
                 ->where('status', 'draft')
                 ->get();
-                
+
             $diaktifkanCount = 0;
             foreach ($periodsToActivate as $period) {
                 $period->update(['status' => 'active']);
                 $diaktifkanCount++;
             }
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Otomatis mengunci $dikunciCount periode, mengaktifkan $diaktifkanCount periode",
@@ -586,39 +586,5 @@ class PeriodController extends Controller
             ], 500);
         }
     }
-
+}
     // Tambahkan method ini ke model Period (app/Models/Period.php)
-public function canBeEvaluated()
-{
-    if ($this->status === 'locked') {
-        return false;
-    }
-    
-    $now = now();
-    
-    // Jika ada periode evaluasi yang ditentukan
-    if ($this->evaluation_start_date && $this->evaluation_end_date) {
-        return $now->between($this->evaluation_start_date, $this->evaluation_end_date);
-    }
-    
-    // Default: periode aktif bisa dievaluasi
-    return $this->status === 'active';
-}
-
-public function isInEditingPeriod()
-{
-    if ($this->status === 'locked') {
-        return false;
-    }
-    
-    $now = now();
-    
-    // Jika ada periode editing yang ditentukan
-    if ($this->editing_start_date && $this->editing_end_date) {
-        return $now->between($this->editing_start_date, $this->editing_end_date);
-    }
-    
-    // Default: tidak dalam periode editing khusus
-    return false;
-}
-}

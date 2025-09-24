@@ -127,4 +127,4 @@ Route::get('/kpi-by-division/{divisionId}', [KpiController::class, 'listKpiByDiv
 Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
 
 // Test routes for attendance data
-Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);
+Route::get('/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);

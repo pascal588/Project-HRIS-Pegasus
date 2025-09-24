@@ -261,26 +261,26 @@ class AttendanceApiController extends Controller
     }
 
     private function autoLinkAttendancesToPeriods()
-{
-    $attendances = Attendance::whereNull('periode_id')
-        ->whereNotNull('period')
-        ->get();
-        
-    foreach ($attendances as $attendance) {
-        $period = Period::where('nama', $attendance->period)->first();
-        if ($period) {
-            $attendance->update(['periode_id' => $period->id_periode]);
-            
-            // Tandai period sebagai memiliki attendance
-            if (!$period->attendance_uploaded) {
-                $period->update([
-                    'attendance_uploaded' => true,
-                    'attendance_uploaded_at' => now()
-                ]);
+    {
+        $attendances = Attendance::whereNull('periode_id')
+            ->whereNotNull('period')
+            ->get();
+
+        foreach ($attendances as $attendance) {
+            $period = Period::where('nama', $attendance->period)->first();
+            if ($period) {
+                $attendance->update(['periode_id' => $period->id_periode]);
+
+                // Tandai period sebagai memiliki attendance
+                if (!$period->attendance_uploaded) {
+                    $period->update([
+                        'attendance_uploaded' => true,
+                        'attendance_uploaded_at' => now()
+                    ]);
+                }
             }
         }
     }
-}
 
     // Tambahkan method ini di AttendanceApiController
     private function createPeriodData($periodString)
@@ -480,6 +480,83 @@ class AttendanceApiController extends Controller
         }
 
         return null;
+    }
+
+    // ================== TEST ATTENDANCE DATA ==================
+    public function testAttendanceData($employeeId, $periodeId)
+    {
+        try {
+            // Validasi employee exists
+            $employee = Employee::find($employeeId);
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found'
+                ], 404);
+            }
+
+            // Validasi periode exists
+            $period = Period::find($periodeId);
+            if (!$period) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Period not found'
+                ], 404);
+            }
+
+            // Get attendance data
+            $attendances = Attendance::where('employee_id', $employeeId)
+                ->where('periode_id', $periodeId)
+                ->orderBy('tanggal', 'asc')
+                ->get();
+
+            $summary = [
+                'employee' => [
+                    'id' => $employee->id_karyawan,
+                    'nama' => $employee->nama,
+                    'divisi' => $employee->division->nama_divisi ?? 'Tidak ada divisi'
+                ],
+                'period' => [
+                    'id' => $period->id_periode,
+                    'nama' => $period->nama,
+                    'tanggal_mulai' => $period->tanggal_mulai,
+                    'tanggal_selesai' => $period->tanggal_selesai
+                ],
+                'attendance_summary' => [
+                    'total_records' => $attendances->count(),
+                    'present' => $attendances->where('status', 'Present at workday (PW)')->count(),
+                    'absent' => $attendances->where('status', 'Absent (A)')->count(),
+                    'permission' => $attendances->where('status', 'Permission (I)')->count(),
+                    'sick' => $attendances->where('status', 'Sick (S)')->count(),
+                    'late_count' => $attendances->where('late', '>', 0)->count(),
+                    'total_late_minutes' => $attendances->sum('late'),
+                    'early_leave_count' => $attendances->where('early_leave', '>', 0)->count(),
+                    'total_early_leave_minutes' => $attendances->sum('early_leave')
+                ],
+                'attendance_details' => $attendances->map(function ($att) {
+                    return [
+                        'tanggal' => $att->tanggal,
+                        'status' => $att->status,
+                        'late_minutes' => $att->late,
+                        'early_leave_minutes' => $att->early_leave,
+                        'check_in' => $att->check_in,
+                        'check_out' => $att->check_out
+                    ];
+                })->values()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance data retrieved successfully',
+                'data' => $summary
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error testing attendance data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error retrieving attendance data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // GET /api/attendances/summary

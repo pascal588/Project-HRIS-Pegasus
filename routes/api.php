@@ -36,19 +36,19 @@ Route::prefix('divisions')->group(function () {
 
 // ==================== EMPLOYEE ROUTES ====================
 Route::prefix('employees')->group(function () {
-    Route::get('/', [EmployeeApiController::class, 'index']);
-    Route::post('/', [EmployeeApiController::class, 'store']);
-    
-    // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
-    Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
-    Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
-    Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
-    Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
-    
-    // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
-    Route::get('/{employee}', [EmployeeApiController::class, 'show']);
-    Route::put('/{employee}', [EmployeeApiController::class, 'update']);
-    Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
+  Route::get('/', [EmployeeApiController::class, 'index']);
+  Route::post('/', [EmployeeApiController::class, 'store']);
+
+  // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
+  Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+  Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
+  Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
+  Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
+
+  // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
+  Route::get('/{employee}', [EmployeeApiController::class, 'show']);
+  Route::put('/{employee}', [EmployeeApiController::class, 'update']);
+  Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
 });
 
 // ==================== ROLE ROUTES ====================
@@ -67,7 +67,7 @@ Route::prefix('kpis')->group(function () {
   Route::get('/division/{divisionId}', [KpiController::class, 'listKpiByDivision']);
   Route::get('/division/{divisionId}/{periodeId}', [KpiController::class, 'getDivisionKpi']);
   Route::get('/division/{divisionId}/total-weight', [KpiController::class, 'getTotalWeightByDivision']);
-  
+
   // Global KPI
   Route::get('/global', [KpiController::class, 'listGlobalKpi']);
 
@@ -90,7 +90,6 @@ Route::prefix('kpis')->group(function () {
   // ✅ PERBAIKAN: Route publishing yang benar
   Route::get('/available-periods-publishing', [KpiController::class, 'getAvailablePeriodsForPublishing']);
   Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']);
-  
 });
 
 // ==================== PERIOD ROUTES ====================
@@ -124,3 +123,6 @@ Route::prefix('periods')->group(function () {
 // Untuk kompatibilitas dengan frontend lama
 Route::get('/kpi-by-division/{divisionId}', [KpiController::class, 'listKpiByDivision']);
 Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
+
+// Test routes for attendance data
+Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);

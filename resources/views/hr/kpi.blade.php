@@ -675,55 +675,142 @@
     const subCard = $(`#sub-${subUid}`);
     const idPoint = subCard.find(".subaspect-id").val();
 
+    console.log('Deleting subaspect:', { subUid, idPoint }); // Debug log
+
     if (idPoint) {
-      Swal.fire({
-        title: 'Hapus Subaspek?',
-        text: "Subaspek ini akan dihapus dari server",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          $.ajax({
-            url: `/api/kpi-point/${idPoint}`,
-            method: "DELETE",
-            success: function(resp) {
-              if (resp.success) {
-                subCard.remove();
-                showAlert('success', 'Berhasil', resp.message || 'Subaspek dihapus');
-                updateInfo();
-              } else {
-                showAlert('error', 'Error', resp.message || 'Gagal menghapus subaspek');
-              }
-            },
-            error: function(xhr) {
-              console.error("Error deleting subaspect:", xhr);
-              showAlert('error', 'Error', 'Gagal menghapus subaspek');
+        Swal.fire({
+            title: 'Hapus Subaspek?',
+            text: "Subaspek dan semua pertanyaan di dalamnya akan dihapus dari server",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ✅ PERBAIKAN: Gunakan endpoint yang benar dengan headers
+                $.ajax({
+                    url: `/api/kpis/point/${idPoint}`,
+                    method: "DELETE",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    success: function(resp) {
+                        if (resp.success) {
+                            subCard.remove();
+                            showAlert('success', 'Berhasil', resp.message || 'Subaspek dihapus');
+                            updateInfo();
+                        } else {
+                            showAlert('error', 'Error', resp.message || 'Gagal menghapus subaspek');
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Error deleting subaspect:", xhr);
+                        
+                        let errorMsg = 'Gagal menghapus subaspek';
+                        try {
+                            const err = xhr.responseJSON;
+                            if (err && err.message) {
+                                errorMsg = err.message;
+                            }
+                            if (err && err.errors) {
+                                errorMsg = Object.values(err.errors).flat().join(', ');
+                            }
+                        } catch (e) {
+                            errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
+                        }
+                        
+                        showAlert('error', 'Error', errorMsg);
+                    }
+                });
             }
-          });
-        }
-      });
+        });
     } else {
-      Swal.fire({
-        title: 'Hapus Subaspek?',
-        text: "Subaspek ini akan dihapus dari form",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          subCard.remove();
-          updateInfo();
-        }
-      });
+        // Untuk subaspek yang belum disimpan (baru dibuat di frontend)
+        Swal.fire({
+            title: 'Hapus Subaspek?',
+            text: "Subaspek ini akan dihapus dari form",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                subCard.remove();
+                updateInfo();
+            }
+        });
     }
-  }
+}
+
+function confirmRemoveQuestionInSub(btn, subUid) {
+    const row = $(btn).closest(".question-row");
+    const qid = row.data("question-id") || null;
+
+    if (qid) {
+        Swal.fire({
+            title: 'Hapus Pertanyaan?',
+            text: "Pertanyaan ini akan dihapus dari server",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // ✅ PERBAIKAN: Gunakan endpoint yang benar
+                $.ajax({
+                    url: `/api/kpis/question/${qid}`, // ✅ Route yang sudah diperbaiki
+                    method: "DELETE",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(resp) {
+                        if (resp.success) {
+                            row.remove();
+                            showAlert('success', 'Berhasil', resp.message || 'Pertanyaan dihapus');
+                            updateInfo();
+                        } else {
+                            showAlert('error', 'Error', resp.message || 'Gagal menghapus pertanyaan');
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Error deleting question:", xhr);
+                        let errorMsg = 'Gagal menghapus pertanyaan';
+                        try {
+                            const err = xhr.responseJSON;
+                            if (err && err.message) errorMsg = err.message;
+                        } catch (e) {}
+                        showAlert('error', 'Error', errorMsg);
+                    }
+                });
+            }
+        });
+    } else {
+        // Untuk pertanyaan yang belum disimpan (baru dibuat di frontend)
+        Swal.fire({
+            title: 'Hapus Pertanyaan?',
+            text: "Pertanyaan ini akan dihapus dari form",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                row.remove();
+                updateInfo();
+            }
+        });
+    }
+}
 
   // ==================== UI UTILITIES ====================
   function removeAspectFromUI(aspectUid) {

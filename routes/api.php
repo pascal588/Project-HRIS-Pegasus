@@ -82,6 +82,8 @@ Route::prefix('kpis')->group(function () {
   // KPI CRUD Operations
   Route::put('/{id}', [KpiController::class, 'updateKpi']);
   Route::delete('/{id}', [KpiController::class, 'deleteKpi']);
+  Route::delete('/point/{id}', [KpiController::class, 'deleteKpiPoint']);
+  Route::delete('/question/{id}', [KpiController::class, 'deleteKpiQuestion']);
 
   // Specific KPI Types
   Route::delete('/global/{id}', [KpiController::class, 'deleteGlobalKpi']);

@@ -318,6 +318,75 @@ class KpiController extends Controller
         return response()->json(['success' => true, 'message' => 'KPI deleted']);
     }
 
+    // ================== DELETE KPI POINT ==================
+// ================== DELETE KPI POINT ==================
+public function deleteKpiPoint($id)
+{
+    DB::beginTransaction();
+    try {
+        $point = KpiPoint::findOrFail($id);
+        
+        // Log untuk debugging
+        Log::info("Deleting KPI Point ID: {$id}");
+        
+        // Hapus semua questions terkait terlebih dahulu
+        $questionsCount = KpiQuestion::where('kpi_point_id', $id)->delete();
+        Log::info("Deleted {$questionsCount} questions for point ID: {$id}");
+        
+        // Hapus point
+        $point->delete();
+        
+        DB::commit();
+        
+        Log::info("Successfully deleted KPI point ID: {$id}");
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Sub-aspek berhasil dihapus'
+        ]);
+        
+    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        DB::rollBack();
+        Log::error("KPI Point not found: {$id}");
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Sub-aspek tidak ditemukan'
+        ], 404);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Failed to delete KPI point: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal menghapus sub-aspek: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// ================== DELETE KPI QUESTION ==================
+public function deleteKpiQuestion($id)
+{
+    try {
+        $question = KpiQuestion::findOrFail($id);
+        $question->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Pertanyaan berhasil dihapus'
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Failed to delete KPI question: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal menghapus pertanyaan: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
     public function storeEmployeeScore(Request $request)
     {
         $validator = Validator::make($request->all(), [

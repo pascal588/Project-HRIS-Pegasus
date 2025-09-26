@@ -89,6 +89,10 @@
     font-size: 0.75rem;
     margin-left: 8px;
   }
+
+    .swal2-container {
+    z-index: 99999 !important;
+  }
 </style>
 
 <div class="body d-flex py-3">
@@ -239,7 +243,20 @@
 
 @section('script')
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+  // ==================== UTILITY FUNCTIONS ====================
+  function showAlert(icon, title, text) {
+    return Swal.fire({
+      icon: icon,
+      title: title,
+      text: text,
+      confirmButtonColor: '#3085d6',
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function() {
     let editId = null;
     let deleteId = null;
@@ -261,14 +278,14 @@
           if (json.success) {
             return json.data;
           } else {
-            alert('Gagal memuat data: ' + (json.message || 'Unknown error'));
+            showAlert('error', 'Error', 'Gagal memuat data: ' + (json.message || 'Unknown error'));
             return [];
           }
         },
         error: function(xhr, error, thrown) {
           document.getElementById('loadingSpinner').style.display = 'none';
           console.error('API Error:', error, thrown);
-          alert('Gagal memuat data divisi. Silakan coba lagi.');
+          showAlert('error', 'Error', 'Gagal memuat data divisi. Silakan coba lagi.');
         }
       },
       columns: [
@@ -474,7 +491,7 @@
       
       const tryFetch = () => {
         if (currentApiIndex >= apiUrls.length) {
-          alert('Semua endpoint gagal. Silakan coba lagi nanti.');
+          showAlert('error', 'Error', 'Semua endpoint gagal. Silakan coba lagi nanti.');
           return;
         }
         
@@ -501,13 +518,13 @@
         })
         .then(data => {
           if (data.success) {
-            alert(data.message || 'Status kepala divisi berhasil diperbarui');
+            showAlert('success', 'Berhasil', data.message || 'Status kepala divisi berhasil diperbarui');
             // Reload data karyawan
             loadDivisionEmployees(divisionId);
             // Reload tabel divisi
             table.ajax.reload(null, false);
           } else {
-            alert(data.message || 'Gagal memperbarui status kepala divisi');
+            showAlert('error', 'Gagal', data.message || 'Gagal memperbarui status kepala divisi');
           }
         })
         .catch(error => {
@@ -526,9 +543,52 @@
       if (e.target.closest(".btn-delete")) {
         const button = e.target.closest(".btn-delete");
         deleteId = button.getAttribute("data-id");
-        new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+        
+        Swal.fire({
+          title: 'Hapus Divisi?',
+          text: "Apakah Anda yakin ingin menghapus divisi ini?",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Ya, Hapus!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            deleteDivision(deleteId);
+          }
+        });
       }
     });
+
+    // Fungsi untuk menghapus divisi
+    function deleteDivision(divisionId) {
+      fetch(`/api/divisions/${divisionId}`, {
+        method: "DELETE",
+        headers: {
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": "{{ csrf_token() }}"
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.message) {
+          table.ajax.reload();
+          showAlert('success', 'Berhasil', 'Divisi berhasil dihapus');
+        } else {
+          showAlert('error', 'Gagal', 'Terjadi kesalahan saat menghapus data');
+        }
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        showAlert('error', 'Error', 'Terjadi kesalahan saat menghapus data: ' + error.message);
+      });
+    }
 
     // Simpan data divisi
     document.getElementById("saveDivisiBtn").addEventListener("click", function() {
@@ -536,7 +596,7 @@
       const namaDivisi = document.getElementById("namaDivisi").value;
 
       if (!idDivisi || !namaDivisi) {
-        alert("ID dan Nama divisi wajib diisi!");
+        showAlert('warning', 'Peringatan', 'ID dan Nama divisi wajib diisi!');
         return;
       }
 
@@ -567,47 +627,37 @@
         if (data.success || data.message) {
           table.ajax.reload();
           bootstrap.Modal.getInstance(document.getElementById('addDivisiModal')).hide();
-          alert(editId ? "Divisi berhasil diperbarui" : "Divisi berhasil ditambahkan");
+          showAlert('success', 'Berhasil', editId ? "Divisi berhasil diperbarui" : "Divisi berhasil ditambahkan");
         } else {
-          alert("Terjadi kesalahan saat menyimpan data");
+          showAlert('error', 'Gagal', 'Terjadi kesalahan saat menyimpan data');
         }
       })
       .catch(error => {
         console.error("Error:", error);
-        alert("Terjadi kesalahan saat menyimpan data: " + error.message);
+        showAlert('error', 'Error', 'Terjadi kesalahan saat menyimpan data: ' + error.message);
       });
     });
 
-    // Konfirmasi hapus divisi
-    document.getElementById("confirmDeleteBtn").addEventListener("click", function() {
-      if (deleteId) {
-        fetch(`/api/divisions/${deleteId}`, {
-          method: "DELETE",
-          headers: {
-            "Accept": "application/json",
-            "X-CSRF-TOKEN": "{{ csrf_token() }}"
-          }
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok: ' + response.statusText);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.message) {
-            table.ajax.reload();
-            alert("Divisi berhasil dihapus");
-          } else {
-            alert("Terjadi kesalahan saat menghapus data");
-          }
-        })
-        .catch(error => {
-          console.error("Error:", error);
-          alert("Terjadi kesalahan saat menghapus data: " + error.message);
-        });
+    // Hapus modal konfirmasi hapus yang tidak digunakan lagi
+    document.addEventListener("click", function(e) {
+      if (e.target.closest(".btn-delete")) {
+        const button = e.target.closest(".btn-delete");
+        deleteId = button.getAttribute("data-id");
         
-        bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+        Swal.fire({
+          title: 'Hapus Divisi?',
+          text: "Apakah Anda yakin ingin menghapus divisi ini?",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Ya, Hapus!',
+          cancelButtonText: 'Batal'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            deleteDivision(deleteId);
+          }
+        });
       }
     });
   });

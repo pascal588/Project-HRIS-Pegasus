@@ -68,6 +68,10 @@
     border-radius: 6px; /* biar lebih smooth */
 }
 
+.swal2-container {
+    z-index: 99999 !important;
+  }
+
 </style>
 
 <div class="body d-flex py-3">
@@ -206,7 +210,20 @@
 @section('script')
 <script src="{{asset('assets/bundles/apexcharts.bundle.js')}}"></script>
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+  // ==================== UTILITY FUNCTIONS ====================
+  function showAlert(icon, title, text) {
+    return Swal.fire({
+      icon: icon,
+      title: title,
+      text: text,
+      confirmButtonColor: '#3085d6',
+    });
+  }
+
 $(document).ready(function() {
     let attendanceTable;
     let periods = [];
@@ -280,7 +297,7 @@ function loadAttendanceData() {
         },
         error: function(xhr, status, error) {
             console.error('Error:', error);
-            alert('Error loading data: ' + error);
+            showAlert('error', 'Error', 'Error loading data: ' + error);
         }
     });
 }
@@ -463,13 +480,21 @@ $.ajax({
     $('#submitImport').click(function() {
         const file = $('#file')[0].files[0];
         if (!file) {
-            alert('Pilih file terlebih dahulu');
+            showAlert('warning', 'Peringatan', 'Pilih file terlebih dahulu');
             return;
         }
         
         const formData = new FormData();
         formData.append('file', file);
         
+        // Tampilkan loading
+        Swal.fire({
+            title: 'Mengimport...',
+            text: 'Sedang memproses file absensi',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
         $.ajax({
             url: '/api/attendances/import',
             type: 'POST',
@@ -477,8 +502,9 @@ $.ajax({
             processData: false,
             contentType: false,
             success: function(response) {
+                Swal.close();
                 if (response.success) {
-                    alert('Import berhasil: ' + response.message);
+                    showAlert('success', 'Berhasil', 'Import berhasil: ' + response.message);
                     $('#importModal').modal('hide');
                     $('#file').val('');
                     
@@ -512,15 +538,16 @@ $.ajax({
                         }
                     });
                 } else {
-                    alert('Import gagal: ' + response.message);
+                    showAlert('error', 'Gagal', 'Import gagal: ' + response.message);
                 }
             },
             error: function(xhr) {
+                Swal.close();
                 let errorMessage = 'Error during import';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                 }
-                alert('Error: ' + errorMessage);
+                showAlert('error', 'Error', 'Error: ' + errorMessage);
             }
         });
     });

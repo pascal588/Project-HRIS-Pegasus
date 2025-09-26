@@ -282,6 +282,8 @@
 
 @section('script')
 <script src="{{ asset('assets/bundles/dataTables.bundle.js') }}"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     /* Konfigurasi / Variabel global */
     const tableSelector = '#myProjectTable';
@@ -300,6 +302,30 @@
     let currentEmployeeId = null;
     let currentPeriodId = null;
     let currentPeriodData = null;
+
+    /* Fungsi SweetAlert2 */
+    function showAlert(icon, title, text) {
+        return Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            confirmButtonColor: '#3085d6',
+        });
+    }
+
+    function showConfirm(title, text, confirmText = 'Ya', cancelText = 'Batal') {
+        return Swal.fire({
+            title: title,
+            text: text,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: confirmText,
+            cancelButtonText: cancelText,
+            reverseButtons: true
+        });
+    }
 
     /* Inisialisasi DataTable */
     $(document).ready(function() {
@@ -706,14 +732,6 @@
     console.log('=== END DEBUG ===');
 }
 
-    // function calculateTotalScore(kpiData) {
-    //     let totalScore = 0;
-    //     kpiData.forEach(aspek => {
-    //         totalScore += calculateAspekScore(aspek);
-    //     });
-    //     return totalScore;
-    // }
-
     function calculateAspekScore(aspek) {
     let totalAspek = 0;
     
@@ -757,22 +775,21 @@ function calculateTotalScore(kpiData) {
     return totalScore;
 }
 
-
     function handleNilaiClick() {
     if (!$(this).data('nama')) {
-        alert("Pilih karyawan dulu!");
+        showAlert('warning', 'Peringatan', 'Pilih karyawan dulu!');
         return;
     }
 
     if (!currentPeriodId) {
-        alert("Tidak ada periode aktif! Pastikan KPI sudah dipublish ke periode.");
+        showAlert('warning', 'Peringatan', 'Tidak ada periode aktif! Pastikan KPI sudah dipublish ke periode.');
         return;
     }
 
     let divisiId = $(this).data("divisi-id");
     
     if (!divisiId) {
-        alert("Divisi karyawan tidak valid!");
+        showAlert('warning', 'Peringatan', 'Divisi karyawan tidak valid!');
         return;
     }
 
@@ -791,7 +808,7 @@ function calculateTotalScore(kpiData) {
         }
         
         if (kpis.length === 0) {
-            alert(`Tidak ada KPI yang ditetapkan untuk divisi ini pada periode aktif!`);
+            showAlert('warning', 'Peringatan', `Tidak ada KPI yang ditetapkan untuk divisi ini pada periode aktif!`);
             return;
         }
         
@@ -802,7 +819,7 @@ function calculateTotalScore(kpiData) {
     })
     .catch(err => {
         console.error("Error load KPI:", err);
-        alert("Gagal memuat data KPI: " + err.message);
+        showAlert('error', 'Error', "Gagal memuat data KPI: " + err.message);
     });
 }
 
@@ -987,11 +1004,10 @@ function calculateTotalScore(kpiData) {
     
     // Sembunyikan tombol Simpan dan Lanjut di step terakhir
     if (currentStep === totalSteps) {
-        document.getElementById('saveStep').style.display = 'none';
-        document.getElementById('nextStep').style.display = 'none';
+        nextBtn.style.display = 'none';
+        saveStep.style.display = 'none';
     } else {
-        document.getElementById('saveStep').style.display = 'inline-block';
-        document.getElementById('nextStep').style.display = 'inline-block';
+        saveStep.style.display = 'inline-block';
     }
 }
 
@@ -1007,228 +1023,244 @@ function calculateTotalScore(kpiData) {
         }
     }
 
-    function finishWizard() {
-    const hasil = kumpulkanJawaban();
-    const karyawanId = $("#btnNilai").data("id");
-
-    // Validasi apakah semua pertanyaan terjawab
-    const totalPertanyaan = stepsData.reduce((total, step) => {
-        return total + step.points.reduce((ptTotal, point) => ptTotal + point.questions.length, 0);
-    }, 0);
+    function saveStepProgress() {
+    const stepData = stepsData[currentStep - 1];
+    const answersToSave = {};
     
-    const totalTerjawab = Object.keys(answersMap).length;
-    
-    if (totalTerjawab === 0) {
-        if (!confirm("Belum ada jawaban yang diisi. Yakin ingin melanjutkan?")) return;
-    } else if (totalTerjawab < totalPertanyaan) {
-        if (!confirm(`Anda hanya menjawab ${totalTerjawab} dari ${totalPertanyaan} pertanyaan. Lanjutkan?`)) return;
-    }
-
-    // Tampilkan loading state
-    finishBtn.innerHTML = '<i class="icofont-spinner-alt-2"></i> Menyimpan...';
-    finishBtn.disabled = true;
-
-    fetch("/api/kpis/employee-score", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": "{{ csrf_token() }}"
-        },
-        body: JSON.stringify({
-            id_karyawan: parseInt(karyawanId),
-            periode_id: parseInt(currentPeriodId),
-            hasil: hasil
-        })
-    })
-    .then(async res => {
-        const contentType = res.headers.get("content-type");
-        let responseData;
-        
-        if (contentType && contentType.includes("application/json")) {
-            responseData = await res.json();
-        } else {
-            const text = await res.text();
-            try {
-                responseData = JSON.parse(text);
-            } catch {
-                throw new Error(`HTTP ${res.status}: ${text}`);
+    // Kumpulkan jawaban untuk step ini
+    stepData.points.forEach(point => {
+        point.questions.forEach(question => {
+            if (answersMap[question.id] !== undefined) {
+                answersToSave[question.id] = answersMap[question.id];
             }
-        }
-        
-        if (!res.ok) {
-            throw new Error(responseData.message || `HTTP ${res.status}`);
-        }
-        return responseData;
-    })
-    .then(res => {
-        if (res.success) {
-            // Tutup modal dengan delay untuk feedback visual
-            setTimeout(() => {
-                const modalInstance = bootstrap.Modal.getInstance(modalWizardEl);
-                if (modalInstance) modalInstance.hide();
-                
-                // Tampilkan alert sukses
-                showSuccessAlert('Nilai berhasil disimpan!');
-                
-                // Refresh data karyawan untuk menampilkan hasil
-                setTimeout(() => {
-                    checkEmployeeKPIStatus(karyawanId);
-                    $(tableSelector).DataTable().ajax.reload(null, false);
-                }, 1000);
-                
-            }, 500);
-            
-        } else {
-            throw new Error(res.message || 'Gagal menyimpan nilai');
-        }
-    })
-    .catch(err => {
-        console.error('Error detail:', err);
-        alert("❌ Gagal menyimpan nilai: " + err.message);
-    })
-    .finally(() => {
-        // Reset button state
-        finishBtn.innerHTML = 'Selesai';
-        finishBtn.disabled = false;
-    });
-}
-
-function showSuccessAlert(message) {
-    // Hapus alert existing jika ada
-    $('.custom-success-alert').remove();
-    
-    // Buat alert success
-    const alertHtml = `
-        <div class="custom-success-alert alert alert-success alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
-            <i class="icofont-check-circled"></i> <strong>Sukses!</strong> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    $('body').append(alertHtml);
-    
-    // Auto hide setelah 3 detik
-    setTimeout(() => {
-        $('.custom-success-alert').alert('close');
-    }, 3000);
-}
-
-function kumpulkanJawaban() {
-    const hasil = [];
-    
-    console.log('=== DEBUG: Mengumpulkan Jawaban ===');
-    console.log('answersMap:', answersMap);
-    console.log('stepsData:', stepsData);
-    
-    stepsData.forEach((step) => {
-        const aspek = {
-            id_aspek: step.kpiId,
-            jawaban: []
-        };
-        
-        console.log(`Aspek: ${step.kpiName}, ID: ${step.kpiId}`);
-        
-        step.points.forEach((point) => {
-            point.questions.forEach((question) => {
-                if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
-                    const jawabanData = {
-                        id: question.id,
-                        jawaban: parseInt(answersMap[question.id])
-                    };
-                    aspek.jawaban.push(jawabanData);
-                    console.log(`  Q: ${question.id} = ${answersMap[question.id]}`);
-                }
-            });
         });
-        
-        if (aspek.jawaban.length > 0) {
-            hasil.push(aspek);
-            console.log(`Aspek ${step.kpiName} memiliki ${aspek.jawaban.length} jawaban`);
-        }
     });
     
-    console.log('Total hasil yang dikirim:', hasil);
-    return hasil;
-}
-
-function resetWizard() {
-    wizardContent.innerHTML = "";
-    stepsData = [];
-    answersMap = {};
-    currentStep = 1;
-    totalSteps = 0;
-}
-
-function showDetailHasil() {
-    if (!window.kpiResultData) {
-        alert("Tidak ada data hasil penilaian!");
+    if (Object.keys(answersToSave).length === 0) {
+        showAlert('info', 'Info', 'Belum ada jawaban yang diisi pada step ini.');
         return;
     }
     
-    let html = '<div class="row">';
+    // Simpan ke localStorage sebagai backup
+    localStorage.setItem(`kpi_answers_${currentEmployeeId}_${currentPeriodId}_step${currentStep}`, 
+        JSON.stringify(answersToSave));
     
-    window.kpiResultData.forEach(aspek => {
-        html += `
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0">${aspek.aspek || aspek.nama}</h6>
-                        <small class="text-muted">Bobot: ${aspek.bobot}%</small>
-                    </div>
-                    <div class="card-body">
-        `;
-        
-        aspek.points.forEach(point => {
-            html += `<div class="mb-3"><strong>${point.nama}</strong> (${point.bobot}%)</div>`;
-            
-            if (point.questions && point.questions.length > 0) {
-                point.questions.forEach((question, qIndex) => {
-                    const scoreLabels = {
-                        1: 'Sangat Tidak Baik',
-                        2: 'Tidak Baik', 
-                        3: 'Baik',
-                        4: 'Sangat Baik'
-                    };
-                    
-                    html += `
-                        <div class="question-detail mb-2">
-                            <div class="d-flex justify-content-between">
-                                <span>${qIndex + 1}. ${question.pertanyaan}</span>
-                                <span class="badge bg-info">${question.answer || 0}/4</span>
-                            </div>
-                            <small class="text-muted">${scoreLabels[question.answer] || 'Belum dinilai'}</small>
-                        </div>
-                    `;
-                });
-            }
+    showAlert('success', 'Berhasil', 'Progress step ini telah disimpan sementara.');
+}
+
+    function finishWizard() {
+    // Validasi apakah semua pertanyaan sudah dijawab
+    let totalQuestions = 0;
+    let answeredQuestions = 0;
+    
+    stepsData.forEach(step => {
+        step.points.forEach(point => {
+            point.questions.forEach(question => {
+                totalQuestions++;
+                if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
+                    answeredQuestions++;
+                }
+            });
         });
-        
-        html += `</div></div></div>`;
     });
     
-    html += '</div>';
+    if (answeredQuestions === 0) {
+        showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
+        return;
+    }
     
+    if (answeredQuestions < totalQuestions) {
+        showConfirm(
+            'Konfirmasi', 
+            `Anda telah mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan. Yakin ingin menyimpan?`,
+            'Ya, Simpan',
+            'Lanjutkan Mengisi'
+        ).then(result => {
+            if (result.isConfirmed) {
+                submitAnswers();
+            }
+        });
+    } else {
+        submitAnswers();
+    }
+}
+
+    function submitAnswers() {
+    const submitData = {
+        employee_id: currentEmployeeId,
+        period_id: currentPeriodId,
+        answers: answersMap,
+        submitted_at: new Date().toISOString()
+    };
+    
+    console.log('Submitting answers:', submitData);
+    
+    // Show loading
+    Swal.fire({
+        title: 'Menyimpan Jawaban...',
+        text: 'Harap tunggu sebentar',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    fetch('/api/kpis/submit-answers', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(submitData)
+    })
+    .then(async response => {
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.message || 'Terjadi kesalahan');
+        }
+        
+        return result;
+    })
+    .then(result => {
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: 'Jawaban KPI berhasil disimpan',
+            confirmButtonColor: '#3085d6',
+        }).then(() => {
+            // Tutup modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalWizard'));
+            modal.hide();
+            
+            // Refresh status karyawan
+            checkEmployeeKPIStatus(currentEmployeeId);
+            
+            // Refresh tabel
+            $(tableSelector).DataTable().ajax.reload(null, false);
+        });
+    })
+    .catch(error => {
+        console.error('Error submitting answers:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal!',
+            text: error.message || 'Gagal menyimpan jawaban',
+            confirmButtonColor: '#3085d6',
+        });
+    });
+}
+
+    function resetWizard() {
+        currentStep = 1;
+        totalSteps = 0;
+        stepsData = [];
+        answersMap = {};
+        wizardContent.innerHTML = '';
+    }
+
+    function showDetailHasil() {
+    if (!window.kpiResultData) {
+        showAlert('warning', 'Peringatan', 'Data hasil tidak tersedia!');
+        return;
+    }
+
+    let html = `
+        <div class="text-center mb-4">
+            <h4>Detail Hasil KPI</h4>
+            <p class="text-muted">Periode: ${currentPeriodData?.nama || '-'}</p>
+            <div class="total-score-display mb-3">
+                <h2 class="text-primary">${window.kpiTotalScore?.toFixed(2) || '0.00'}</h2>
+                <p class="text-muted">Total Skor KPI</p>
+            </div>
+        </div>
+    `;
+
+    window.kpiResultData.forEach((aspek, index) => {
+        const aspekScore = calculateAspekScore(aspek);
+        
+        html += `
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">${aspek.aspek || aspek.nama || 'Aspek ' + (index + 1)}</h6>
+                    <small class="text-muted">Skor: ${aspekScore.toFixed(2)}</small>
+                </div>
+                <div class="card-body">
+        `;
+
+        if (aspek.points && aspek.points.length > 0) {
+            aspek.points.forEach((point, pointIndex) => {
+                let pointScore = 0;
+                let answeredQuestions = 0;
+                
+                if (point.questions && point.questions.length > 0) {
+                    point.questions.forEach(question => {
+                        if (question.answer !== null && question.answer !== undefined) {
+                            pointScore += parseFloat(question.answer) || 0;
+                            answeredQuestions++;
+                        }
+                    });
+                    
+                    const avgPointScore = answeredQuestions > 0 ? pointScore / answeredQuestions : 0;
+                    const pointBobot = parseFloat(point.bobot) || 0;
+                    const pointContribution = (avgPointScore * 2.5) * (pointBobot / 100);
+                    
+                    html += `
+                        <div class="mb-3 p-3 border rounded">
+                            <h6>${point.nama || 'Sub-Aspek ' + (pointIndex + 1)}</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small><strong>Rata-rata Nilai:</strong> ${avgPointScore.toFixed(2)}/4</small><br>
+                                    <small><strong>Konversi:</strong> ${(avgPointScore * 2.5).toFixed(2)}/10</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small><strong>Bobot:</strong> ${pointBobot}%</small><br>
+                                    <small><strong>Kontribusi:</strong> ${pointContribution.toFixed(2)}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <strong>Detail Jawaban:</strong>
+                                <div class="mt-2">
+                    `;
+                    
+                    point.questions.forEach((question, qIndex) => {
+                        const answer = question.answer !== null && question.answer !== undefined ? 
+                            parseFloat(question.answer) : null;
+                        const answerLabels = {
+                            1: 'Sangat Tidak Baik',
+                            2: 'Tidak Baik',
+                            3: 'Baik', 
+                            4: 'Sangat Baik'
+                        };
+                        
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
+                                <small>${qIndex + 1}. ${question.pertanyaan || question.text}</small>
+                                <span class="badge ${answer ? 'bg-primary' : 'bg-secondary'}">
+                                    ${answer ? answer + ' - ' + answerLabels[answer] : 'Belum diisi'}
+                                </span>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `</div></div></div>`;
+                }
+            });
+        } else {
+            html += `<p class="text-muted">Tidak ada sub-aspek</p>`;
+        }
+        
+        html += `</div></div>`;
+    });
+
     detailHasilContent.innerHTML = html;
     
     const modal = new bootstrap.Modal(document.getElementById('modalHasilDetail'));
     modal.show();
 }
 
-/* Utility functions */
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-function truncate(s, n) {
-    if (!s) return '';
-    return s.length > n ? s.slice(0, n - 1) + '…' : s;
-}
+    // Tambahkan event listener untuk tombol saveStep
+    document.getElementById('saveStep').addEventListener('click', saveStepProgress);
 </script>
 @endsection

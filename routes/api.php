@@ -45,10 +45,14 @@ Route::prefix('employees')->group(function () {
     Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
     Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
     
+    // ✅ TAMBAHKAN INI DI SINI:
+    Route::get('/jumlahkaryawan-by-month', [EmployeeApiController::class, 'getEmployeeTotalByMonth']);
+    
     // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
     Route::get('/{employee}', [EmployeeApiController::class, 'show']);
     Route::put('/{employee}', [EmployeeApiController::class, 'update']);
     Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
+    
 });
 
 // ==================== ROLE ROUTES ====================
@@ -127,4 +131,4 @@ Route::get('/kpi-by-division/{divisionId}', [KpiController::class, 'listKpiByDiv
 Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
 
 // Test routes for attendance data
-Route::get('/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);
+Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);

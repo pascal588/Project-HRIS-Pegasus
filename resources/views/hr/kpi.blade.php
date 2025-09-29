@@ -31,6 +31,10 @@
     border-left: 2px solid #6c757d;
     padding-left: 10px;
   }
+
+  .swal2-container {
+    z-index: 99999 !important;
+  }
 </style>
 
 <div class="body d-flex py-3">

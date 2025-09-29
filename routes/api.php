@@ -73,7 +73,7 @@ Route::prefix('kpis')->group(function () {
 
   // KPI Scoring & Evaluation
   // Route::post('/score', [KpiController::class, 'storeEmployeeScore']);
-  Route::post('/employee-score', [KpiController::class, 'storeEmployeeScore']);
+  Route::post('/submit-answers', [KpiController::class, 'storeEmployeeScore']);
   Route::get('/attendance-summary/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceSummary']);
   Route::post('/calculate/{employeeId}/{periodeId}', [KpiController::class, 'calculateFinalScore']);
   Route::get('/scores/{employeeId}/{periodeId}', [KpiController::class, 'getScoreByAspekUtama']);

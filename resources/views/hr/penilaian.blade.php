@@ -56,7 +56,7 @@
                             </div>
                             <div class="mt-2" id="deadlineInfo" style="display: none;">
                                 <small class="text-muted">
-                                    <i class="icofont-calendar"></i> 
+                                    <i class="icofont-calendar"></i>
                                     Deadline: <span id="deadlineDate">-</span>
                                 </small>
                             </div>
@@ -146,20 +146,20 @@
                     transform: scale(1.15);
                     cursor: pointer;
                 }
-                
+
                 .subaspek-card {
                     border: 1px solid #e0e0e0;
                     border-radius: 8px;
                     margin-bottom: 20px;
                     overflow: hidden;
                 }
-                
+
                 .subaspek-header {
                     background-color: #f8f9fa;
                     padding: 12px 15px;
                     border-bottom: 1px solid #e0e0e0;
                 }
-                
+
                 .subaspek-body {
                     padding: 15px;
                 }
@@ -172,30 +172,30 @@
                 .progress {
                     height: 8px;
                 }
-                
+
                 .question-item {
                     margin-bottom: 15px;
                     padding-bottom: 15px;
                     border-bottom: 1px solid #f0f0f0;
                 }
-                
+
                 .question-item:last-child {
                     border-bottom: none;
                     margin-bottom: 0;
                     padding-bottom: 0;
                 }
-                
+
                 .score-option {
                     display: flex;
                     align-items: center;
                     margin-bottom: 5px;
                     cursor: pointer;
                 }
-                
+
                 .score-option input {
                     margin-right: 8px;
                 }
-                
+
                 .score-label {
                     font-size: 0.9em;
                 }
@@ -331,16 +331,16 @@
     $(document).ready(function() {
         initializeDataTable();
         loadActivePeriods();
-        
+
         // Event listener untuk tombol nilai
         $("#btnNilai").on("click", handleNilaiClick);
         $("#btnLihatHasil").on("click", showDetailHasil);
-        
+
         // Event listener untuk wizard
         prevBtn.addEventListener("click", prevStep);
         nextBtn.addEventListener("click", nextStep);
         finishBtn.addEventListener("click", finishWizard);
-        
+
         // Reset wizard saat modal tertutup
         modalWizardEl.addEventListener("hidden.bs.modal", function() {
             resetWizard();
@@ -420,7 +420,12 @@
 
             $("#previewNama").text(nama);
             $("#previewDivisi").text(divisi);
-            $("#btnNilai").data({ id, nama, divisi, divisiId });
+            $("#btnNilai").data({
+                id,
+                nama,
+                divisi,
+                divisiId
+            });
 
             // Cek apakah karyawan sudah dinilai
             checkEmployeeKPIStatus(id);
@@ -436,7 +441,7 @@
                     const activePeriod = response.data.find(p => p.kpi_published) || response.data[0];
                     currentPeriodId = activePeriod.id_periode;
                     currentPeriodData = activePeriod;
-                    
+
                     // Update UI dengan period info
                     $('#periodInfo').html(`
                         <div class="alert alert-info">
@@ -444,10 +449,10 @@
                             <small>${formatDate(activePeriod.tanggal_mulai)} - ${formatDate(activePeriod.tanggal_selesai)}</small>
                         </div>
                     `);
-                    
+
                     // Load info deadline
                     loadPeriodInfo(activePeriod.id_periode);
-                    
+
                     // Refresh tabel untuk update status KPI
                     $(tableSelector).DataTable().ajax.reload(null, false);
                 } else {
@@ -478,14 +483,14 @@
                     const now = new Date();
                     const evalEnd = new Date(period.evaluation_end_date);
                     const daysLeft = Math.ceil((evalEnd - now) / (1000 * 60 * 60 * 24));
-                    
+
                     if (period.evaluation_end_date) {
                         $('#deadlineInfo').show();
                         $('#deadlineDate').html(`
                             <strong>${formatDate(period.evaluation_end_date)}</strong>
                             (${daysLeft > 0 ? `${daysLeft} hari lagi` : 'Telah berakhir'})
                         `);
-                        
+
                         if (daysLeft <= 0) {
                             $('#deadlineInfo').addClass('text-danger');
                             $('#deadlineInfo small').html('<i class="icofont-warning"></i> Periode evaluasi telah berakhir!');
@@ -502,114 +507,118 @@
 
     function formatDate(dateString) {
         if (!dateString) return '-';
-        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        const options = {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        };
         return new Date(dateString).toLocaleDateString('id-ID', options);
     }
 
     function checkEmployeeKPIStatus(employeeId) {
-    if (!currentPeriodId) {
-        showEmptyForm();
-        return;
-    }
-    
-    fetch(`/api/kpis/employee/${employeeId}/period/${currentPeriodId}`)
-        .then(res => res.json())
-        .then(data => {
-            console.log('KPI Status Response:', data);
-            
-            if (data.success && data.data && data.data.length > 0) {
-                // Pastikan ada data yang valid
-                const validData = data.data.filter(aspek => 
-                    aspek.points && aspek.points.length > 0
-                );
-                
-                console.log('Valid Data Count:', validData.length);
-                
-                if (validData.length > 0) {
-                    // Cek apakah sudah ada jawaban
-                    let hasAnswers = false;
-                    let totalAnswers = 0;
-                    
-                    validData.forEach(aspek => {
-                        aspek.points.forEach(point => {
-                            if (point.questions) {
-                                point.questions.forEach(q => {
-                                    if (q.answer !== null && q.answer !== undefined) {
-                                        hasAnswers = true;
-                                        totalAnswers++;
-                                    }
-                                });
-                            }
+        if (!currentPeriodId) {
+            showEmptyForm();
+            return;
+        }
+
+        fetch(`/api/kpis/employee/${employeeId}/period/${currentPeriodId}`)
+            .then(res => res.json())
+            .then(data => {
+                console.log('KPI Status Response:', data);
+
+                if (data.success && data.data && data.data.length > 0) {
+                    // Pastikan ada data yang valid
+                    const validData = data.data.filter(aspek =>
+                        aspek.points && aspek.points.length > 0
+                    );
+
+                    console.log('Valid Data Count:', validData.length);
+
+                    if (validData.length > 0) {
+                        // Cek apakah sudah ada jawaban
+                        let hasAnswers = false;
+                        let totalAnswers = 0;
+
+                        validData.forEach(aspek => {
+                            aspek.points.forEach(point => {
+                                if (point.questions) {
+                                    point.questions.forEach(q => {
+                                        if (q.answer !== null && q.answer !== undefined) {
+                                            hasAnswers = true;
+                                            totalAnswers++;
+                                        }
+                                    });
+                                }
+                            });
                         });
-                    });
-                    
-                    console.log('Has Answers:', hasAnswers, 'Total Answers:', totalAnswers);
-                    
-                    if (hasAnswers) {
-                        showHasilPenilaian(validData);
-                        $("#previewStatus").removeClass('bg-warning').addClass('bg-success').text('Sudah Dinilai');
-                        $("#btnNilai").addClass('d-none');
-                        $("#btnLihatHasil").removeClass('d-none');
-                        
-                        // Update status di tabel
-                        const totalScore = calculateTotalScore(validData);
-                        console.log('Calculated Total Score:', totalScore);
-                        updateTableStatus(employeeId, 'Sudah Dinilai', totalScore);
+
+                        console.log('Has Answers:', hasAnswers, 'Total Answers:', totalAnswers);
+
+                        if (hasAnswers) {
+                            showHasilPenilaian(validData);
+                            $("#previewStatus").removeClass('bg-warning').addClass('bg-success').text('Sudah Dinilai');
+                            $("#btnNilai").addClass('d-none');
+                            $("#btnLihatHasil").removeClass('d-none');
+
+                            // Update status di tabel
+                            const totalScore = calculateTotalScore(validData);
+                            console.log('Calculated Total Score:', totalScore);
+                            updateTableStatus(employeeId, 'Sudah Dinilai', totalScore);
+                        } else {
+                            console.log('No answers found');
+                            showEmptyForm();
+                            updateTableStatus(employeeId, 'Belum Dinilai', 0);
+                        }
                     } else {
-                        console.log('No answers found');
+                        console.log('No valid data found');
                         showEmptyForm();
                         updateTableStatus(employeeId, 'Belum Dinilai', 0);
                     }
                 } else {
-                    console.log('No valid data found');
+                    console.log('No data from API');
                     showEmptyForm();
                     updateTableStatus(employeeId, 'Belum Dinilai', 0);
                 }
-            } else {
-                console.log('No data from API');
+            })
+            .catch(err => {
+                console.error("Error checking KPI status:", err);
                 showEmptyForm();
-                updateTableStatus(employeeId, 'Belum Dinilai', 0);
-            }
-        })
-        .catch(err => {
-            console.error("Error checking KPI status:", err);
-            showEmptyForm();
-            updateTableStatus(employeeId, 'Error', 0);
-        });
-}
+                updateTableStatus(employeeId, 'Error', 0);
+            });
+    }
 
     function updateTableStatus(employeeId, status, score) {
-    const table = $(tableSelector).DataTable();
-    const data = table.data();
-    
-    // Pastikan score adalah number
-    const validScore = parseFloat(score) || 0;
-    
-    for (let i = 0; i < data.length; i++) {
-        if (data[i].id_karyawan == employeeId) {
-            // Update baris yang sesuai
-            const row = table.row(i);
-            const node = row.node();
-            
-            if (node) {
-                // Update status
-                const statusBadge = status === 'Sudah Dinilai' ? 
-                    '<span class="badge bg-success">Sudah Dinilai</span>' : 
-                    '<span class="badge bg-warning">Belum Dinilai</span>';
-                
-                $(node).find('td:eq(3)').html(statusBadge);
-                
-                // Update score
-                const scoreBadge = status === 'Sudah Dinilai' ? 
-                    `<span class="badge bg-primary">${validScore.toFixed(2)}</span>` : 
-                    '<span class="badge bg-secondary">-</span>';
-                
-                $(node).find('td:eq(4)').html(scoreBadge);
+        const table = $(tableSelector).DataTable();
+        const data = table.data();
+
+        // Pastikan score adalah number
+        const validScore = parseFloat(score) || 0;
+
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].id_karyawan == employeeId) {
+                // Update baris yang sesuai
+                const row = table.row(i);
+                const node = row.node();
+
+                if (node) {
+                    // Update status
+                    const statusBadge = status === 'Sudah Dinilai' ?
+                        '<span class="badge bg-success">Sudah Dinilai</span>' :
+                        '<span class="badge bg-warning">Belum Dinilai</span>';
+
+                    $(node).find('td:eq(3)').html(statusBadge);
+
+                    // Update score
+                    const scoreBadge = status === 'Sudah Dinilai' ?
+                        `<span class="badge bg-primary">${validScore.toFixed(2)}</span>` :
+                        '<span class="badge bg-secondary">-</span>';
+
+                    $(node).find('td:eq(4)').html(scoreBadge);
+                }
+                break;
             }
-            break;
         }
     }
-}
 
     function showEmptyForm() {
         $("#formAspekContainer").removeClass('d-none');
@@ -620,27 +629,27 @@
     }
 
     function showHasilPenilaian(kpiData) {
-    console.log('=== DEBUG showHasilPenilaian ===');
-    console.log('KPI Data:', kpiData);
-    
-    $("#formAspekContainer").addClass('d-none');
-    $("#hasilPenilaianContainer").removeClass('d-none');
+        console.log('=== DEBUG showHasilPenilaian ===');
+        console.log('KPI Data:', kpiData);
 
-    let html = '';
-    const totalScore = calculateTotalScore(kpiData);
-    
-    console.log('Total Score:', totalScore);
+        $("#formAspekContainer").addClass('d-none');
+        $("#hasilPenilaianContainer").removeClass('d-none');
 
-    kpiData.forEach((aspek, index) => {
-        const scoreAspek = calculateAspekScore(aspek);
-        
-        // Hitung total bobot sub-aspek untuk validasi (dengan default value 0)
-        const totalBobotSubAspek = aspek.points ? 
-            aspek.points.reduce((total, point) => total + (parseFloat(point.bobot) || 0), 0) : 0;
+        let html = '';
+        const totalScore = calculateTotalScore(kpiData);
 
-        console.log(`Aspek ${index + 1}:`, aspek.nama, 'Score:', scoreAspek, 'Bobot:', totalBobotSubAspek);
+        console.log('Total Score:', totalScore);
 
-        html += `
+        kpiData.forEach((aspek, index) => {
+            const scoreAspek = calculateAspekScore(aspek);
+
+            // Hitung total bobot sub-aspek untuk validasi (dengan default value 0)
+            const totalBobotSubAspek = aspek.points ?
+                aspek.points.reduce((total, point) => total + (parseFloat(point.bobot) || 0), 0) : 0;
+
+            console.log(`Aspek ${index + 1}:`, aspek.nama, 'Score:', scoreAspek, 'Bobot:', totalBobotSubAspek);
+
+            html += `
             <div class="mb-3 p-3 border rounded">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong>${aspek.aspek || aspek.nama || 'Aspek ' + (index + 1)}</strong>
@@ -651,46 +660,46 @@
                 </div>
         `;
 
-        // Progress bar hanya ditampilkan jika totalBobotSubAspek > 0
-        if (totalBobotSubAspek > 0) {
-            html += `
+            // Progress bar hanya ditampilkan jika totalBobotSubAspek > 0
+            if (totalBobotSubAspek > 0) {
+                html += `
                 <div class="progress mb-2">
                     <div class="progress-bar" style="width: ${(scoreAspek / totalBobotSubAspek) * 100}%"></div>
                 </div>
             `;
-        }
-        
-        html += `
+            }
+
+            html += `
                 <small class="text-muted d-block">Total Bobot Sub-Aspek: ${totalBobotSubAspek}%</small>
         `;
-        
-        // Cek jika ada points
-        if (aspek.points && aspek.points.length > 0) {
-            html += `<div class="mt-2">`;
-            
-            aspek.points.forEach((point, pointIndex) => {
-                let pointScore = 0;
-                let answeredQuestions = 0;
-                
-                console.log(`  Point ${pointIndex + 1}:`, point.nama, 'Bobot:', point.bobot);
 
-                if (point.questions && point.questions.length > 0) {
-                    point.questions.forEach((question, qIndex) => {
-                        if (question.answer !== null && question.answer !== undefined) {
-                            pointScore += parseFloat(question.answer) || 0;
-                            answeredQuestions++;
-                            console.log(`    Q ${qIndex + 1}:`, question.answer);
-                        }
-                    });
-                    
-                    const pointBobot = parseFloat(point.bobot) || 0;
-                    
-                    if (answeredQuestions > 0) {
-                        const avgPointScore = pointScore / answeredQuestions;
-                        const pointContribution = (avgPointScore * 2.5) * (pointBobot / 100);
-                        const nilaiMaksimalPoint = 4 * 2.5 * (pointBobot / 100);
-                        
-                        html += `
+            // Cek jika ada points
+            if (aspek.points && aspek.points.length > 0) {
+                html += `<div class="mt-2">`;
+
+                aspek.points.forEach((point, pointIndex) => {
+                    let pointScore = 0;
+                    let answeredQuestions = 0;
+
+                    console.log(`  Point ${pointIndex + 1}:`, point.nama, 'Bobot:', point.bobot);
+
+                    if (point.questions && point.questions.length > 0) {
+                        point.questions.forEach((question, qIndex) => {
+                            if (question.answer !== null && question.answer !== undefined) {
+                                pointScore += parseFloat(question.answer) || 0;
+                                answeredQuestions++;
+                                console.log(`    Q ${qIndex + 1}:`, question.answer);
+                            }
+                        });
+
+                        const pointBobot = parseFloat(point.bobot) || 0;
+
+                        if (answeredQuestions > 0) {
+                            const avgPointScore = pointScore / answeredQuestions;
+                            const pointContribution = (avgPointScore * 2.5) * (pointBobot / 100);
+                            const nilaiMaksimalPoint = 4 * 2.5 * (pointBobot / 100);
+
+                            html += `
                             <div class="sub-point-detail mb-2 p-2 bg-light rounded">
                                 <strong>${point.nama || 'Sub-Aspek ' + (pointIndex + 1)}</strong>
                                 <div class="d-flex justify-content-between">
@@ -703,130 +712,130 @@
                                 </div>
                             </div>
                         `;
-                    } else {
-                        html += `
+                        } else {
+                            html += `
                             <div class="sub-point-detail mb-2 p-2 bg-light rounded">
                                 <strong>${point.nama || 'Sub-Aspek ' + (pointIndex + 1)}</strong>
                                 <small class="text-muted">Belum ada jawaban</small>
                             </div>
                         `;
+                        }
                     }
-                }
-            });
-            
+                });
+
+                html += `</div>`;
+            } else {
+                html += `<small class="text-muted">Tidak ada sub-aspek</small>`;
+            }
+
             html += `</div>`;
-        } else {
-            html += `<small class="text-muted">Tidak ada sub-aspek</small>`;
-        }
-        
-        html += `</div>`;
-    });
+        });
 
-    $("#hasilPerAspek").html(html);
-    $("#totalScoreKPI").text(totalScore.toFixed(2));
+        $("#hasilPerAspek").html(html);
+        $("#totalScoreKPI").text(totalScore.toFixed(2));
 
-    // Simpan data untuk modal detail
-    window.kpiResultData = kpiData;
-    window.kpiTotalScore = totalScore;
-    
-    console.log('=== END DEBUG ===');
-}
+        // Simpan data untuk modal detail
+        window.kpiResultData = kpiData;
+        window.kpiTotalScore = totalScore;
+
+        console.log('=== END DEBUG ===');
+    }
 
     function calculateAspekScore(aspek) {
-    let totalAspek = 0;
-    
-    if (!aspek.points || aspek.points.length === 0) return 0;
-    
-    aspek.points.forEach(point => {
-        let totalPoint = 0;
-        let answeredQuestions = 0;
-        
-        if (point.questions && point.questions.length > 0) {
-            point.questions.forEach(question => {
-                if (question.answer !== null && question.answer !== undefined) {
-                    totalPoint += parseFloat(question.answer) || 0; // Nilai 1-4
-                    answeredQuestions++;
-                }
-            });
-            
-            if (answeredQuestions > 0) {
-                const averagePointScore = totalPoint / answeredQuestions;
-                const pointBobot = parseFloat(point.bobot) || 0;
-                // Konversi 1-4 ke skala 0-10: (rata-rata × 2.5) × bobot%
-                const pointContribution = (averagePointScore * 2.5) * (pointBobot / 100);
-                totalAspek += pointContribution;
-            }
-        }
-    });
-    
-    return totalAspek;
-}
+        let totalAspek = 0;
 
-function calculateTotalScore(kpiData) {
-    let totalScore = 0;
-    
-    if (!kpiData || !Array.isArray(kpiData)) return 0;
-    
-    kpiData.forEach(aspek => {
-        const aspekScore = calculateAspekScore(aspek);
-        totalScore += aspekScore;
-    });
-    
-    return totalScore;
-}
+        if (!aspek.points || aspek.points.length === 0) return 0;
+
+        aspek.points.forEach(point => {
+            let totalPoint = 0;
+            let answeredQuestions = 0;
+
+            if (point.questions && point.questions.length > 0) {
+                point.questions.forEach(question => {
+                    if (question.answer !== null && question.answer !== undefined) {
+                        totalPoint += parseFloat(question.answer) || 0; // Nilai 1-4
+                        answeredQuestions++;
+                    }
+                });
+
+                if (answeredQuestions > 0) {
+                    const averagePointScore = totalPoint / answeredQuestions;
+                    const pointBobot = parseFloat(point.bobot) || 0;
+                    // Konversi 1-4 ke skala 0-10: (rata-rata × 2.5) × bobot%
+                    const pointContribution = (averagePointScore * 2.5) * (pointBobot / 100);
+                    totalAspek += pointContribution;
+                }
+            }
+        });
+
+        return totalAspek;
+    }
+
+    function calculateTotalScore(kpiData) {
+        let totalScore = 0;
+
+        if (!kpiData || !Array.isArray(kpiData)) return 0;
+
+        kpiData.forEach(aspek => {
+            const aspekScore = calculateAspekScore(aspek);
+            totalScore += aspekScore;
+        });
+
+        return totalScore;
+    }
 
     function handleNilaiClick() {
-    if (!$(this).data('nama')) {
-        showAlert('warning', 'Peringatan', 'Pilih karyawan dulu!');
-        return;
-    }
-
-    if (!currentPeriodId) {
-        showAlert('warning', 'Peringatan', 'Tidak ada periode aktif! Pastikan KPI sudah dipublish ke periode.');
-        return;
-    }
-
-    let divisiId = $(this).data("divisi-id");
-    
-    if (!divisiId) {
-        showAlert('warning', 'Peringatan', 'Divisi karyawan tidak valid!');
-        return;
-    }
-
-    // Hanya mengambil KPI global dan divisi karyawan tersebut
-    let url = `/api/kpis/division/${divisiId}?periode_id=${currentPeriodId}`;
-    console.log('Fetching KPI from:', url);
-    
-    fetch(url)
-    .then(res => res.json())
-    .then(response => {
-        console.log('KPI Response:', response);
-        
-        let kpis = [];
-        if (response.success && response.data) {
-            kpis = response.data;
-        }
-        
-        if (kpis.length === 0) {
-            showAlert('warning', 'Peringatan', `Tidak ada KPI yang ditetapkan untuk divisi ini pada periode aktif!`);
+        if (!$(this).data('nama')) {
+            showAlert('warning', 'Peringatan', 'Pilih karyawan dulu!');
             return;
         }
-        
-        buildStepsFromKpis(kpis);
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalWizard'));
-        modal.show();
-    })
-    .catch(err => {
-        console.error("Error load KPI:", err);
-        showAlert('error', 'Error', "Gagal memuat data KPI: " + err.message);
-    });
-}
+
+        if (!currentPeriodId) {
+            showAlert('warning', 'Peringatan', 'Tidak ada periode aktif! Pastikan KPI sudah dipublish ke periode.');
+            return;
+        }
+
+        let divisiId = $(this).data("divisi-id");
+
+        if (!divisiId) {
+            showAlert('warning', 'Peringatan', 'Divisi karyawan tidak valid!');
+            return;
+        }
+
+        // Hanya mengambil KPI global dan divisi karyawan tersebut
+        let url = `/api/kpis/division/${divisiId}?periode_id=${currentPeriodId}`;
+        console.log('Fetching KPI from:', url);
+
+        fetch(url)
+            .then(res => res.json())
+            .then(response => {
+                console.log('KPI Response:', response);
+
+                let kpis = [];
+                if (response.success && response.data) {
+                    kpis = response.data;
+                }
+
+                if (kpis.length === 0) {
+                    showAlert('warning', 'Peringatan', `Tidak ada KPI yang ditetapkan untuk divisi ini pada periode aktif!`);
+                    return;
+                }
+
+                buildStepsFromKpis(kpis);
+
+                const modal = new bootstrap.Modal(document.getElementById('modalWizard'));
+                modal.show();
+            })
+            .catch(err => {
+                console.error("Error load KPI:", err);
+                showAlert('error', 'Error', "Gagal memuat data KPI: " + err.message);
+            });
+    }
 
     function buildStepsFromKpis(kpis) {
         console.log('=== DEBUG KPI DATA ===');
         console.log('Raw KPI data:', kpis);
-        
+
         stepsData = [];
         answersMap = {};
 
@@ -876,46 +885,46 @@ function calculateTotalScore(kpiData) {
     }
 
     function renderWizardSteps(steps) {
-    totalSteps = steps.length;
-    currentStep = 1;
-    
-    // Render step indicator
-    let stepHtml = `
+        totalSteps = steps.length;
+        currentStep = 1;
+
+        // Render step indicator
+        let stepHtml = `
         <div class="step-container">
     `;
-    
-    for (let i = 1; i <= totalSteps; i++) {
-        stepHtml += `
+
+        for (let i = 1; i <= totalSteps; i++) {
+            stepHtml += `
             <button class="step-btn ${i === 1 ? 'active' : ''}" data-step="${i}">
                 ${i}
             </button>
         `;
-    }
-    
-    stepHtml += `</div>`;
-    
-    // Render current step content
-    stepHtml += renderStepContent(steps[0]);
-    
-    wizardContent.innerHTML = stepHtml;
-    
-    // Tambahkan event listener untuk step buttons
-    document.querySelectorAll('.step-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const stepNum = parseInt(this.getAttribute('data-step'));
-            goToStep(stepNum);
+        }
+
+        stepHtml += `</div>`;
+
+        // Render current step content
+        stepHtml += renderStepContent(steps[0]);
+
+        wizardContent.innerHTML = stepHtml;
+
+        // Tambahkan event listener untuk step buttons
+        document.querySelectorAll('.step-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const stepNum = parseInt(this.getAttribute('data-step'));
+                goToStep(stepNum);
+            });
         });
-    });
-    
-    updateWizardButtons();
-}
+
+        updateWizardButtons();
+    }
 
     function renderStepContent(step) {
         let html = `
             <h4 class="text-center mb-4">${step.kpiName}</h4>
             <p class="text-center text-muted mb-4">Bobot: ${step.kpiBobot}%</p>
         `;
-        
+
         step.points.forEach(point => {
             html += `
                 <div class="subaspek-card">
@@ -925,25 +934,25 @@ function calculateTotalScore(kpiData) {
                     </div>
                     <div class="subaspek-body">
             `;
-            
+
             point.questions.forEach((question, qIndex) => {
                 const currentAnswer = answersMap[question.id] || question.answer || null;
-                
+
                 html += `
                     <div class="question-item">
                         <p class="fw-semibold">${qIndex + 1}. ${question.pertanyaan}</p>
                         <div class="score-options">
                 `;
-                
+
                 // Opsi nilai 1-4
                 for (let score = 1; score <= 4; score++) {
                     const scoreLabels = {
                         1: 'Sangat Tidak Baik',
-                        2: 'Tidak Baik', 
+                        2: 'Tidak Baik',
                         3: 'Baik',
                         4: 'Sangat Baik'
                     };
-                    
+
                     html += `
                         <div class="score-option">
                             <input type="radio" 
@@ -958,13 +967,13 @@ function calculateTotalScore(kpiData) {
                         </div>
                     `;
                 }
-                
+
                 html += `</div></div>`;
             });
-            
+
             html += `</div></div>`;
         });
-        
+
         return html;
     }
 
@@ -975,9 +984,9 @@ function calculateTotalScore(kpiData) {
 
     function goToStep(stepNumber) {
         if (stepNumber < 1 || stepNumber > totalSteps) return;
-        
+
         currentStep = stepNumber;
-        
+
         // Update step indicator
         document.querySelectorAll('.step-btn').forEach((btn, index) => {
             if (index + 1 === stepNumber) {
@@ -986,30 +995,30 @@ function calculateTotalScore(kpiData) {
                 btn.classList.remove('active');
             }
         });
-        
+
         // Update content
         const stepContent = renderStepContent(stepsData[stepNumber - 1]);
         const stepContainer = wizardContent.querySelector('.step-container');
         wizardContent.innerHTML = '';
         wizardContent.appendChild(stepContainer);
         wizardContent.innerHTML += stepContent;
-        
+
         updateWizardButtons();
     }
 
     function updateWizardButtons() {
-    prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
-    nextBtn.style.display = currentStep < totalSteps ? 'inline-block' : 'none';
-    finishBtn.style.display = currentStep === totalSteps ? 'inline-block' : 'none';
-    
-    // Sembunyikan tombol Simpan dan Lanjut di step terakhir
-    if (currentStep === totalSteps) {
-        nextBtn.style.display = 'none';
-        saveStep.style.display = 'none';
-    } else {
-        saveStep.style.display = 'inline-block';
+        prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
+        nextBtn.style.display = currentStep < totalSteps ? 'inline-block' : 'none';
+        finishBtn.style.display = currentStep === totalSteps ? 'inline-block' : 'none';
+
+        // Sembunyikan tombol Simpan dan Lanjut di step terakhir
+        if (currentStep === totalSteps) {
+            nextBtn.style.display = 'none';
+            saveStep.style.display = 'none';
+        } else {
+            saveStep.style.display = 'inline-block';
+        }
     }
-}
 
     function prevStep() {
         if (currentStep > 1) {
@@ -1024,132 +1033,190 @@ function calculateTotalScore(kpiData) {
     }
 
     function saveStepProgress() {
-    const stepData = stepsData[currentStep - 1];
-    const answersToSave = {};
-    
-    // Kumpulkan jawaban untuk step ini
-    stepData.points.forEach(point => {
-        point.questions.forEach(question => {
-            if (answersMap[question.id] !== undefined) {
-                answersToSave[question.id] = answersMap[question.id];
-            }
-        });
-    });
-    
-    if (Object.keys(answersToSave).length === 0) {
-        showAlert('info', 'Info', 'Belum ada jawaban yang diisi pada step ini.');
-        return;
-    }
-    
-    // Simpan ke localStorage sebagai backup
-    localStorage.setItem(`kpi_answers_${currentEmployeeId}_${currentPeriodId}_step${currentStep}`, 
-        JSON.stringify(answersToSave));
-    
-    showAlert('success', 'Berhasil', 'Progress step ini telah disimpan sementara.');
-}
+        const stepData = stepsData[currentStep - 1];
+        const answersToSave = {};
 
-    function finishWizard() {
-    // Validasi apakah semua pertanyaan sudah dijawab
-    let totalQuestions = 0;
-    let answeredQuestions = 0;
-    
-    stepsData.forEach(step => {
-        step.points.forEach(point => {
+        // Kumpulkan jawaban untuk step ini
+        stepData.points.forEach(point => {
             point.questions.forEach(question => {
-                totalQuestions++;
-                if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
-                    answeredQuestions++;
+                if (answersMap[question.id] !== undefined) {
+                    answersToSave[question.id] = answersMap[question.id];
                 }
             });
         });
-    });
-    
-    if (answeredQuestions === 0) {
-        showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
-        return;
+
+        if (Object.keys(answersToSave).length === 0) {
+            showAlert('info', 'Info', 'Belum ada jawaban yang diisi pada step ini.');
+            return;
+        }
+
+        // Simpan ke localStorage sebagai backup
+        localStorage.setItem(`kpi_answers_${currentEmployeeId}_${currentPeriodId}_step${currentStep}`,
+            JSON.stringify(answersToSave));
+
+        showAlert('success', 'Berhasil', 'Progress step ini telah disimpan sementara.');
     }
-    
-    if (answeredQuestions < totalQuestions) {
-        showConfirm(
-            'Konfirmasi', 
-            `Anda telah mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan. Yakin ingin menyimpan?`,
-            'Ya, Simpan',
-            'Lanjutkan Mengisi'
-        ).then(result => {
-            if (result.isConfirmed) {
-                submitAnswers();
-            }
+
+    function finishWizard() {
+        // Validasi apakah semua pertanyaan sudah dijawab
+        let totalQuestions = 0;
+        let answeredQuestions = 0;
+
+        stepsData.forEach(step => {
+            step.points.forEach(point => {
+                point.questions.forEach(question => {
+                    totalQuestions++;
+                    if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
+                        answeredQuestions++;
+                    }
+                });
+            });
         });
-    } else {
-        submitAnswers();
+
+        if (answeredQuestions === 0) {
+            showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
+            return;
+        }
+
+        if (answeredQuestions < totalQuestions) {
+            showConfirm(
+                'Konfirmasi',
+                `Anda telah mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan. Yakin ingin menyimpan?`,
+                'Ya, Simpan',
+                'Lanjutkan Mengisi'
+            ).then(result => {
+                if (result.isConfirmed) {
+                    submitAnswers();
+                }
+            });
+        } else {
+            submitAnswers();
+        }
     }
-}
 
     function submitAnswers() {
-    const submitData = {
-        employee_id: currentEmployeeId,
-        period_id: currentPeriodId,
-        answers: answersMap,
-        submitted_at: new Date().toISOString()
-    };
-    
-    console.log('Submitting answers:', submitData);
-    
-    // Show loading
-    Swal.fire({
-        title: 'Menyimpan Jawaban...',
-        text: 'Harap tunggu sebentar',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    fetch('/api/kpis/submit-answers', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify(submitData)
-    })
-    .then(async response => {
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(result.message || 'Terjadi kesalahan');
-        }
-        
-        return result;
-    })
-    .then(result => {
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: 'Jawaban KPI berhasil disimpan',
-            confirmButtonColor: '#3085d6',
-        }).then(() => {
-            // Tutup modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalWizard'));
-            modal.hide();
-            
-            // Refresh status karyawan
-            checkEmployeeKPIStatus(currentEmployeeId);
-            
-            // Refresh tabel
-            $(tableSelector).DataTable().ajax.reload(null, false);
+        // 1. Kumpulkan semua jawaban dari answersMap dan kelompokkan
+        // Kita perlu tahu ID Aspek (kpiId) untuk setiap pertanyaan, diambil dari stepsData.
+
+        const aspekMap = {}; // Key: kpiId, Value: Array of { id: questionId, jawaban: score }
+
+        stepsData.forEach(step => {
+            const kpiId = step.kpiId;
+            if (!kpiId) return; // Lewati jika tidak ada ID KPI/Aspek
+
+            // Inisialisasi array jawaban untuk aspek ini
+            aspekMap[kpiId] = [];
+
+            step.points.forEach(point => {
+                point.questions.forEach(question => {
+                    // Prioritas ambil dari answersMap (jawaban baru), fallback ke question.answer (jawaban lama/default)
+                    const answerScore = answersMap[question.id] !== undefined ? answersMap[question.id] : question.answer;
+
+                    // Hanya kirim pertanyaan yang sudah dijawab (skor 1-4)
+                    if (answerScore !== undefined && answerScore !== null && answerScore >= 1 && answerScore <= 4) {
+                        aspekMap[kpiId].push({
+                            // Mapping: question.id -> id (ID KpiQuestion)
+                            id: question.id,
+                            // Mapping: answerScore -> jawaban (Nilai 1-4)
+                            jawaban: answerScore
+                        });
+                    }
+                });
+            });
         });
-    })
-    .catch(error => {
-        console.error('Error submitting answers:', error);
+
+        // 2. Format menjadi array 'hasil'
+        const formattedHasil = [];
+        for (const kpiId in aspekMap) {
+            // Hanya masukkan aspek yang memiliki minimal satu jawaban yang diisi
+            if (aspekMap[kpiId].length > 0) {
+                formattedHasil.push({
+                    // Mapping: kpiId (key) -> id_aspek
+                    id_aspek: parseInt(kpiId),
+                    // Mapping: array jawaban per aspek -> jawaban
+                    jawaban: aspekMap[kpiId]
+                });
+            }
+        }
+
+        // 3. Buat Payload Akhir dengan nama field yang benar
+        const finalPayload = {
+            // Mapping: currentEmployeeId -> id_karyawan
+            id_karyawan: currentEmployeeId,
+            // Mapping: currentPeriodId -> periode_id
+            periode_id: currentPeriodId,
+            // Mapping: formattedHasil -> hasil
+            hasil: formattedHasil
+        };
+
+        console.log('Submitting finalPayload:', finalPayload);
+
+        // Show loading
         Swal.fire({
-            icon: 'error',
-            title: 'Gagal!',
-            text: error.message || 'Gagal menyimpan jawaban',
-            confirmButtonColor: '#3085d6',
+            title: 'Menyimpan Jawaban...',
+            text: 'Harap tunggu sebentar',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
         });
-    });
-}
+
+        // KIRIM finalPayload (Payload yang sudah di-mapping)
+        fetch('/api/kpis/submit-answers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // Pastikan Anda menggunakan X-CSRF-TOKEN
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(finalPayload) // Menggunakan finalPayload yang benar
+            })
+            .then(async response => {
+                const result = await response.json();
+
+                if (!response.ok) {
+                    // Log detail error dari backend jika ada
+                    console.error("Backend validation/error response:", result);
+
+                    // Ambil pesan error dari backend
+                    let errorMessage = result.message || 'Terjadi kesalahan';
+                    if (result.errors) {
+                        // Coba tampilkan error validasi yang lebih spesifik jika ada
+                        errorMessage += ": " + Object.values(result.errors).flat().join(', ');
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                return result;
+            })
+            .then(result => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Jawaban KPI berhasil disimpan',
+                    confirmButtonColor: '#3085d6',
+                }).then(() => {
+                    // Tutup modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalWizard'));
+                    modal.hide();
+
+                    // Refresh status karyawan
+                    checkEmployeeKPIStatus(currentEmployeeId);
+
+                    // Refresh tabel
+                    $(tableSelector).DataTable().ajax.reload(null, false);
+                });
+            })
+            .catch(error => {
+                console.error('Error submitting answers:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: error.message || 'Gagal menyimpan jawaban',
+                    confirmButtonColor: '#3085d6',
+                });
+            });
+    }
 
     function resetWizard() {
         currentStep = 1;
@@ -1160,12 +1227,12 @@ function calculateTotalScore(kpiData) {
     }
 
     function showDetailHasil() {
-    if (!window.kpiResultData) {
-        showAlert('warning', 'Peringatan', 'Data hasil tidak tersedia!');
-        return;
-    }
+        if (!window.kpiResultData) {
+            showAlert('warning', 'Peringatan', 'Data hasil tidak tersedia!');
+            return;
+        }
 
-    let html = `
+        let html = `
         <div class="text-center mb-4">
             <h4>Detail Hasil KPI</h4>
             <p class="text-muted">Periode: ${currentPeriodData?.nama || '-'}</p>
@@ -1176,10 +1243,10 @@ function calculateTotalScore(kpiData) {
         </div>
     `;
 
-    window.kpiResultData.forEach((aspek, index) => {
-        const aspekScore = calculateAspekScore(aspek);
-        
-        html += `
+        window.kpiResultData.forEach((aspek, index) => {
+            const aspekScore = calculateAspekScore(aspek);
+
+            html += `
             <div class="card mb-3">
                 <div class="card-header bg-light">
                     <h6 class="mb-0">${aspek.aspek || aspek.nama || 'Aspek ' + (index + 1)}</h6>
@@ -1188,24 +1255,24 @@ function calculateTotalScore(kpiData) {
                 <div class="card-body">
         `;
 
-        if (aspek.points && aspek.points.length > 0) {
-            aspek.points.forEach((point, pointIndex) => {
-                let pointScore = 0;
-                let answeredQuestions = 0;
-                
-                if (point.questions && point.questions.length > 0) {
-                    point.questions.forEach(question => {
-                        if (question.answer !== null && question.answer !== undefined) {
-                            pointScore += parseFloat(question.answer) || 0;
-                            answeredQuestions++;
-                        }
-                    });
-                    
-                    const avgPointScore = answeredQuestions > 0 ? pointScore / answeredQuestions : 0;
-                    const pointBobot = parseFloat(point.bobot) || 0;
-                    const pointContribution = (avgPointScore * 2.5) * (pointBobot / 100);
-                    
-                    html += `
+            if (aspek.points && aspek.points.length > 0) {
+                aspek.points.forEach((point, pointIndex) => {
+                    let pointScore = 0;
+                    let answeredQuestions = 0;
+
+                    if (point.questions && point.questions.length > 0) {
+                        point.questions.forEach(question => {
+                            if (question.answer !== null && question.answer !== undefined) {
+                                pointScore += parseFloat(question.answer) || 0;
+                                answeredQuestions++;
+                            }
+                        });
+
+                        const avgPointScore = answeredQuestions > 0 ? pointScore / answeredQuestions : 0;
+                        const pointBobot = parseFloat(point.bobot) || 0;
+                        const pointContribution = (avgPointScore * 2.5) * (pointBobot / 100);
+
+                        html += `
                         <div class="mb-3 p-3 border rounded">
                             <h6>${point.nama || 'Sub-Aspek ' + (pointIndex + 1)}</h6>
                             <div class="row">
@@ -1223,18 +1290,18 @@ function calculateTotalScore(kpiData) {
                                 <strong>Detail Jawaban:</strong>
                                 <div class="mt-2">
                     `;
-                    
-                    point.questions.forEach((question, qIndex) => {
-                        const answer = question.answer !== null && question.answer !== undefined ? 
-                            parseFloat(question.answer) : null;
-                        const answerLabels = {
-                            1: 'Sangat Tidak Baik',
-                            2: 'Tidak Baik',
-                            3: 'Baik', 
-                            4: 'Sangat Baik'
-                        };
-                        
-                        html += `
+
+                        point.questions.forEach((question, qIndex) => {
+                            const answer = question.answer !== null && question.answer !== undefined ?
+                                parseFloat(question.answer) : null;
+                            const answerLabels = {
+                                1: 'Sangat Tidak Baik',
+                                2: 'Tidak Baik',
+                                3: 'Baik',
+                                4: 'Sangat Baik'
+                            };
+
+                            html += `
                             <div class="d-flex justify-content-between align-items-center p-2 border-bottom">
                                 <small>${qIndex + 1}. ${question.pertanyaan || question.text}</small>
                                 <span class="badge ${answer ? 'bg-primary' : 'bg-secondary'}">
@@ -1242,23 +1309,23 @@ function calculateTotalScore(kpiData) {
                                 </span>
                             </div>
                         `;
-                    });
-                    
-                    html += `</div></div></div>`;
-                }
-            });
-        } else {
-            html += `<p class="text-muted">Tidak ada sub-aspek</p>`;
-        }
-        
-        html += `</div></div>`;
-    });
+                        });
 
-    detailHasilContent.innerHTML = html;
-    
-    const modal = new bootstrap.Modal(document.getElementById('modalHasilDetail'));
-    modal.show();
-}
+                        html += `</div></div></div>`;
+                    }
+                });
+            } else {
+                html += `<p class="text-muted">Tidak ada sub-aspek</p>`;
+            }
+
+            html += `</div></div>`;
+        });
+
+        detailHasilContent.innerHTML = html;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalHasilDetail'));
+        modal.show();
+    }
 
     // Tambahkan event listener untuk tombol saveStep
     document.getElementById('saveStep').addEventListener('click', saveStepProgress);

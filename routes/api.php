@@ -77,11 +77,16 @@ Route::prefix('kpis')->group(function () {
 
   // KPI Scoring & Evaluation
   // Route::post('/score', [KpiController::class, 'storeEmployeeScore']);
+  Route::get('/all-employee-scores', [KpiController::class, 'getAllEmployeeKpis']);
   Route::post('/submit-answers', [KpiController::class, 'storeEmployeeScore']);
   Route::get('/attendance-summary/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceSummary']);
   Route::post('/calculate/{employeeId}/{periodeId}', [KpiController::class, 'calculateFinalScore']);
   Route::get('/scores/{employeeId}/{periodeId}', [KpiController::class, 'getScoreByAspekUtama']);
   Route::get('/employee/{employeeId}/period/{periodId}', [KpiController::class, 'getEmployeeKpiForPeriod']);
+  Route::get('/employee/{employeeId}/period/{periodId}/status', [KpiController::class, 'getEmployeeKpiStatus']);
+  // KPI Detail Routes
+  Route::get('/employee/{employeeId}/detail', [KpiController::class, 'getEmployeeKpiDetail']);
+  Route::get('/employee/{employeeId}/detail/{periodId}', [KpiController::class, 'getEmployeeKpiDetail']);
 
   // KPI CRUD Operations
   Route::put('/{id}', [KpiController::class, 'updateKpi']);
@@ -95,7 +100,9 @@ Route::prefix('kpis')->group(function () {
 
   // ✅ PERBAIKAN: Route publishing yang benar
   Route::get('/available-periods-publishing', [KpiController::class, 'getAvailablePeriodsForPublishing']);
-  Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']);
+  Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']); 
+
+Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceCalculationData']);
 });
 
 // ==================== PERIOD ROUTES ====================

@@ -14,37 +14,40 @@ use Carbon\Carbon;
 
 class PeriodController extends Controller
 {
-    // GET /api/periods - List semua periode
-    public function index(Request $request)
-    {
-        $query = Period::withCount(['attendances', 'kpis', 'kpiEvaluations']);
+public function index(Request $request)
+{
+    $query = Period::withCount(['attendances', 'kpis', 'kpiEvaluations']);
 
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by tanggal
-        if ($request->has('start_date')) {
-            $query->where('tanggal_mulai', '>=', $request->start_date);
-        }
-
-        if ($request->has('end_date')) {
-            $query->where('tanggal_selesai', '<=', $request->end_date);
-        }
-
-        // Filter by attendance uploaded
-        if ($request->has('attendance_uploaded')) {
-            $query->where('attendance_uploaded', $request->attendance_uploaded);
-        }
-
-        $periods = $query->orderBy('tanggal_mulai', 'desc')->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $periods
-        ], 200);
+    // Filter by status
+    if ($request->has('status')) {
+        $query->where('status', $request->status);
     }
+
+    // ✅ FILTER BARU: Hanya periode dengan KPI published
+    if ($request->has('kpi_published')) {
+        $query->where('kpi_published', $request->boolean('kpi_published'));
+    }
+
+    // Filter lainnya tetap...
+    if ($request->has('start_date')) {
+        $query->where('tanggal_mulai', '>=', $request->start_date);
+    }
+
+    if ($request->has('end_date')) {
+        $query->where('tanggal_selesai', '<=', $request->end_date);
+    }
+
+    if ($request->has('attendance_uploaded')) {
+        $query->where('attendance_uploaded', $request->attendance_uploaded);
+    }
+
+    $periods = $query->orderBy('tanggal_mulai', 'desc')->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $periods
+    ], 200);
+}
 
     // GET /api/periods/{id} - Detail periode lengkap
     public function show($id)

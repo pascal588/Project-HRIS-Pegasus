@@ -35,8 +35,11 @@ Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
     Route::get('/kpi-karyawan', function() {
         return view('hr.kpi-karyawan');
     })->name('hr.kpi-karyawan');
-    Route::get('/detail-kpi', function() {
-        return view('hr.detail-kpi');
+    // Route::get('/detail-kpi', function() {
+    //     return view('hr.detail-kpi');
+    // })->name('hr.detail-kpi');
+    Route::get('/kpi/detail/{employeeId}', function($employeeId) {
+    return view('hr.detail-kpi', ['employeeId' => $employeeId]);
     })->name('hr.detail-kpi');
     Route::get('/karyawan', function() {
         return view('hr.karyawan');

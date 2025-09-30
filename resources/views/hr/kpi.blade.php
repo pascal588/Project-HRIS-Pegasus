@@ -355,23 +355,46 @@
 
   function addAspect() {
     if (currentMode === "division" && !currentDivisionId) {
-      showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
-      return;
+        showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
+        return;
     }
 
+    // ⚠️ FIX: Cek apakah sudah ada aspek "Disiplin" di mode Global
+    if (currentMode === "global") {
+        const existingDisiplin = $("#topicContents .tab-pane").find('.aspect-name')
+            .filter((_, el) => el.value.toLowerCase().includes('disiplin'));
+        
+        if (existingDisiplin.length > 0) {
+            // Jika sudah ada Disiplin, buat aspek biasa
+            const aspect = {
+                uid: uid("aspect"),
+                id: null,
+                nama: "",
+                bobot: 0,
+                is_global: true,
+                points: [],
+            };
+            renderAspect(aspect, true);
+            setActiveTab(aspect.uid);
+            updateInfo();
+            return;
+        }
+    }
+
+    // Jika belum ada Disiplin di Global, buat Disiplin dengan sub-aspek absensi
     const aspect = {
-      uid: uid("aspect"),
-      id: null,
-      nama: "",
-      bobot: 0,
-      is_global: currentMode === "global",
-      points: [],
+        uid: uid("aspect"),
+        id: null,
+        nama: "Disiplin",
+        bobot: 30, // Default bobot untuk Disiplin
+        is_global: currentMode === "global",
+        points: [],
     };
 
     renderAspect(aspect, true);
     setActiveTab(aspect.uid);
     updateInfo();
-  }
+}
 
   function renderAspect(aspectObj, newlyCreated = false) {
     const aspectUid = aspectObj.uid;
@@ -400,6 +423,9 @@
     // KPI Global menjadi read-only ketika di mode Divisi
     const isReadOnly = currentMode === "division" && isGlobal;
 
+    // ✅ DETEKSI JIKA INI ASPEK DISIPLIN GLOBAL
+    const isDisiplinGlobal = isGlobal && aspectName.toLowerCase().includes('disiplin');
+
     const contentHtml = `
 <div class="tab-pane fade" id="tab-${aspectUid}" role="tabpanel">
   <input type="hidden" class="aspect-id" value="${aspectId}">
@@ -416,6 +442,54 @@
       ${isReadOnly ? 'readonly' : ''}>
   </div>
   ${isReadOnly ? '<div class="alert alert-info">KPI Global - Hanya dapat diubah di mode Global</div>' : ''}
+  
+  ${isDisiplinGlobal ? `
+<!-- ✅ KONFIGURASI ABSENSI DINAMIS -->
+<div class="card border-warning mb-3">
+    <div class="card-header bg-warning text-dark">
+        <i class="bi bi-gear-fill me-2"></i>
+        Konfigurasi Penilaian Absensi (Dinamis)
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label small">Hadir ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="hadir_multiplier" value="3">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Sakit ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="sakit_multiplier" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Izin ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="izin_multiplier" value="0">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Mangkir ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="mangkir_multiplier" value="-3">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Terlambat ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="terlambat_multiplier" value="-2">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Hari Kerja ×</label>
+                <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                       data-type="workday_multiplier" value="2" min="1">
+            </div>
+        </div>
+        <small class="text-muted mt-2 d-block">
+            <i class="bi bi-info-circle"></i> Konfigurasi ini menentukan rumus perhitungan nilai absensi otomatis
+        </small>
+    </div>
+</div>
+` : ''}
+
   <div class="subaspects-wrapper" id="subaspects-${aspectUid}">
     <h6>Subaspek</h6>
     ${subHtml}
@@ -432,10 +506,42 @@
 `;
     $("#topicContents").append(contentHtml);
 
-    if (points.length === 0 && !isReadOnly) addSubaspect(aspectUid);
+    // ✅ AUTO-CREATE SUB-ASPEK ABSENSI JIKA DISIPLIN GLOBAL BARU
+    if (isDisiplinGlobal && newlyCreated && points.length === 0) {
+        addAbsensiSubaspect(aspectUid);
+    }
+
+    if (points.length === 0 && !isReadOnly && !isDisiplinGlobal) addSubaspect(aspectUid);
     if (newlyCreated || $("#topicTabs .nav-link").length === 1) setActiveTab(aspectUid);
     updateInfo();
-  }
+}
+
+function addAbsensiSubaspect(aspectUid) {
+    const sub = {
+        uid: uid("sub"),
+        id: "",
+        nama: "Penilaian Absensi", // ✅ NAMA KHUSUS UNTUK ABSENSI
+        bobot: 10, // ✅ BOBOT DEFAULT 10%
+        questions: [], // ✅ ABSENSI TIDAK PERLU PERTANYAAN
+    };
+    
+    const html = subaspectTemplate(aspectUid, sub);
+    $(`#subaspects-${aspectUid}`).append(html);
+    
+    // ✅ TAMBAH INFO BAHWA INI SUB-ASPEK ABSENSI
+    const subCard = $(`#sub-${sub.uid}`);
+    subCard.addClass('border-warning');
+    subCard.find('.subaspect-name').attr('readonly', true).addClass('fw-bold text-warning');
+    subCard.find('.subaspect-weight').attr('readonly', true);
+    
+    // ✅ HAPUS TOMBOL HAPUS UNTUK ABSENSI
+    subCard.find('button[onclick*="confirmRemoveSubaspect"]').remove();
+    
+    // ✅ TAMBAH BADGE ABSENSI
+    subCard.find('.form-label').append('<span class="badge bg-warning ms-2">Auto-calculate</span>');
+    
+    updateInfo();
+}
 
   function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
     const suid = saObj.uid || uid("sub");
@@ -444,28 +550,50 @@
     const sweight = saObj.bobot || 0;
     const questions = saObj.questions || [];
 
+    // ✅ DETEKSI JIKA INI SUB-ASPEK ABSENSI
+    const isAbsensi = sname.toLowerCase().includes('absensi') || 
+                     sname.toLowerCase().includes('kehadiran') ||
+                     sname.toLowerCase().includes('penilaian absensi');
+    
     // Subaspek menjadi read-only jika termasuk dalam KPI Global di mode Divisi
     const isReadOnly = currentMode === "division" && isGlobalAspect;
 
     let qHtml = "";
-    questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
+    
+    // ✅ JIKA ABSENSI, TAMPILKAN INFORMASI KHUSUS
+    if (isAbsensi) {
+        qHtml = `
+        <div class="alert alert-info mt-2">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Sub-aspek Absensi</strong><br>
+            Nilai akan dihitung otomatis berdasarkan data kehadiran karyawan dengan konfigurasi multiplier yang ditentukan.
+        </div>
+        `;
+    } else {
+        // Tampilkan pertanyaan normal untuk sub-aspek lainnya
+        questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
+    }
 
     return `
-<div class="card mb-2 p-2 subaspect-card" id="sub-${suid}">
+<div class="card mb-2 p-2 subaspect-card ${isAbsensi ? 'border-warning' : ''}" id="sub-${suid}">
   <input type="hidden" class="subaspect-id" value="${sid}">
   <div class="d-flex justify-content-between align-items-center mb-2">
     <div style="flex:1">
-      <label class="form-label">Nama Subaspek</label>
-      <input type="text" class="form-control subaspect-name" value="${escapeAttr(sname)}"
-        oninput="updateInfo()" ${isReadOnly ? 'readonly' : ''}>
+      <label class="form-label">
+        Nama Subaspek 
+        ${isAbsensi ? '<span class="badge bg-warning ms-2">Auto-calculate</span>' : ''}
+      </label>
+      <input type="text" class="form-control subaspect-name ${isAbsensi ? 'fw-bold text-warning' : ''}" 
+             value="${escapeAttr(sname)}" oninput="updateInfo()" 
+             ${isReadOnly || isAbsensi ? 'readonly' : ''}>
     </div>
     <div style="width:140px; margin-left:10px">
       <label class="form-label">Bobot (%)</label>
       <input type="number" class="form-control subaspect-weight" value="${Number(sweight)}"
         min="0" max="100" oninput="updateSubaspectWeight('${suid}', this.value, '${aspectUid}')"
-        ${isReadOnly ? 'readonly' : ''}>
+        ${isReadOnly || isAbsensi ? 'readonly' : ''}>
     </div>
-    ${!isReadOnly ? `
+    ${!isReadOnly && !isAbsensi ? `
     <div style="margin-left:10px">
       <label class="form-label">&nbsp;</label>
       <button class="btn btn-sm btn-outline-danger d-block" type="button"
@@ -476,7 +604,7 @@
   <div class="questions-list" id="questions-${suid}">
     ${qHtml}
   </div>
-  ${!isReadOnly ? `
+  ${!isReadOnly && !isAbsensi ? `
   <div class="mt-2">
     <button class="btn btn-outline-secondary btn-sm" type="button"
       onclick="addQuestionToSub('${suid}')">+ Tambah Pertanyaan</button>
@@ -484,7 +612,7 @@
   ` : ''}
 </div>
 `;
-  }
+}
 
   function questionInputTemplate(suid, q = {}, isReadOnly = false) {
     const qid = q.id || "";

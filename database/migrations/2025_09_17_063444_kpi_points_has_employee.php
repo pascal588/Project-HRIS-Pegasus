@@ -17,6 +17,8 @@ return new class extends Migration
                 ->constrained('kpi_points', 'id_point')
                 ->cascadeOnDelete();
             $table->decimal('bobot', 8, 2)->nullable();
+            $table->decimal('nilai_akhir', 8, 2)->nullable();
+            $table->decimal('nilai_absensi', 5, 2)->default(0);
             $table->timestamps();
 
             // Constraints

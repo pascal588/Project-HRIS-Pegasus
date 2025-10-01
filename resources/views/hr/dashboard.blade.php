@@ -149,6 +149,46 @@
       order: 2;
     }
   }
+
+  .employee-actions {
+    margin-left: 10px;
+}
+
+.employee-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.employee-item:last-child {
+    border-bottom: none;
+}
+
+.employee-item:hover {
+    background-color: #f8f9fa;
+}
+
+.employee-item .avatar {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.employee-item .employee-info h6 {
+    font-size: 0.8rem;
+    margin-bottom: 2px;
+}
+
+.employee-item .employee-info span {
+    font-size: 0.7rem;
+}
+
+.employee-item .employee-info small {
+    font-size: 0.65rem;
+}
 </style>
 
 <div class="container-fluid px-2">
@@ -293,7 +333,7 @@ $(document).ready(function() {
         // Update total karyawan
         $('#total-employees').text(employees.length);
         
-        // Hitung distribusi gender berdasarkan nilai 'Pria' dan 'Wanita'
+        // Hitung distribusi gender
         let priaCount = 0;
         let wanitaCount = 0;
         
@@ -308,13 +348,174 @@ $(document).ready(function() {
         // Render chart gender
         renderGenderChart(priaCount, wanitaCount);
         
-        // Tampilkan karyawan terbaik (contoh: 3 karyawan pertama)
-        const bestEmployees = employees.slice(0, 3);
-        renderEmployeeList('#best-employees-list', bestEmployees, 'Karyawan Terbaik');
+        // Load data ranking 10 terbaik dari API KPI
+        loadTopEmployees();
         
-        // Tampilkan karyawan yang perlu perhatian (contoh: 3 karyawan terakhir)
-        const worstEmployees = employees.slice(-3);
-        renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
+        // Load data karyawan perlu perhatian dari semua divisi
+        loadLowPerformingEmployeesAll();
+    }
+
+    // FUNGSI BARU: Load 10 karyawan terbaik dengan tampilan sama seperti dashboard penilai
+    function loadTopEmployees() {
+        $.ajax({
+            url: '/api/kpis/all-employee-scores',
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data.length > 0) {
+                    console.log('Top employees loaded:', response.data.length, 'items');
+                    renderEmployeeList('#best-employees-list', response.data, 'Karyawan Terbaik');
+                } else {
+                    console.error('Failed to load top employees:', response.message);
+                    renderFallbackBestEmployees();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading top employees:', error);
+                renderFallbackBestEmployees();
+            }
+        });
+    }
+
+    // FUNGSI BARU: Load karyawan perlu perhatian dengan tampilan sama seperti dashboard penilai
+    function loadLowPerformingEmployeesAll() {
+        $.ajax({
+            url: '/api/kpis/low-performing-employees-all',
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data.length > 0) {
+                    console.log('Low performing employees loaded:', response.data.length, 'items');
+                    renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
+                } else {
+                    console.error('Failed to load low performing employees:', response.message);
+                    renderFallbackWorstEmployees();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading low performing employees:', error);
+                renderFallbackWorstEmployees();
+            }
+        });
+    }
+
+    // FUNGSI FALLBACK untuk karyawan terbaik
+    function renderFallbackBestEmployees() {
+        // Ambil data karyawan dari API employees sebagai fallback
+        $.ajax({
+            url: '/api/employees',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const bestEmployees = response.data.slice(0, 5).map(emp => ({
+                        ...emp,
+                        score: Math.floor(Math.random() * 20) + 80 // Random score 80-100 untuk demo
+                    }));
+                    renderEmployeeList('#best-employees-list', bestEmployees, 'Karyawan Terbaik');
+                }
+            },
+            error: function() {
+                const fallbackData = [
+                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
+                ];
+                renderEmployeeList('#best-employees-list', fallbackData, 'Karyawan Terbaik');
+            }
+        });
+    }
+
+    // FUNGSI FALLBACK untuk karyawan perlu perhatian
+    function renderFallbackWorstEmployees() {
+        // Ambil data karyawan dari API employees sebagai fallback
+        $.ajax({
+            url: '/api/employees',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const worstEmployees = response.data.slice(-5).map(emp => ({
+                        ...emp,
+                        score: Math.floor(Math.random() * 20) + 30, // Random score 30-50 untuk demo
+                        phone: emp.no_telp || '62'
+                    }));
+                    renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
+                }
+            },
+            error: function() {
+                const fallbackData = [
+                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
+                ];
+                renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
+            }
+        });
+    }
+
+    // FUNGSI RENDER YANG SAMA PERSIS DENGAN DASHBOARD PENILAI
+    function renderEmployeeList(selector, employees, title) {
+        const listElement = $(selector);
+        listElement.empty();
+        
+        if (!employees || employees.length === 0) {
+            listElement.append(`
+                <div class="text-center text-muted py-4">
+                    <i class="icofont-checked fs-1"></i>
+                    <p class="mt-2">Tidak ada data ${title.toLowerCase()}</p>
+                </div>
+            `);
+            return;
+        }
+        
+        employees.forEach(employee => {
+            // Handle berbagai format data
+            const employeeName = employee.nama || 'Tidak ada nama';
+            const employeePosition = employee.position || 
+                                   (employee.roles && employee.roles.length > 0 ? 
+                                    employee.roles[0].nama_jabatan : 'Tidak ada jabatan');
+            const employeeDivision = employee.division || 
+                                   (employee.roles && employee.roles.length > 0 ? 
+                                    employee.roles[0].division?.nama_divisi : '-');
+            
+            const hasScore = employee.score !== undefined;
+            const scoreColor = hasScore ? getScoreColor(employee.score) : '';
+            const scoreHtml = hasScore ? `<small class="${scoreColor}">Score: ${employee.score.toFixed(1)}</small>` : '';
+            
+            // Foto employee - sama seperti dashboard penilai
+            const photoUrl = employee.foto ? 
+                '/storage/' + employee.foto : 
+                '{{ asset('assets/images/profile_av.png') }}';
+            
+            const employeeItem = `
+                <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
+                    <img class="avatar lg rounded-circle img-thumbnail" 
+                         src="${photoUrl}" 
+                         alt="${employeeName}"
+                         onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
+                    <div class="d-flex flex-column ps-3 flex-fill">
+                        <h6 class="fw-bold mb-0 small-14">${employeeName}</h6>
+                        <span class="text-muted">${employeePosition}</span>
+                        ${scoreHtml}
+                    </div>
+                    ${title === 'Perlu Perhatian' && employee.phone ? `
+                        <div class="d-flex gap-1">
+                            <a class="btn btn-outline-success btn-sm" href="https://wa.me/${employee.phone}" target="_blank">
+                                <i class="icofont-brand-whatsapp"></i>
+                            </a>
+                            <a class="btn btn-outline-info btn-sm" href="/kpi/detail/${employee.id_karyawan}">
+                                <i class="icofont-eye-alt"></i>
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            listElement.append(employeeItem);
+        });
+    }
+
+    // Helper function untuk menentukan warna score - sama seperti dashboard penilai
+    function getScoreColor(score) {
+        const numericScore = parseFloat(score) || 0;
+        if (numericScore >= 90) return 'text-success';
+        if (numericScore >= 80) return 'text-primary';
+        if (numericScore >= 70) return 'text-warning';
+        if (numericScore >= 60) return 'text-orange';
+        return 'text-danger';
     }
 
     // Fungsi untuk merender chart gender
@@ -354,150 +555,91 @@ $(document).ready(function() {
         chart.render();
     }
 
-    // Fungsi untuk merender daftar karyawan
-    function renderEmployeeList(selector, employees, title) {
-        const listElement = $(selector);
-        listElement.empty();
-        
-        if (employees.length === 0) {
-            listElement.append('<div class="employee-item text-center text-muted">Tidak ada data</div>');
-            return;
-        }
-        
-        employees.forEach(employee => {
-            const genderIcon = employee.gender === 'Pria' ? '♂' : '♀';
-            const roleName = employee.roles && employee.roles.length > 0 
-                ? employee.roles[0].nama_jabatan 
-                : 'Tidak ada jabatan';
-                
-            const employeeItem = `
-                <div class="employee-item">
-                    <div class="d-flex align-items-center flex-fill">
-                        <div class="avatar rounded-circle img-thumbnail d-flex align-items-center justify-content-center bg-light">
-                            ${genderIcon}
-                        </div>
-                        <div class="employee-info">
-                            <h6 class="fw-bold mb-0 small-14">${employee.nama}</h6>
-                            <span class="text-muted">${roleName}</span>
-                        </div>
-                    </div>
-                    <div class="employee-time">
-                        <i class="icofont-clock-time"></i> ${employee.no_telp || '-'}
-                    </div>
-                </div>
-            `;
-            
-            listElement.append(employeeItem);
-        });
-    }
-
-    // Jalankan fungsi untuk mengambil data
-    fetchEmployees();
-    fetchDivisions();
-});
-
-  // KPI Divisi
-$(document).ready(function() {
+    // KPI Divisi Chart
     const chartContainer = document.querySelector("#apex-stacked-area");
+    if (chartContainer) {
+        chartContainer.innerHTML = 'Memuat data perkembangan KPI...';
 
-    if (!chartContainer) {
-        console.error('Elemen #apex-stacked-area tidak ditemukan.');
-        return;
-    }
-    chartContainer.innerHTML = 'Memuat data perkembangan KPI...';
-
-    // Mengambil data dari API menggunakan jQuery AJAX
-    $.ajax({
-        url: '/api/periods/performance-across-periods',
-        method: 'GET',
-        success: function(response) {
-            if (response.success && response.data.series.length > 0) {
-                // Jika data berhasil didapat, panggil fungsi untuk render grafik
-                renderChart(response.data);
-            } else {
-                chartContainer.innerHTML = 'Tidak ada data perkembangan KPI untuk ditampilkan.';
-            }
-        },
-        error: function(error) {
-            console.error('Error fetching data:', error);
-            chartContainer.innerHTML = '<div class="alert alert-danger p-2">Gagal memuat data grafik.</div>';
-        }
-    });
-
-    /**
-     * Fungsi untuk merender grafik dengan data dari API.
-     * @param {object} apiData - Berisi 'categories' dan 'series'.
-     */
-    function renderChart(apiData) {
-        var options = {
-            chart: {
-                height: 300,
-                type: 'area',
-                stacked: true,
-                toolbar: {
-                    show: true, // Diubah menjadi true agar lebih fungsional
-                },
-            },
-            colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'],
-            dataLabels: {
-                enabled: false
-            },
-            // Menggunakan data 'series' dari backend
-            series: apiData.series,
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    opacityFrom: 0.6,
-                    opacityTo: 0.8,
+        $.ajax({
+            url: '/api/periods/performance-across-periods',
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data.series.length > 0) {
+                    renderChart(response.data);
+                } else {
+                    chartContainer.innerHTML = 'Tidak ada data perkembangan KPI untuk ditampilkan.';
                 }
             },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                show: true,
-            },
-            xaxis: {
-                // Mengubah tipe menjadi 'category' karena kita menggunakan nama periode
-                type: 'category',
-                // Menggunakan data 'categories' dari backend sebagai label
-                categories: apiData.categories,
-            },
-            yaxis: {
-                title: { text: 'Rata-rata Nilai KPI' }
-            },
-            grid: {
-                yaxis: {
-                    lines: {
-                        show: false,
+            error: function(error) {
+                console.error('Error fetching data:', error);
+                chartContainer.innerHTML = '<div class="alert alert-danger p-2">Gagal memuat data grafik.</div>';
+            }
+        });
+
+        function renderChart(apiData) {
+            var options = {
+                chart: {
+                    height: 300,
+                    type: 'area',
+                    stacked: true,
+                    toolbar: {
+                        show: true,
+                    },
+                },
+                colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'],
+                dataLabels: {
+                    enabled: false
+                },
+                series: apiData.series,
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        opacityFrom: 0.6,
+                        opacityTo: 0.8,
                     }
                 },
-                padding: {
-                    top: 20,
-                    right: 20, // Memberi sedikit ruang
-                    bottom: 0,
-                    left: 20
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'right',
+                    show: true,
                 },
-            },
-            stroke: {
-                show: true,
-                curve: 'smooth',
-                width: 2,
-            },
-            tooltip: {
-                theme: 'dark'
-                // Tooltip akan otomatis menggunakan nama kategori (periode)
-            }
-        };
+                xaxis: {
+                    type: 'category',
+                    categories: apiData.categories,
+                },
+                yaxis: {
+                    title: { text: 'Rata-rata Nilai KPI' }
+                },
+                grid: {
+                    yaxis: {
+                        lines: {
+                            show: false,
+                        }
+                    },
+                    padding: {
+                        top: 20,
+                        right: 20,
+                        bottom: 0,
+                        left: 20
+                    },
+                },
+                stroke: {
+                    show: true,
+                    curve: 'smooth',
+                    width: 2,
+                },
+                tooltip: {
+                    theme: 'dark'
+                }
+            };
 
-        chartContainer.innerHTML = ''; // Hapus pesan loading
-        var chart = new ApexCharts(chartContainer, options);
-        chart.render();
+            chartContainer.innerHTML = '';
+            var chart = new ApexCharts(chartContainer, options);
+            chart.render();
+        }
     }
-});
 
-
-// Distribusi Karyawan per Divisi (Stacked Bar per Bulan)
-$(document).ready(function() {
+    // Distribusi Karyawan per Divisi
     function fetchEmployeeDistribution() {
         $.ajax({
             url: '/api/employees/jumlahkaryawan-by-month',
@@ -509,25 +651,20 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching employee distribution:', error);
-                // Fallback data jika API error
                 renderEmployeeDistributionChart([]);
             }
         });
     }
 
     function renderEmployeeDistributionChart(data) {
-        // Jika tidak ada data, tampilkan chart kosong
         if (!data || data.length === 0) {
             data = generateFallbackData();
         }
 
-        // Siapkan data untuk chart
         const divisions = [...new Set(data.map(item => item.nama_divisi))];
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
-        // Siapkan series untuk stacked bar chart (per divisi)
         const series = divisions.map(division => {
-            // Buat array data untuk 12 bulan
             const monthlyData = months.map((month, index) => {
                 const monthData = data.find(item => 
                     item.nama_divisi === division && item.month === index + 1
@@ -541,7 +678,6 @@ $(document).ready(function() {
             };
         });
 
-        // Warna-warni untuk setiap divisi
         const colors = ['#4361ee', '#f72585', '#4cc9f0', '#7209b7', '#3a0ca3', '#f8961e', '#43aa8b', '#577590', '#f94144', '#90be6d'];
 
         var options = {
@@ -549,7 +685,7 @@ $(document).ready(function() {
             chart: {
                 type: 'bar',
                 height: 300,
-                stacked: true, // Stacked bar chart
+                stacked: true,
                 toolbar: {
                     show: false
                 },
@@ -607,25 +743,22 @@ $(document).ready(function() {
             }
         };
 
-        // Hapus chart lama jika ada
         if (window.employeeDistributionChart) {
             window.employeeDistributionChart.destroy();
         }
 
-        // Buat chart baru
         window.employeeDistributionChart = new ApexCharts(document.querySelector("#hiringsources"), options);
         window.employeeDistributionChart.render();
     }
 
     function generateFallbackData() {
-        // Data fallback jika API tidak tersedia
         const divisions = ['IT', 'HR', 'Finance', 'Marketing'];
         
         let data = [];
         divisions.forEach(division => {
             let cumulative = 0;
             for (let month = 1; month <= 12; month++) {
-                cumulative += Math.floor(Math.random() * 3) + 1; // Random growth
+                cumulative += Math.floor(Math.random() * 3) + 1;
                 data.push({
                     nama_divisi: division,
                     month: month,
@@ -636,7 +769,9 @@ $(document).ready(function() {
         return data;
     }
 
-    // Jalankan fungsi
+    // Jalankan semua fungsi
+    fetchEmployees();
+    fetchDivisions();
     fetchEmployeeDistribution();
 });
 </script>

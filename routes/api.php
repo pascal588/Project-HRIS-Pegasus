@@ -66,10 +66,12 @@ Route::prefix('kpis')->group(function () {
   Route::get('/templates', [KpiController::class, 'getKpiTemplates']);
   Route::post('/copy-to-period/{periodId}', [KpiController::class, 'copyTemplatesToPeriod']);
   Route::get('/period/{periodId}', [KpiController::class, 'getKpisByPeriod']);
+  Route::get('/all-employee-scores', [KpiController::class, 'getAllEmployeeKpis']);
+Route::get('/low-performing-employees-all', [KpiController::class, 'getLowPerformingEmployeesAllDivisions']);
 
   // KPI by Division
   Route::get('/division/{divisionId}', [KpiController::class, 'listKpiByDivision']);
-  Route::get('/division/{divisionId}/{periodeId}', [KpiController::class, 'getDivisionKpi']);
+  Route::get('/division/{divisionId}/period/{periodeId}', [KpiController::class, 'getKpisByPeriod']);
   Route::get('/division/{divisionId}/total-weight', [KpiController::class, 'getTotalWeightByDivision']);
 
   // Global KPI
@@ -103,6 +105,12 @@ Route::prefix('kpis')->group(function () {
   Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']);
 
   Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceCalculationData']);
+
+  // Tambahkan di routes/api.php
+
+    Route::get('/division/{divisionId}/unrated-employees', [KpiController::class, 'getUnratedEmployees']);
+    Route::get('/division/{divisionId}/low-performing-employees', [KpiController::class, 'getLowPerformingEmployees']);
+    Route::get('/division/{divisionId}/stats', [KpiController::class, 'getDivisionKpiStats']);
 });
 
 // ==================== PERIOD ROUTES ====================

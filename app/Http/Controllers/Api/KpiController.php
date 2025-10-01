@@ -1469,30 +1469,37 @@ class KpiController extends Controller
             ]);
         }
 
-        // ⚠️ PERBAIKAN: Gunakan query langsung ke kpis_has_employees
+        // VERSI SEDERHANA: Hanya ambil dari kpis_has_employees dan employees
         $employeeScores = DB::table('kpis_has_employees')
             ->where('periode_id', $activePeriod->id_periode)
             ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-            ->leftJoin('employee_has_roles', 'employees.id_karyawan', '=', 'employee_has_roles.employee_id')
-            ->leftJoin('roles', 'employee_has_roles.role_id', '=', 'roles.id_role')
-            ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
             ->select(
                 'employees.id_karyawan',
                 'employees.nama',
                 'employees.status',
                 'employees.foto',
-                'divisions.nama_divisi as division',
-                DB::raw('GROUP_CONCAT(DISTINCT roles.nama_jabatan) as positions'),
                 DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
             )
             ->where('employees.status', 'Aktif')
-            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto', 'divisions.nama_divisi')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+            ->orderBy('total_score', 'desc')
+            ->limit(10)
             ->get();
 
         $formattedData = [];
 
         foreach ($employeeScores as $emp) {
             if ($emp->total_score > 0) {
+                // Untuk mendapatkan divisi dan jabatan, gunakan query terpisah
+                $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+                $division = '-';
+                $position = '-';
+                
+                if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                    $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                    $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+                }
+
                 $formattedData[] = [
                     'id_karyawan' => $emp->id_karyawan,
                     'nama' => $emp->nama,
@@ -1502,16 +1509,11 @@ class KpiController extends Controller
                     'period_month' => date('F', strtotime($activePeriod->tanggal_mulai)),
                     'period_year' => date('Y', strtotime($activePeriod->tanggal_mulai)),
                     'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                    'division' => $emp->division ?? '-',
-                    'position' => $emp->positions ?? '-'
+                    'division' => $division,
+                    'position' => $position
                 ];
             }
         }
-
-        // Urutkan berdasarkan score tertinggi
-        usort($formattedData, function($a, $b) {
-            return $b['score'] <=> $a['score'];
-        });
 
         return response()->json([
             'success' => true,
@@ -1711,4 +1713,356 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
         return 'Poor';
     }
     
+
+// Di KpiController.php - PERBAIKI method getUnratedEmployees
+public function getUnratedEmployees($divisionId)
+{
+    try {
+        \Log::info("getUnratedEmployees called", ['division_id' => $divisionId]);
+
+        $activePeriod = Period::where('status', 'active')
+            ->where('kpi_published', true)
+            ->first();
+
+        if (!$activePeriod) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Tidak ada periode aktif'
+            ]);
+        }
+
+        // Ambil semua karyawan di divisi yang aktif
+        $divisionEmployees = Employee::whereHas('roles', function($query) use ($divisionId) {
+            $query->where('division_id', $divisionId);
+        })
+        ->where('status', 'Aktif')
+        ->with(['roles.division'])
+        ->get();
+
+        \Log::info("Division employees found", ['count' => $divisionEmployees->count()]);
+
+        $unratedEmployees = [];
+
+        foreach ($divisionEmployees as $employee) {
+            // Cek apakah sudah ada penilaian KPI di periode aktif
+            $hasKpiScore = DB::table('kpis_has_employees')
+                ->where('employees_id_karyawan', $employee->id_karyawan)
+                ->where('periode_id', $activePeriod->id_periode)
+                ->exists();
+
+            if (!$hasKpiScore) {
+                $unratedEmployees[] = [
+                    'id_karyawan' => $employee->id_karyawan,
+                    'nama' => $employee->nama,
+                    'foto' => $employee->foto,
+                    'division' => $employee->roles->first()->division->nama_divisi ?? '-',
+                    'position' => $employee->roles->first()->nama_jabatan ?? '-'
+                ];
+            }
+        }
+
+        \Log::info("Unrated employees", ['count' => count($unratedEmployees)]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $unratedEmployees,
+            'period' => $activePeriod->nama,
+            'total_unrated' => count($unratedEmployees)
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error getting unrated employees: ' . $e->getMessage());
+        \Log::error('Error trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error getting unrated employees: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// Di KpiController.php - PERBAIKI getLowPerformingEmployees
+public function getLowPerformingEmployees($divisionId)
+{
+    try {
+        \Log::info("getLowPerformingEmployees called", ['division_id' => $divisionId]);
+
+        $activePeriod = Period::where('status', 'active')
+            ->where('kpi_published', true)
+            ->first();
+
+        if (!$activePeriod) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Tidak ada periode aktif'
+            ]);
+        }
+
+        // PERBAIKAN: Gunakan id_jabatan bukan id_role
+        $lowPerformers = DB::table('kpis_has_employees')
+            ->where('periode_id', $activePeriod->id_periode)
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->leftJoin('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+            ->leftJoin('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan') // ✅ DIPERBAIKI: id_jabatan
+            ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.foto',
+                'employees.no_telp as phone',
+                'roles.nama_jabatan as position',
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+            )
+            ->where('divisions.id_divisi', $divisionId)
+            ->where('employees.status', 'Aktif')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.foto', 'employees.no_telp', 'roles.nama_jabatan')
+            ->having('total_score', '<=', 50) // Nilai E
+            ->get();
+
+        \Log::info("Low performers found", ['count' => $lowPerformers->count()]);
+
+        $formattedData = [];
+
+        foreach ($lowPerformers as $emp) {
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'foto' => $emp->foto,
+                'phone' => $emp->phone,
+                'position' => $emp->position,
+                'score' => floatval($emp->total_score)
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedData,
+            'period' => $activePeriod->nama
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error getting low performing employees: ' . $e->getMessage());
+        \Log::error('Error trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error getting low performing employees: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// Di KpiController.php - PERBAIKI getDivisionKpiStats
+public function getDivisionKpiStats($divisionId)
+{
+    try {
+        \Log::info("getDivisionKpiStats called", ['division_id' => $divisionId]);
+
+        // Ambil semua periode yang sudah dipublish (12 bulan terakhir)
+        $periods = Period::where('kpi_published', true)
+            ->where('status', 'active')
+            ->orderBy('tanggal_mulai', 'desc')
+            ->limit(12)
+            ->get();
+
+        if ($periods->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'division_average' => 0,
+                    'total_employees' => 0,
+                    'monthly_averages' => [],
+                    'performance_distribution' => [
+                        'A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0
+                    ],
+                    'employee_scores' => []
+                ],
+                'message' => 'Tidak ada data periode'
+            ]);
+        }
+
+        $monthlyAverages = [];
+        $allEmployeeScores = [];
+
+        foreach ($periods as $period) {
+            // Hitung rata-rata KPI untuk divisi di periode ini
+            $periodStats = DB::table('kpis_has_employees')
+                ->where('periode_id', $period->id_periode)
+                ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+                ->leftJoin('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+                ->leftJoin('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
+                ->select(
+                    'employees.id_karyawan',
+                    'employees.nama',
+                    'roles.nama_jabatan as position',
+                    DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+                )
+                ->where('divisions.id_divisi', $divisionId)
+                ->where('employees.status', 'Aktif')
+                ->groupBy('employees.id_karyawan', 'employees.nama', 'roles.nama_jabatan')
+                ->get();
+
+            if ($periodStats->count() > 0) {
+                $averageScore = $periodStats->avg('total_score');
+                $monthName = \Carbon\Carbon::parse($period->tanggal_mulai)->format('M Y');
+                
+                $monthlyAverages[] = [
+                    'month' => $monthName,
+                    'average_score' => round($averageScore, 2),
+                    'total_employees' => $periodStats->count(),
+                    'period_name' => $period->nama
+                ];
+
+                // Simpan data karyawan untuk statistik saat ini
+                if ($period->status === 'active') {
+                    foreach ($periodStats as $stat) {
+                        $allEmployeeScores[] = [
+                            'nama' => $stat->nama,
+                            'position' => $stat->position,
+                            'average_score' => round($stat->total_score, 2),
+                            'total_score' => round($stat->total_score, 2)
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Hitung statistik untuk periode aktif saat ini
+        $currentPeriod = $periods->firstWhere('status', 'active');
+        $currentStats = [];
+        
+        if ($currentPeriod) {
+            $currentStats = DB::table('kpis_has_employees')
+                ->where('periode_id', $currentPeriod->id_periode)
+                ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+                ->leftJoin('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+                ->leftJoin('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
+                ->select(
+                    'employees.id_karyawan',
+                    DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+                )
+                ->where('divisions.id_divisi', $divisionId)
+                ->where('employees.status', 'Aktif')
+                ->groupBy('employees.id_karyawan')
+                ->get();
+        }
+
+        // Hitung performance distribution untuk periode aktif
+        $performanceCounts = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
+        
+        foreach ($currentStats as $stat) {
+            $score = $stat->total_score;
+            if ($score >= 90) $performanceCounts['A']++;
+            elseif ($score >= 80) $performanceCounts['B']++;
+            elseif ($score >= 70) $performanceCounts['C']++;
+            elseif ($score >= 60) $performanceCounts['D']++;
+            else $performanceCounts['E']++;
+        }
+
+        $totalEmployees = count($currentStats);
+        $divisionAverage = $totalEmployees > 0 ? $currentStats->avg('total_score') : 0;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'division_average' => round($divisionAverage, 2),
+                'total_employees' => $totalEmployees,
+                'monthly_averages' => array_reverse($monthlyAverages), // Urut dari terlama ke terbaru
+                'performance_distribution' => $performanceCounts,
+                'employee_scores' => $allEmployeeScores
+            ],
+            'current_period' => $currentPeriod ? $currentPeriod->nama : 'Tidak ada periode aktif'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error getting division KPI stats: ' . $e->getMessage());
+        \Log::error('Error trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error getting division stats: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getLowPerformingEmployeesAllDivisions()
+{
+    try {
+        \Log::info("getLowPerformingEmployeesAllDivisions called");
+
+        $activePeriod = Period::where('status', 'active')
+            ->where('kpi_published', true)
+            ->first();
+
+        if (!$activePeriod) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Tidak ada periode aktif'
+            ]);
+        }
+
+        // VERSI SEDERHANA: Hanya ambil dari kpis_has_employees dan employees
+        $lowPerformers = DB::table('kpis_has_employees')
+            ->where('periode_id', $activePeriod->id_periode)
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.foto',
+                'employees.no_telp as phone',
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+            )
+            ->where('employees.status', 'Aktif')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.foto', 'employees.no_telp')
+            ->having('total_score', '<=', 50)
+            ->orderBy('total_score', 'asc')
+            ->limit(10)
+            ->get();
+
+        \Log::info("Low performers from all divisions found", ['count' => $lowPerformers->count()]);
+
+        $formattedData = [];
+
+        foreach ($lowPerformers as $emp) {
+            // Untuk mendapatkan divisi dan jabatan, gunakan query terpisah
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            $division = '-';
+            $position = '-';
+            
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+            }
+
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'foto' => $emp->foto,
+                'phone' => $emp->phone,
+                'division' => $division,
+                'position' => $position,
+                'score' => floatval($emp->total_score)
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedData,
+            'period' => $activePeriod->nama
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error getting low performing employees from all divisions: ' . $e->getMessage());
+        \Log::error('Error trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error getting low performing employees: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

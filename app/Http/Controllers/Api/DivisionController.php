@@ -232,19 +232,22 @@ public function updateHead(Request $request, $divisionId)
         ], 500);
     }
 }
-// GET jumlah karyawan by divisi
+// GET jumlah karyawan by divisi - VERSI DIPERBAIKI
 public function getEmployeeCount($divisionId)
 {
     try {
-        $employeeCount = Employee::join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+        // Gunakan cara yang sama dengan getGenderData() untuk konsistensi
+        $employeeCount = Employee::select(DB::raw('COUNT(DISTINCT employees.id_karyawan) as count'))
+            ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
             ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
             ->where('roles.division_id', $divisionId)
-            ->distinct('employees.id_karyawan')
-            ->count();
+            ->value('count');
 
         return response()->json([
             'success' => true,
-            'data' => $employeeCount
+            'data' => [
+                'total_employees' => $employeeCount
+            ]
         ]);
         
     } catch (\Exception $e) {
@@ -254,7 +257,6 @@ public function getEmployeeCount($divisionId)
         ], 500);
     }
 }
-
 // GET data gender karyawan by divisi
 public function getGenderData($divisionId)
 {

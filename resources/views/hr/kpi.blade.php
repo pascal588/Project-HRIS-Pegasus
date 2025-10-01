@@ -359,8 +359,9 @@
         return;
     }
 
-    // ⚠️ FIX: Cek apakah sudah ada aspek "Disiplin" di mode Global
+    // ⚠️ FIX: Hanya buat aspek "Disiplin" otomatis di mode Global
     if (currentMode === "global") {
+        // Cek apakah sudah ada aspek "Disiplin" di mode Global
         const existingDisiplin = $("#topicContents .tab-pane").find('.aspect-name')
             .filter((_, el) => el.value.toLowerCase().includes('disiplin'));
         
@@ -378,19 +379,49 @@
             setActiveTab(aspect.uid);
             updateInfo();
             return;
+        } else {
+            // Jika belum ada Disiplin di Global, buat Disiplin dengan sub-aspek absensi
+            const aspect = {
+                uid: uid("aspect"),
+                id: null,
+                nama: "Disiplin",
+                bobot: 30, // Default bobot untuk Disiplin
+                is_global: true,
+                points: [],
+            };
+
+            renderAspect(aspect, true);
+            setActiveTab(aspect.uid);
+            updateInfo();
+            return;
         }
     }
 
-    // Jika belum ada Disiplin di Global, buat Disiplin dengan sub-aspek absensi
+    // ⚠️ FIX: Untuk mode divisi, selalu buat aspek biasa (bukan Disiplin)
+    if (currentMode === "division") {
+        const aspect = {
+            uid: uid("aspect"),
+            id: null,
+            nama: "",
+            bobot: 0,
+            is_global: false,
+            points: [],
+        };
+        renderAspect(aspect, true);
+        setActiveTab(aspect.uid);
+        updateInfo();
+        return;
+    }
+
+    // Fallback untuk mode lainnya
     const aspect = {
         uid: uid("aspect"),
         id: null,
-        nama: "Disiplin",
-        bobot: 30, // Default bobot untuk Disiplin
+        nama: "",
+        bobot: 0,
         is_global: currentMode === "global",
         points: [],
     };
-
     renderAspect(aspect, true);
     setActiveTab(aspect.uid);
     updateInfo();
@@ -516,13 +547,13 @@
     updateInfo();
 }
 
-function addAbsensiSubaspect(aspectUid) {
+function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
     const sub = {
         uid: uid("sub"),
         id: "",
-        nama: "Penilaian Absensi", // ✅ NAMA KHUSUS UNTUK ABSENSI
-        bobot: 10, // ✅ BOBOT DEFAULT 10%
-        questions: [], // ✅ ABSENSI TIDAK PERLU PERTANYAAN
+        nama: "Penilaian Absensi",
+        bobot: defaultBobot,
+        questions: [],
     };
     
     const html = subaspectTemplate(aspectUid, sub);
@@ -532,7 +563,7 @@ function addAbsensiSubaspect(aspectUid) {
     const subCard = $(`#sub-${sub.uid}`);
     subCard.addClass('border-warning');
     subCard.find('.subaspect-name').attr('readonly', true).addClass('fw-bold text-warning');
-    subCard.find('.subaspect-weight').attr('readonly', true);
+    subCard.find('.subaspect-weight').removeAttr('readonly');
     
     // ✅ HAPUS TOMBOL HAPUS UNTUK ABSENSI
     subCard.find('button[onclick*="confirmRemoveSubaspect"]').remove();

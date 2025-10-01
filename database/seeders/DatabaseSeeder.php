@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             // KpiSeeder::class,
             // kpiPointSeeder::class,
             // DivisionHasKpiSeeder::class
+            KpiTemplateSeeder::class,
         ]);
     }
 }

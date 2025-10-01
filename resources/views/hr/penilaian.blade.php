@@ -652,6 +652,7 @@ function showHasilPenilaian(kpiData) {
 
     kpiData.forEach((aspek, index) => {
         const scoreAspek = calculateAspekScore(aspek);
+        const scoreAspekDisplay = scoreAspek * 10; // ⚠️ Konversi ke 0-100 untuk display
 
         // Hitung total bobot sub-aspek untuk validasi
         const totalBobotSubAspek = aspek.points ?
@@ -842,9 +843,11 @@ function calculateAspekScore(aspek) {
         console.log(`Aspek: ${aspek.nama}, Score: ${aspekScore}, Bobot: ${aspek.bobot}`);
     });
 
-    // ⚠️ PERBAIKAN: Total score sudah dalam skala 0-100
-    console.log(`Final Total Score: ${totalScore}`);
-    return totalScore;
+    // ⚠️ PERBAIKAN: Kalikan dengan 10 untuk konversi ke skala 0-100
+    const finalScore = totalScore * 10;
+    
+    console.log(`Final Total Score: ${totalScore} × 10 = ${finalScore}`);
+    return finalScore;
 }
     function handleNilaiClick() {
        if (!$(this).data('nama')) {
@@ -908,31 +911,49 @@ function calculateAspekScore(aspek) {
     stepsData = [];
     answersMap = {};
 
-    kpis.forEach((kpi, index) => {
-        console.log(`KPI ${index + 1}:`, kpi);
+    // ⚠️ PERBAIKAN KRITIS: Deduplikasi berdasarkan ID KPI + Nama
+    const uniqueKpis = [];
+    const seenKpiIds = new Set();
+
+    kpis.forEach((kpi) => {
+        const kpiId = kpi.id_kpi || kpi.id;
+        
+        // Skip jika KPI sudah diproses
+        if (seenKpiIds.has(kpiId)) {
+            console.log(`❌ SKIPPING DUPLICATE KPI: ${kpi.nama} (ID: ${kpiId})`);
+            return;
+        }
+        
+        seenKpiIds.add(kpiId);
+        uniqueKpis.push(kpi);
+    });
+
+    console.log('🔍 After deduplication:', {
+        original: kpis.length,
+        unique: uniqueKpis.length,
+        duplicates: kpis.length - uniqueKpis.length
+    });
+
+    // ⚠️ PERBAIKAN: Hanya proses KPI unik
+    uniqueKpis.forEach((kpi, index) => {
+        console.log(`📋 Processing KPI ${index + 1}: ${kpi.nama} (ID: ${kpi.id_kpi})`);
 
         const kpiId = kpi.id_kpi || kpi.id || null;
         const kpiName = kpi.nama || kpi.name || 'Aspek ' + (index + 1);
         const kpiBobot = kpi.bobot || 0;
         const points = kpi.points || [];
 
-        // ⚠️ PERBAIKAN: Filter points - TAMPILKAN SEMUA POINTS (baik ada questions maupun absensi)
+        // Filter points yang valid
         const filteredPoints = points.filter(point => {
             const questions = point.questions || [];
             const isAbsensi = point.nama?.toLowerCase().includes('absensi') || 
-                            point.nama?.toLowerCase().includes('kehadiran') ||
-                            point.nama?.toLowerCase().includes('penilaian absensi');
+                            point.nama?.toLowerCase().includes('kehadiran');
             
-            // ✅ PERBAIKAN: TAMPILKAN JIKA:
-            // 1. Punya questions ATAU 
-            // 2. Adalah absensi ATAU 
-            // 3. Ada nama (semua point valid)
-            return point.nama && (questions.length > 0 || isAbsensi || true); // ✅ TAMPILKAN SEMUA
+            return point.nama && (questions.length > 0 || isAbsensi);
         });
 
-        // Skip KPI yang tidak ada points valid
         if (filteredPoints.length === 0) {
-            console.log(`Skipping KPI ${kpiName} - no valid points`);
+            console.log(`⚠️ Skipping KPI ${kpiName} - no valid points`);
             return;
         }
 
@@ -946,11 +967,10 @@ function calculateAspekScore(aspek) {
 
         filteredPoints.forEach((point, pointIndex) => {
             const questions = point.questions || [];
-            console.log(`  Point ${pointIndex + 1}:`, point);
+            console.log(`   📌 Point ${pointIndex + 1}: ${point.nama}`);
 
             const isAbsensi = point.nama?.toLowerCase().includes('absensi') || 
-                            point.nama?.toLowerCase().includes('kehadiran') ||
-                            point.nama?.toLowerCase().includes('penilaian absensi');
+                            point.nama?.toLowerCase().includes('kehadiran');
 
             const pointData = {
                 pointId: point.id_point || point.id || null,
@@ -960,7 +980,6 @@ function calculateAspekScore(aspek) {
                 questions: []
             };
 
-            // ⚠️ PERBAIKAN: Untuk SEMUA point (baik absensi maupun non-absensi), proses questions
             questions.forEach((q, qIndex) => {
                 pointData.questions.push({
                     id: q.id_question || q.id || `temp_${index}_${pointIndex}_${qIndex}`,
@@ -973,46 +992,52 @@ function calculateAspekScore(aspek) {
         });
 
         stepsData.push(stepData);
+        console.log(`✅ Added KPI to steps: ${kpiName}`);
     });
 
-    console.log('Processed stepsData:', stepsData);
+    console.log('🎯 Final stepsData:', stepsData);
+    console.log('📊 Total steps:', stepsData.length);
+    
     renderWizardSteps(stepsData);
 }
 
     function renderWizardSteps(steps) {
-        totalSteps = steps.length;
-        currentStep = 1;
+    console.log('🔄 Rendering wizard steps:', steps.length);
+    
+    totalSteps = steps.length;
+    currentStep = 1;
 
-        // Render step indicator
-        let stepHtml = `
-        <div class="step-container">
-    `;
+    // Render step indicator
+    let stepHtml = `<div class="step-container">`;
 
-        for (let i = 1; i <= totalSteps; i++) {
-            stepHtml += `
-            <button class="step-btn ${i === 1 ? 'active' : ''}" data-step="${i}">
-                ${i}
-            </button>
+    for (let i = 1; i <= totalSteps; i++) {
+        console.log(`📝 Creating step ${i}: ${steps[i-1]?.kpiName}`);
+        stepHtml += `
+        <button class="step-btn ${i === 1 ? 'active' : ''}" data-step="${i}">
+            ${i}
+        </button>
         `;
-        }
-
-        stepHtml += `</div>`;
-
-        // Render current step content
-        stepHtml += renderStepContent(steps[0]);
-
-        wizardContent.innerHTML = stepHtml;
-
-        // Tambahkan event listener untuk step buttons
-        document.querySelectorAll('.step-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const stepNum = parseInt(this.getAttribute('data-step'));
-                goToStep(stepNum);
-            });
-        });
-
-        updateWizardButtons();
     }
+
+    stepHtml += `</div>`;
+
+    // Render current step content
+    stepHtml += renderStepContent(steps[0]);
+
+    wizardContent.innerHTML = stepHtml;
+
+    // Tambahkan event listener untuk step buttons
+    document.querySelectorAll('.step-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const stepNum = parseInt(this.getAttribute('data-step'));
+            goToStep(stepNum);
+        });
+    });
+
+    updateWizardButtons();
+    
+    console.log('✅ Wizard rendered with', totalSteps, 'steps');
+}
 
 function renderAbsenceCalculationStep(step, absencePoint) {
     const employeeId = currentEmployeeId;

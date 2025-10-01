@@ -54,7 +54,7 @@ class AttendanceApiController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls'
+            'files.*' => 'required|mimes:xlsx,xls' // Ubah ke files.* untuk multiple
         ]);
 
         try {

@@ -257,72 +257,69 @@ class KpiController extends Controller
         return response()->json(['success' => true, 'data' => ['period' => $period, 'kpis' => $kpis]]);
     }
     // checkpoint
-    // ================== KPI BY DIVISION / GLOBAL ==================
-    public function listKpiByDivision($divisionId, Request $request)
+   public function listKpiByDivision($divisionId, Request $request)
 {
     $periodeId = $request->get('periode_id');
 
-    // ⚠️ PERBAIKAN: Debug parameters
     Log::info("listKpiByDivision Debug:", [
         'division_id' => $divisionId,
         'periode_id' => $periodeId
     ]);
 
-    // Jika ada parameter periode_id, filter berdasarkan periode
     if ($periodeId) {
-        $kpis = Kpi::where('periode_id', $periodeId)
-            ->where(function ($query) use ($divisionId) {
-                $query->where('is_global', true)
-                    ->orWhereHas('divisions', function ($q) use ($divisionId) {
-                        $q->where('divisions.id_divisi', $divisionId);
-                    });
+        // ⚠️ PERBAIKAN KRITIS: Query yang lebih spesifik
+        $globalKpis = Kpi::where('periode_id', $periodeId)
+            ->where('is_global', true)
+            ->with('points.questions')
+            ->get();
+
+        $divisionKpis = Kpi::where('periode_id', $periodeId)
+            ->whereHas('divisions', function ($q) use ($divisionId) {
+                $q->where('divisions.id_divisi', $divisionId);
             })
             ->with('points.questions')
             ->get();
 
-        // ⚠️ PERBAIKAN: Debug query results
-        Log::info("KPI Query for Division with Period:", [
-            'division_id' => $divisionId,
-            'periode_id' => $periodeId,
-            'total_kpis_found' => $kpis->count(),
-            'kpi_details' => $kpis->map(function($kpi) {
-                return [
-                    'id' => $kpi->id_kpi,
-                    'nama' => $kpi->nama,
-                    'is_global' => $kpi->is_global
-                ];
-            })
+        // ⚠️ PERBAIKAN: Gabungkan dan hapus duplikasi berdasarkan ID KPI
+        $allKpis = $globalKpis->merge($divisionKpis);
+        
+        // Hapus duplikasi berdasarkan id_kpi
+        $uniqueKpis = $allKpis->unique('id_kpi')->values();
+
+        Log::info("KPI Deduplication Results:", [
+            'global_count' => $globalKpis->count(),
+            'division_count' => $divisionKpis->count(),
+            'before_dedup' => $allKpis->count(),
+            'after_dedup' => $uniqueKpis->count(),
+            'duplicates_removed' => $allKpis->count() - $uniqueKpis->count()
         ]);
+
+        $kpis = $uniqueKpis;
 
     } else {
-        // Default: template KPI (null periode_id)
-        $global = Kpi::where('is_global', true)
+        // Template KPI (tanpa periode)
+        $globalKpis = Kpi::where('is_global', true)
             ->whereNull('periode_id')
             ->with('points.questions')
             ->get();
 
-        $div = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
-            $q->where('divisions.id_divisi', $divisionId);
-        })
+        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+                $q->where('divisions.id_divisi', $divisionId);
+            })
             ->whereNull('periode_id')
             ->with('points.questions')
             ->get();
 
-        $kpis = $global->concat($div)->unique('id_kpi')->values();
-
-        // ⚠️ PERBAIKAN: Debug template results
-        Log::info("KPI Template for Division:", [
-            'division_id' => $divisionId,
-            'global_count' => $global->count(),
-            'division_specific_count' => $div->count(),
-            'total_kpis' => $kpis->count()
-        ]);
+        // Hapus duplikasi
+        $kpis = $globalKpis->merge($divisionKpis)
+            ->unique('id_kpi')
+            ->values();
     }
 
     return response()->json([
         'success' => true, 
         'data' => $kpis,
-        'debug' => [ // ⚠️ TAMBAH DEBUG INFO
+        'debug' => [
             'division_id' => $divisionId,
             'periode_id' => $periodeId,
             'total_kpis' => $kpis->count()
@@ -823,7 +820,7 @@ private function calculateAllFinalScores($employeeId, $periodeId)
                 Log::info("  📊 Point: {$point->nama} (Absensi: {$isAbsensi})");
 
                 if ($isAbsensi) {
-                    // Ambil dari nilai_absensi
+                    // Ambil dari nilai_absensi (skala 0-100)
                     $kpisHasEmployeeId = DB::table('kpis_has_employees')
                         ->where('kpis_id_kpi', $kpi->id_kpi)
                         ->where('employees_id_karyawan', $employeeId)
@@ -839,7 +836,7 @@ private function calculateAllFinalScores($employeeId, $periodeId)
                             ->first();
 
                         if ($pointRecord) {
-                            $pointScore = ($pointRecord->nilai_absensi ?? 0) / 10;
+                            $pointScore = ($pointRecord->nilai_absensi ?? 0) / 10; // Konversi ke 0-10
                             Log::info("  ✅ Absensi score from DB: {$pointRecord->nilai_absensi} → {$pointScore}/10");
                         } else {
                             Log::warning("  ❌ No absensi record found for point: {$point->id_point}");
@@ -867,7 +864,7 @@ private function calculateAllFinalScores($employeeId, $periodeId)
 
                     if ($answeredQuestions > 0) {
                         $avgQuestionScore = $pointTotal / $answeredQuestions;
-                        $pointScore = $avgQuestionScore * 2.5;
+                        $pointScore = $avgQuestionScore * 2.5; // Konversi ke 0-10
                         Log::info("  📈 Point score calculated: {$pointTotal}/{$answeredQuestions} = {$avgQuestionScore} → {$pointScore}/10");
                     } else {
                         Log::warning("  ❌ No questions answered for point: {$point->nama}");
@@ -882,10 +879,10 @@ private function calculateAllFinalScores($employeeId, $periodeId)
                 Log::info("  🧮 Point contribution: {$pointScore} × {$pointBobot}% = {$pointContribution}");
             }
 
-            // Update nilai akhir aspek
-            $finalAspekScore = $totalBobotPoint > 0 ? $totalAspekScore : 0;
+            // ⚠️ PERBAIKAN: Kalikan dengan 10 untuk konversi ke skala 0-100
+            $finalAspekScore = $totalBobotPoint > 0 ? ($totalAspekScore * 10) : 0;
 
-            Log::info("🎯 FINAL KPI SCORE for '{$kpi->nama}': {$finalAspekScore}");
+            Log::info("🎯 FINAL KPI SCORE for '{$kpi->nama}': {$totalAspekScore} × 10 = {$finalAspekScore}");
 
             // Update atau create record di kpis_has_employees
             $existingRecord = DB::table('kpis_has_employees')
@@ -900,7 +897,7 @@ private function calculateAllFinalScores($employeeId, $periodeId)
                     ->where('employees_id_karyawan', $employeeId)
                     ->where('periode_id', $periodeId)
                     ->update([
-                        'nilai_akhir' => $finalAspekScore,
+                        'nilai_akhir' => $finalAspekScore, // Sekarang dalam skala 0-100
                         'updated_at' => now()
                     ]);
                 Log::info("  ✅ Updated existing record");
@@ -911,7 +908,7 @@ private function calculateAllFinalScores($employeeId, $periodeId)
                     'periode_id' => $periodeId,
                     'tahun' => date('Y'),
                     'bulan' => date('m'),
-                    'nilai_akhir' => $finalAspekScore,
+                    'nilai_akhir' => $finalAspekScore, // Sekarang dalam skala 0-100
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -1210,17 +1207,19 @@ public function getEmployeeKpiForPeriod($employeeId, $periodId)
         'employee_roles' => $employee->roles->pluck('division_id')
     ]);
 
-    // ⚠️ PERBAIKAN TOTAL: Query KPI yang benar
+    // Di method getEmployeeKpiForPeriod - GANTI query menjadi:
     $kpis = Kpi::where('periode_id', $periodId)
         ->where(function($query) use ($divisionId) {
-            // KPI global
-            $query->where('is_global', true);
-            
-            // KPI divisi spesifik (jika karyawan punya divisi)
+            // Pertama coba ambil KPI divisi spesifik
             if ($divisionId) {
-                $query->orWhereHas('divisions', function($q) use ($divisionId) {
+                $query->whereHas('divisions', function($q) use ($divisionId) {
                     $q->where('divisions.id_divisi', $divisionId);
                 });
+            }
+            
+            // Jika tidak ada KPI divisi, ambil KPI global sebagai fallback
+            if (!$query->getQuery()->wheres) {
+                $query->orWhere('is_global', true);
             }
         })
         ->with(['points.questions'])
@@ -1463,12 +1462,9 @@ public function getEmployeeKpiForPeriod($employeeId, $periodId)
         ]);
     }
 
-// ================== GET ALL EMPLOYEE KPI SCORES ==================
 public function getAllEmployeeKpis(Request $request)
 {
     try {
-        Log::info('🔄 getAllEmployeeKpis method called');
-
         $activePeriod = Period::where('status', 'active')
             ->where('kpi_published', true)
             ->first();
@@ -1481,7 +1477,6 @@ public function getAllEmployeeKpis(Request $request)
             ]);
         }
 
-        // Ambil semua karyawan aktif
         $employees = Employee::with(['roles.division'])
             ->where('status', 'Aktif')
             ->get();
@@ -1489,19 +1484,12 @@ public function getAllEmployeeKpis(Request $request)
         $formattedData = [];
 
         foreach ($employees as $employee) {
-            // Tentukan divisi karyawan
             $divisionId = null;
             if ($employee->roles && count($employee->roles) > 0) {
                 $divisionId = $employee->roles[0]->division_id ?? null;
             }
 
-            Log::info("🔍 Processing employee: {$employee->nama}", [
-                'division_id' => $divisionId,
-                'employee_id' => $employee->id_karyawan
-            ]);
-
-            // ⚠️ PERBAIKAN CRITICAL: Gunakan query yang SAMA dengan getEmployeeKpiForPeriod
-            // Ambil semua KPI yang relevan untuk karyawan ini
+            // ⚠️ PERBAIKAN: Gunakan query dengan deduplikasi
             $kpis = Kpi::where('periode_id', $activePeriod->id_periode)
                 ->where(function($query) use ($divisionId) {
                     $query->where('is_global', true);
@@ -1512,16 +1500,12 @@ public function getAllEmployeeKpis(Request $request)
                         });
                     }
                 })
-                ->get();
-
-            Log::info("📊 KPI found for employee {$employee->nama}:", [
-                'total_kpis' => $kpis->count(),
-                'kpi_names' => $kpis->pluck('nama')
-            ]);
+                ->get()
+                ->unique('id_kpi') // ⚠️ DEDUPLIKASI
+                ->values();
 
             $totalScore = 0;
 
-            // Hitung total score dari SEMUA KPI
             foreach ($kpis as $kpi) {
                 $kpiScore = DB::table('kpis_has_employees')
                     ->where('kpis_id_kpi', $kpi->id_kpi)
@@ -1531,22 +1515,18 @@ public function getAllEmployeeKpis(Request $request)
 
                 $kpiScore = floatval($kpiScore) ?? 0;
                 $totalScore += $kpiScore;
-
-                Log::info("  ➕ KPI '{$kpi->nama}': {$kpiScore} (Total: {$totalScore})");
             }
 
-            // Ambil data roles untuk division dan position
             $roles = $employee->roles;
             $divisionName = $roles->first()->division->nama_divisi ?? '-';
             $positionNames = $roles->pluck('nama_jabatan')->unique()->implode(', ') ?: '-';
 
-            // Hanya tampilkan karyawan dengan score > 0
             if ($totalScore > 0) {
                 $formattedData[] = [
                     'id_karyawan' => $employee->id_karyawan,
                     'nama' => $employee->nama,
                     'status' => $employee->status,
-                    'score' => $totalScore, // ⚠️ INI TOTAL SEMUA KPI
+                    'score' => $totalScore,
                     'period' => $activePeriod->nama,
                     'period_month' => date('F', strtotime($activePeriod->tanggal_mulai)),
                     'period_year' => date('Y', strtotime($activePeriod->tanggal_mulai)),
@@ -1555,36 +1535,20 @@ public function getAllEmployeeKpis(Request $request)
                     'position' => $positionNames,
                     'kpi_details' => $this->getEmployeeKpiDetails($employee->id_karyawan, $activePeriod->id_periode)
                 ];
-
-                Log::info("✅ Employee {$employee->nama} - FINAL SCORE: {$totalScore}");
-            } else {
-                Log::info("❌ Employee {$employee->nama} - No KPI scores found");
             }
         }
 
-        // Urutkan berdasarkan score tertinggi
         usort($formattedData, function($a, $b) {
             return $b['score'] <=> $a['score'];
         });
 
-        Log::info('🎯 FINAL RESULTS:', [
-            'total_employees_with_scores' => count($formattedData),
-            'scores' => array_column($formattedData, 'score')
-        ]);
-
         return response()->json([
             'success' => true,
-            'data' => $formattedData,
-            'debug' => [
-                'total_employees' => count($formattedData),
-                'active_period' => $activePeriod->nama,
-                'period_id' => $activePeriod->id_periode
-            ]
+            'data' => $formattedData
         ]);
 
     } catch (\Exception $e) {
-        Log::error('❌ Failed to fetch KPI data: ' . $e->getMessage());
-        
+        Log::error('Failed to fetch KPI data: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch KPI data: ' . $e->getMessage()

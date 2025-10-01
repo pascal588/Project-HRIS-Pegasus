@@ -687,7 +687,7 @@ function updateKpiSummary(summary) {
     document.getElementById('rankingText').textContent = `(Dari ${summary.total_employees} Karyawan)`;
 }
 
-// ⚠️ PERBAIKAN: Di function updateKpiDetails()
+// ⚠️ OPSI 1: Kontribusi = Nilai (tanpa dikali bobot)
 function updateKpiDetails(details) {
     const tbody = document.getElementById('kpiDetailBody');
     const tfoot = document.getElementById('kpiDetailFooter');
@@ -699,12 +699,11 @@ function updateKpiDetails(details) {
     let totalNilaiTerbobot = 0;
 
     details.forEach(item => {
-        const score = parseFloat(item.score) || 0;        
-        const bobot = parseFloat(item.bobot) || 0;        
-        const contribution = parseFloat(item.contribution) || 0; 
+        const nilai = parseFloat(item.score) || 0;
+        const bobot = parseFloat(item.bobot) || 0;
         
-        // Nilai terbobot = score × (bobot/100)
-        const nilaiTerbobot = score * (bobot / 100);
+        // OPSI 1: Kontribusi = Nilai
+        const kontribusi = nilai;
         
         const statusClass = getStatusClass(item.status);
         
@@ -712,18 +711,18 @@ function updateKpiDetails(details) {
             <tr>
                 <td>${item.aspek_kpi}</td>
                 <td>${bobot.toFixed(1)}%</td>
-                <td>${score.toFixed(2)}</td>              
-                <td>${contribution.toFixed(2)}%</td>      
+                <td>${nilai.toFixed(2)}</td>              <!-- NILAI -->
+                <td>${kontribusi.toFixed(2)}%</td>        <!-- KONTRIBUSI = NILAI -->
                 <td><span class="kpi-badge ${statusClass}">${item.status}</span></td>
                 <td>
                     <div class="progress kpi-progress">
                         <div class="progress-bar bg-primary" role="progressbar" 
-                            style="width: ${score}%"       
-                            aria-valuenow="${score}" 
+                            style="width: ${nilai}%" 
+                            aria-valuenow="${nilai}" 
                             aria-valuemin="0" 
                             aria-valuemax="100"></div>
                     </div>
-                    <div class="progress-percentage">${score.toFixed(1)}%</div>
+                    <div class="progress-percentage">${nilai.toFixed(1)}%</div>
                 </td>
             </tr>
         `;
@@ -731,44 +730,38 @@ function updateKpiDetails(details) {
         tbody.innerHTML += row;
         
         totalBobot += bobot;
-        totalKontribusi += contribution;
-        totalNilaiTerbobot += nilaiTerbobot;
+        totalKontribusi += kontribusi;
+        totalNilaiTerbobot += (nilai * bobot);
     });
 
-    // ⚠️ PERBAIKAN CRITICAL: RUMUS YANG BENAR
-    // averageScore = totalKontribusi (karena sudah weighted)
-    const averageScore = totalKontribusi;
+    // Total Nilai = Rata-rata terbobot
+    const nilaiTotal = totalBobot > 0 ? (totalNilaiTerbobot / totalBobot) : 0;
     
-    const overallAchievement = totalKontribusi;
-    const overallStatus = getOverallStatus(overallAchievement);
+    // Total Kontribusi = Rata-rata sederhana
+    const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
+    
+    const overallStatus = getOverallStatus(nilaiTotal);
     const overallStatusClass = getStatusClass(overallStatus);
     
     tfoot.innerHTML = `
         <tr class="table-active">
             <th>Total</th>
             <th>${totalBobot.toFixed(1)}%</th>
-            <th>${averageScore.toFixed(2)}</th>          <!-- ⚠️ PAKAI totalKontribusi -->
-            <th>${totalKontribusi.toFixed(2)}%</th>       
+            <th>${nilaiTotal.toFixed(2)}</th>          <!-- NILAI TOTAL -->
+            <th>${kontribusiTotal.toFixed(2)}%</th>    <!-- KONTRIBUSI TOTAL -->
             <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
             <th>
                 <div class="progress kpi-progress">
                     <div class="progress-bar bg-primary" role="progressbar" 
-                         style="width: ${averageScore}%"   
-                         aria-valuenow="${averageScore}" 
+                         style="width: ${nilaiTotal}%" 
+                         aria-valuenow="${nilaiTotal}" 
                          aria-valuemin="0" 
                          aria-valuemax="100"></div>
                 </div>
-                <div class="progress-percentage">${averageScore.toFixed(1)}%</div>
+                <div class="progress-percentage">${nilaiTotal.toFixed(1)}%</div>
             </th>
         </tr>
     `;
-    
-    // ⚠️ DEBUG: Console log untuk cek perhitungan
-    console.log("DEBUG PERHITUNGAN:");
-    console.log("Total Bobot:", totalBobot);
-    console.log("Total Kontribusi:", totalKontribusi);
-    console.log("Total Nilai Terbobot:", totalNilaiTerbobot);
-    console.log("Average Score:", averageScore);
 }
 
 // ⚠️ PERBAIKAN: Threshold status

@@ -1477,70 +1477,61 @@ public function getAllEmployeeKpis(Request $request)
             ]);
         }
 
-        $employees = Employee::with(['roles.division'])
-            ->where('status', 'Aktif')
+        // ⚠️ PERBAIKAN: Gunakan query langsung ke kpis_has_employees dengan prefix tabel
+        $employeeScores = DB::table('kpis_has_employees')
+            ->where('kpis_has_employees.periode_id', $activePeriod->id_periode) // ⚠️ TAMBAH PREFIX
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->leftJoin('employee_has_roles', 'employees.id_karyawan', '=', 'employee_has_roles.employee_id')
+            ->leftJoin('roles', 'employee_has_roles.role_id', '=', 'roles.id_role')
+            ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.status',
+                'employees.foto',
+                'divisions.nama_divisi as division',
+                DB::raw('GROUP_CONCAT(DISTINCT roles.nama_jabatan) as positions'),
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+            )
+            ->where('employees.status', 'Aktif')
+            ->groupBy(
+                'employees.id_karyawan', 
+                'employees.nama', 
+                'employees.status', 
+                'employees.foto', 
+                'divisions.nama_divisi'
+            )
             ->get();
 
         $formattedData = [];
 
-        foreach ($employees as $employee) {
-            $divisionId = null;
-            if ($employee->roles && count($employee->roles) > 0) {
-                $divisionId = $employee->roles[0]->division_id ?? null;
-            }
-
-            // ⚠️ PERBAIKAN: Gunakan query dengan deduplikasi
-            $kpis = Kpi::where('periode_id', $activePeriod->id_periode)
-                ->where(function($query) use ($divisionId) {
-                    $query->where('is_global', true);
-                    
-                    if ($divisionId) {
-                        $query->orWhereHas('divisions', function($q) use ($divisionId) {
-                            $q->where('divisions.id_divisi', $divisionId);
-                        });
-                    }
-                })
-                ->get()
-                ->unique('id_kpi') // ⚠️ DEDUPLIKASI
-                ->values();
-
-            $totalScore = 0;
-
-            foreach ($kpis as $kpi) {
-                $kpiScore = DB::table('kpis_has_employees')
-                    ->where('kpis_id_kpi', $kpi->id_kpi)
-                    ->where('employees_id_karyawan', $employee->id_karyawan)
-                    ->where('periode_id', $activePeriod->id_periode)
-                    ->value('nilai_akhir');
-
-                $kpiScore = floatval($kpiScore) ?? 0;
-                $totalScore += $kpiScore;
-            }
-
-            $roles = $employee->roles;
-            $divisionName = $roles->first()->division->nama_divisi ?? '-';
-            $positionNames = $roles->pluck('nama_jabatan')->unique()->implode(', ') ?: '-';
-
-            if ($totalScore > 0) {
+        foreach ($employeeScores as $emp) {
+            if ($emp->total_score > 0) {
                 $formattedData[] = [
-                    'id_karyawan' => $employee->id_karyawan,
-                    'nama' => $employee->nama,
-                    'status' => $employee->status,
-                    'score' => $totalScore,
+                    'id_karyawan' => $emp->id_karyawan,
+                    'nama' => $emp->nama,
+                    'status' => $emp->status,
+                    'score' => floatval($emp->total_score),
                     'period' => $activePeriod->nama,
                     'period_month' => date('F', strtotime($activePeriod->tanggal_mulai)),
                     'period_year' => date('Y', strtotime($activePeriod->tanggal_mulai)),
-                    'photo' => $employee->foto ?? 'assets/images/profile_av.png',
-                    'division' => $divisionName,
-                    'position' => $positionNames,
-                    'kpi_details' => $this->getEmployeeKpiDetails($employee->id_karyawan, $activePeriod->id_periode)
+                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                    'division' => $emp->division ?? '-',
+                    'position' => $emp->positions ?? '-'
                 ];
             }
         }
 
+        // Urutkan berdasarkan score tertinggi
         usort($formattedData, function($a, $b) {
             return $b['score'] <=> $a['score'];
         });
+
+        Log::info("All Employee KPI Data:", [
+            'period' => $activePeriod->nama,
+            'total_employees' => count($formattedData),
+            'scores_sample' => array_slice($formattedData, 0, 3) // Sample 3 data pertama
+        ]);
 
         return response()->json([
             'success' => true,
@@ -1631,81 +1622,84 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
 
         $period = Period::findOrFail($periodId);
 
-        $kpiResponse = $this->getEmployeeKpiForPeriod($employeeId, $periodId);
-        $kpiData = json_decode($kpiResponse->getContent(), true);
+        // ⚠️ PERBAIKAN: Gunakan nilai_akhir dari kpis_has_employees untuk konsistensi
+        $kpiScores = DB::table('kpis_has_employees')
+            ->where('kpis_has_employees.employees_id_karyawan', $employeeId)
+            ->where('kpis_has_employees.periode_id', $periodId)
+            ->join('kpis', 'kpis_has_employees.kpis_id_kpi', '=', 'kpis.id_kpi')
+            ->select(
+                'kpis.id_kpi', 
+                'kpis.nama', 
+                'kpis.bobot', 
+                'kpis_has_employees.nilai_akhir'
+            )
+            ->get();
 
-        if (!$kpiData['success']) {
-            throw new \Exception($kpiData['message'] ?? 'Failed to get KPI data');
-        }
+        Log::info("KPI Scores from database:", [
+            'employee_id' => $employeeId,
+            'period_id' => $periodId,
+            'kpi_count' => $kpiScores->count(),
+            'kpi_scores' => $kpiScores->toArray()
+        ]);
 
         $totalScore = 0;
-        $totalBobot = 0;
         $kpiDetails = [];
 
-        foreach ($kpiData['data'] as $kpi) {
-            $kpiScore = 0;
-            $kpiBobot = floatval($kpi['bobot']);
-            
-            foreach ($kpi['points'] as $point) {
-                $pointBobot = floatval($point['bobot']);
-                
-                if ($point['is_absensi']) {
-                    $pointScore = $point['point_score']; // Nilai 0-100
-                } else {
-                    $pointTotal = 0;
-                    $answeredQuestions = 0;
-                    
-                    foreach ($point['questions'] as $question) {
-                        if ($question['answer'] !== null) {
-                            $questionScore = (($question['answer'] - 1) / 3) * 100;
-                            $pointTotal += $questionScore;
-                            $answeredQuestions++;
-                        }
-                    }
-                    
-                    if ($answeredQuestions > 0) {
-                        $pointScore = $pointTotal / $answeredQuestions;
-                    } else {
-                        $pointScore = 0;
-                    }
-                }
-                
-                // Kontribusi point = (Score Point × Bobot Point) / 100
-                $pointContribution = ($pointScore * $pointBobot) / 100;
-                $kpiScore += $pointContribution;
-            }
-            
-            $displayScore = $kpiScore;
+        foreach ($kpiScores as $kpi) {
+            $kpiScore = floatval($kpi->nilai_akhir) ?? 0;
+            $kpiBobot = floatval($kpi->bobot) ?? 0;
             
             // ⚠️ PERBAIKAN: Kontribusi = (Nilai ÷ Bobot) × 100%
-            $contribution = $kpiBobot > 0 ? ($displayScore / $kpiBobot) * 100 : 0;
+            $contribution = $kpiBobot > 0 ? ($kpiScore / $kpiBobot) * 100 : 0;
             
-            // ⚠️ PERBAIKAN: Status berdasarkan KONTRIBUSI
             $status = $this->getStatusByContribution($contribution);
             
             $kpiDetails[] = [
-                'aspek_kpi' => $kpi['nama'],
+                'aspek_kpi' => $kpi->nama,
                 'bobot' => $kpiBobot,
-                'score' => round($displayScore, 2), // Nilai (0-100)
-                'contribution' => round($contribution, 2), // Kontribusi = (Nilai ÷ Bobot) × 100%
-                'achievement_percentage' => round($contribution, 2), // Progress = Kontribusi (sama dengan kontribusi)
+                'score' => round($kpiScore, 2),
+                'contribution' => round($contribution, 2),
+                'achievement_percentage' => round($contribution, 2),
                 'status' => $status
             ];
             
-            $totalScore += $displayScore;
-            $totalBobot += $kpiBobot;
+            $totalScore += $kpiScore;
         }
 
-        // Average score = total nilai / jumlah aspek
+        // Hitung rata-rata
         $averageScore = count($kpiDetails) > 0 ? ($totalScore / count($kpiDetails)) : 0;
-        
-        // Rata-rata kontribusi
         $averageContribution = count($kpiDetails) > 0 ? 
             (array_sum(array_column($kpiDetails, 'contribution')) / count($kpiDetails)) : 0;
 
-        // Hitung ranking
+        // ⚠️ PERBAIKAN: Hitung ranking dengan query yang benar
+        $allEmployeeScores = DB::table('kpis_has_employees')
+            ->where('periode_id', $periodId)
+            ->select(
+                'employees_id_karyawan', 
+                DB::raw('SUM(nilai_akhir) as total_score')
+            )
+            ->groupBy('employees_id_karyawan')
+            ->orderBy('total_score', 'desc')
+            ->get();
+
         $ranking = 1;
-        $totalEmployees = Employee::where('status', 'Aktif')->count();
+        foreach ($allEmployeeScores as $empScore) {
+            if ($empScore->employees_id_karyawan == $employeeId) {
+                break;
+            }
+            $ranking++;
+        }
+
+        $totalEmployees = $allEmployeeScores->count();
+
+        Log::info("Final KPI Detail Calculation:", [
+            'employee_id' => $employeeId,
+            'total_score' => $totalScore,
+            'average_score' => $averageScore,
+            'ranking' => $ranking,
+            'total_employees' => $totalEmployees,
+            'kpi_details_count' => count($kpiDetails)
+        ]);
 
         return response()->json([
             'success' => true,

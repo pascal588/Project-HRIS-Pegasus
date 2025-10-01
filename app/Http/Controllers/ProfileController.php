@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse; // Tambahkan ini
 
 class ProfileController extends Controller
 {
@@ -22,31 +23,42 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function updatePhoto(Request $request): RedirectResponse
+    public function updatePhoto(Request $request): JsonResponse // Ubah return type
     {
         $request->validate([
-            'foto' => ['required', 'image', 'max:5120']
+            'foto' => ['required', 'image', 'max:5120'] // 5MB
         ]);
         
         $employee = $request->user()->employee;
         
-        // Hapus foto lama jika ada
-        if ($employee->foto) {
-            // Hapus file dari storage public tanpa menambahkan prefix 'public/'
-            if (Storage::disk('public')->exists($employee->foto)) {
-                Storage::disk('public')->delete($employee->foto);
+        try {
+            // Hapus foto lama jika ada
+            if ($employee->foto) {
+                if (Storage::disk('public')->exists($employee->foto)) {
+                    Storage::disk('public')->delete($employee->foto);
+                }
             }
-        }
-        
-        // Simpan foto baru
-        $path = $request->file('foto')->store('profile-photos', 'public');
-        
-        // Update database
-        $employee->update([
-            'foto' => $path
-        ]);
+            
+            // Simpan foto baru
+            $path = $request->file('foto')->store('profile-photos', 'public');
+            
+            // Update database
+            $employee->update([
+                'foto' => $path
+            ]);
 
-        return Redirect::route('profile.edit')->with('status', 'photo-updated');
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto berhasil diupdate',
+                'new_path' => $path
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(ProfileUpdateRequest $request): RedirectResponse
@@ -62,7 +74,6 @@ class ProfileController extends Controller
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
-
 
     public function destroy(Request $request): RedirectResponse
     {

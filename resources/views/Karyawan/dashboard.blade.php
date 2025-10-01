@@ -11,12 +11,12 @@
       <div class="col-12">
         <div class="card shadow-sm p-3 d-flex flex-row align-items-center">
           <img class="rounded-circle img-thumbnail me-3" 
-               src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.pngassets/images/xs/avatar2.jpg') }}" 
+               src="{{ Auth::user()->employee->foto ? asset('storage/' . Auth::user()->employee->foto) : asset('assets/images/profile_av.png') }}" 
               alt="profile" style="width: 60px; height: 60px;"
               onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
           <div>
             <h4 class="mb-1">Hai, {{ Auth::user()->Employee->nama }} 👋</h4>
-            <small class="text-muted">Score terbaru kamu: <span class="fw-bold text-primary">B+</span></small>
+            <small class="text-muted">Score terbaru kamu: <span class="fw-bold text-primary" id="currentGrade">-</span></small>
           </div>
         </div>
       </div>
@@ -30,9 +30,9 @@
               <span class="avatar lg bg-white text-primary rounded-circle d-flex align-items-center justify-content-center">
                 <i class="icofont-file-text fs-5"></i>
               </span>
-              <h2 class="fw-bold">70,9</h2>
+              <h2 class="fw-bold" id="currentScore">0</h2>
             </div>
-            <span class="d-block text-end small">Nilai Sebelumnya: 20.20</span>
+            <span class="d-block text-end small" id="previousScore">-</span>
           </div>
         </div>
       </div>
@@ -42,10 +42,10 @@
           <div class="card-body">
             <h6 class="fw-bold mb-3">Performa Anda</h6>
             <div class="d-flex justify-content-between align-items-center">
-              <h4><span class="avatar lg rounded-circle bg-primary text-white d-flex align-items-center justify-content-center">A+</span></h4>
-              <h3 class="fw-bold mb-0">Terbaik</h3>
+              <h4><span class="avatar lg rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" id="performanceGrade">-</span></h4>
+              <h3 class="fw-bold mb-0" id="performanceText">-</h3>
             </div>
-            <span class="d-block text-end small text-muted">Memuaskan</span>
+            <span class="d-block text-end small text-muted" id="performanceStatus">-</span>
           </div>
         </div>
       </div>
@@ -58,9 +58,9 @@
               <span class="avatar lg bg-white text-primary rounded-circle d-flex align-items-center justify-content-center">
                 <i class="icofont-chart-line fs-4"></i>
               </span>
-              <h2 class="fw-bold mb-0">5/20</h2>
+              <h2 class="fw-bold mb-0" id="rankingPosition">-</h2>
             </div>
-            <span class="d-block text-end small">Meningkat 20</span>
+            <span class="d-block text-end small" id="rankingText">-</span>
           </div>
         </div>
       </div>
@@ -123,7 +123,10 @@
           <!-- Grafik KPI -->
           <div class="col-12">
             <div class="card shadow-sm p-3">
-              <h6 class="mb-3">Grafik Tren KPI</h6>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Grafik Tren KPI</h6>
+                <small class="text-muted">Arahkan kursor untuk detail aspek</small>
+              </div>
               <div id="chartKpi" style="min-height:300px;"></div>
             </div>
           </div>
@@ -137,60 +140,16 @@
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h6 class="fw-bold mb-0">Top Karyawan</h6>
-            <span class="text-muted small">Agustus</span>
+            <span class="text-muted small" id="topEmployeePeriod">-</span>
           </div>
 
-          <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;">
-            
-            <div class="list-group-item d-flex align-items-center">
-              <img class="avatar rounded-circle me-3" 
-                  src="{{ asset('assets/images/lg/avatar9.jpg') }}" 
-                  alt="profile" width="40" height="40">
-              
-              <!-- Nama dibuat fleksibel -->
-              <div class="flex-fill" style="min-width: 0;">
-                <h6 class="mb-0 small-14 fw-bold text-truncate">
-                  Paul Rees Nughroho Sangat Panjang adjoijawoijwa oijwadoawjijdiwao wiadjiowajojwo
-                </h6>
+          <div class="list-group list-group-flush" style="max-height: 250px; overflow-y: auto;" id="topEmployeesList">
+            <div class="text-center py-3">
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
               </div>
-
-              <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
-                <span class="fw-bold text-primary">77%</span>
-              </div>
+              <p class="mt-2 small text-muted">Memuat data...</p>
             </div>
-
-            <div class="list-group-item d-flex align-items-center">
-              <img class="avatar rounded-circle me-3" 
-                  src="{{ asset('assets/images/lg/avatar9.jpg') }}" 
-                  alt="profile" width="40" height="40">
-              
-              <div class="flex-fill" style="min-width: 0;">
-                <h6 class="mb-0 small-14 fw-bold text-truncate">
-                  John Doe Nur Insani
-                </h6>
-              </div>
-
-              <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
-                <span class="fw-bold text-primary">75%</span>
-              </div>
-            </div>
-
-            <div class="list-group-item d-flex align-items-center">
-              <img class="avatar rounded-circle me-3" 
-                  src="{{ asset('assets/images/lg/avatar9.jpg') }}" 
-                  alt="profile" width="40" height="40">
-              
-              <div class="flex-fill" style="min-width: 0;">
-                <h6 class="mb-0 small-14 fw-bold text-truncate">
-                  John Doe Nur Insani
-                </h6>
-              </div>
-
-              <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
-                <span class="fw-bold text-primary">75%</span>
-              </div>
-            </div>
-
           </div>
         </div>
 
@@ -198,22 +157,30 @@
         <!-- Detail KPI -->
         <div class="card mb-3 mt-3">
           <div class="card-body">
-            <h6 class="mb-3">Detail KPI</h6>
-            <table class="table table-sm table-striped mb-0">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Aspek</th>
-                  <th>Skor</th>
-                  <th>Keterangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>1</td><td>Kedisiplinan</td><td>90</td><td>Sangat Baik</td></tr>
-                <tr><td>2</td><td>Kompetensi Umum</td><td>85</td><td>Baik</td></tr>
-                <tr><td>3</td><td>Teknikal</td><td>88</td><td>Baik</td></tr>
-              </tbody>
-            </table>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0">Detail KPI Terbaru</h6>
+              <small class="text-muted" id="kpiDetailPeriod">-</small>
+            </div>
+            <div id="kpiDetailLoading" class="text-center py-2">
+              <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <div id="kpiDetailContent">
+              <table class="table table-sm table-striped mb-0">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Aspek</th>
+                    <th>Skor</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="kpiDetailBody">
+                  <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -225,46 +192,340 @@
 @section('script')
     <script src="{{ asset('assets/bundles/apexcharts.bundle.js') }}"></script>
     <script>
-  var options = {
-    chart: { type: 'line', height: 300 },
-    series: [{
-      name: 'Skor KPI',
-      data: [78, 82, 80, 85, 87, 90, 88, 87, 85, 89, 92, 87]
-    }],
-    xaxis: {
-      categories: ['Sep', 'Okt', 'Nov', 'Des', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu']
-    },
-    colors: ['#28a745']
-  };
-  var chart = new ApexCharts(document.querySelector("#chartKpi"), options);
-  chart.render();
+let currentEmployeeId = '{{ Auth::user()->employee->id_karyawan }}';
+let kpiChart = null;
+let allMonthlyData = {};
 
-  // Fungsi untuk mengambil data absensi
-  function fetchAttendanceData() {
-    const employeeId = '{{ Auth::user()->employee->id_karyawan }}';
-    let url = `/api/attendances/employee/${employeeId}`;
+// Load data untuk dashboard
+async function loadDashboardData() {
+    try {
+        // Load data KPI
+        await loadKpiData();
+        
+        // Load data absensi
+        fetchAttendanceData();
+        
+        // Load top employees
+        loadTopEmployees();
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Load data KPI untuk grafik dan summary
+async function loadKpiData() {
+    try {
+        // 1. Load available periods dulu
+        const periodsResponse = await fetch('/api/periods?kpi_published=true');
+        const periodsData = await periodsResponse.json();
+
+        if (periodsData.success && periodsData.data.length > 0) {
+            const periods = periodsData.data;
+            
+            // 2. Load data untuk setiap periode
+            allMonthlyData = {};
+            
+            for (const period of periods.slice(0, 12)) { // Maksimal 12 bulan
+                try {
+                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/detail/${period.id_periode}`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        const periodData = data.data;
+                        const startDate = new Date(period.tanggal_mulai);
+                        const monthKey = startDate.toLocaleDateString('id-ID', { 
+                            month: 'short', 
+                            year: 'numeric' 
+                        });
+                        
+                        // Simpan data lengkap
+                        allMonthlyData[monthKey] = {
+                            month: monthKey,
+                            totalScore: periodData.kpi_summary.total_score,
+                            averageScore: periodData.kpi_summary.average_score,
+                            periodName: period.nama,
+                            fullDate: startDate,
+                            kpiDetails: periodData.kpi_details,
+                            ranking: periodData.kpi_summary.ranking,
+                            totalEmployees: periodData.kpi_summary.total_employees,
+                            performanceStatus: periodData.kpi_summary.performance_status
+                        };
+                    }
+                } catch (error) {
+                    console.error(`Error loading data for period ${period.id_periode}:`, error);
+                }
+            }
+            
+            // 3. Update UI dengan data terbaru
+            updateDashboardSummary();
+            updateKpiChart();
+            updateKpiDetailTable();
+            
+        } else {
+            throw new Error('Tidak ada data periode yang tersedia');
+        }
+    } catch (error) {
+        console.error('Error loading KPI data:', error);
+    }
+}
+
+// Update summary dashboard
+function updateDashboardSummary() {
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
     
-    // Tampilkan loading, sembunyikan error dan content
+    if (monthlyArray.length > 0) {
+        const latestData = monthlyArray[0];
+        const previousData = monthlyArray[1] || latestData;
+        
+        // Update current score
+        document.getElementById('currentScore').textContent = latestData.totalScore.toFixed(1);
+        
+        // Update previous score
+        const previousScore = previousData.totalScore.toFixed(1);
+        document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore}`;
+        
+        // Update grade
+        const avgScore = latestData.averageScore;
+        const gradeInfo = calculateGrade(avgScore);
+        document.getElementById('currentGrade').textContent = gradeInfo.grade;
+        document.getElementById('performanceGrade').textContent = gradeInfo.grade;
+        document.getElementById('performanceText').textContent = gradeInfo.text;
+        document.getElementById('performanceStatus').textContent = gradeInfo.status;
+        
+        // Update ranking
+        document.getElementById('rankingPosition').textContent = `${latestData.ranking}/${latestData.totalEmployees}`;
+        document.getElementById('rankingText').textContent = `Dari ${latestData.totalEmployees} karyawan`;
+        
+    }
+}
+
+// Calculate grade berdasarkan score
+function calculateGrade(score) {
+    const numericScore = parseFloat(score) || 0;
+    if (numericScore >= 90) return { grade: 'A', text: 'Sangat Baik', status: 'Excellent' };
+    if (numericScore >= 80) return { grade: 'B', text: 'Baik', status: 'Good' };
+    if (numericScore >= 70) return { grade: 'C', text: 'Cukup', status: 'Average' };
+    if (numericScore >= 60) return { grade: 'D', text: 'Kurang', status: 'Below Average' };
+    return { grade: 'E', text: 'Sangat Kurang', status: 'Poor' };
+}
+
+// Update grafik KPI
+function updateKpiChart() {
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - b.fullDate);
+    
+    if (monthlyArray.length === 0) {
+        document.getElementById('chartKpi').innerHTML = `
+            <div class="text-center p-5">
+                <i class="icofont-chart-line-alt fs-1 text-muted"></i>
+                <p class="text-muted mt-2">Tidak ada data KPI bulanan</p>
+            </div>
+        `;
+        return;
+    }
+
+    const categories = monthlyArray.map(item => item.month);
+    const totalScores = monthlyArray.map(item => parseFloat(item.totalScore) || 0);
+
+    if (kpiChart) {
+        kpiChart.destroy();
+    }
+
+    const options = {
+        chart: {
+            type: 'line',
+            height: 300,
+            zoom: { enabled: false },
+            toolbar: { show: true }
+        },
+        series: [{
+            name: 'Total Nilai KPI',
+            data: totalScores
+        }],
+        stroke: {
+            width: 3,
+            curve: 'smooth'
+        },
+        markers: {
+            size: 5,
+            hover: { size: 7 }
+        },
+        xaxis: {
+            categories: categories,
+            labels: { style: { fontSize: '12px' } }
+        },
+        yaxis: {
+            title: { text: 'Total Nilai KPI' },
+            min: 0,
+            max: Math.max(...totalScores) * 1.1,
+            labels: { formatter: function(val) { return val.toFixed(0); } }
+        },
+        colors: ['#0d6efd'],
+        grid: {
+            borderColor: '#f1f1f1',
+            strokeDashArray: 4
+        },
+        legend: { position: 'top' },
+        tooltip: {
+            custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                const monthData = monthlyArray[dataPointIndex];
+                const totalScore = series[seriesIndex][dataPointIndex];
+                
+                let tooltipHTML = `
+                    <div class="apexcharts-tooltip-title" style="font-weight: bold; margin-bottom: 8px;">
+                        ${monthData.month}
+                    </div>
+                    <div style="padding: 4px 0;">
+                        <strong>Total Nilai: ${totalScore.toFixed(2)}</strong>
+                    </div>
+                `;
+                
+                if (monthData.kpiDetails && monthData.kpiDetails.length > 0) {
+                    tooltipHTML += `<div style="border-top: 1px solid #e0e0e0; margin-top: 6px; padding-top: 6px;">`;
+                    tooltipHTML += `<div style="font-weight: 600; margin-bottom: 4px;">Detail Aspek:</div>`;
+                    
+                    monthData.kpiDetails.forEach(aspek => {
+                        const nilai = parseFloat(aspek.score) || 0;
+                        tooltipHTML += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
+                                <span>${aspek.aspek_kpi}:</span>
+                                <strong style="margin-left: 8px;">${nilai.toFixed(1)}</strong>
+                            </div>
+                        `;
+                    });
+                    
+                    tooltipHTML += `</div>`;
+                }
+                
+                return tooltipHTML;
+            }
+        },
+        dataLabels: { enabled: false }
+    };
+
+    kpiChart = new ApexCharts(document.querySelector("#chartKpi"), options);
+    kpiChart.render();
+}
+
+// Update tabel detail KPI
+function updateKpiDetailTable() {
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
+    
+    if (monthlyArray.length > 0) {
+        const latestData = monthlyArray[0];
+        const tbody = document.getElementById('kpiDetailBody');
+        const periodElement = document.getElementById('kpiDetailPeriod');
+        
+        periodElement.textContent = latestData.month;
+        tbody.innerHTML = '';
+        
+        latestData.kpiDetails.forEach((item, index) => {
+            const nilai = parseFloat(item.score) || 0;
+            const status = item.status;
+            const statusClass = getStatusClass(status);
+            
+            const row = `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="small">${item.aspek_kpi}</td>
+                    <td class="fw-bold">${nilai.toFixed(1)}</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+        
+        document.getElementById('kpiDetailLoading').classList.add('d-none');
+    }
+}
+
+// Load top employees
+async function loadTopEmployees() {
+    try {
+        const response = await fetch('/api/kpis/all-employees');
+        const data = await response.json();
+        
+        if (data.success) {
+            updateTopEmployees(data.data);
+        }
+    } catch (error) {
+        console.error('Error loading top employees:', error);
+        document.getElementById('topEmployeesList').innerHTML = `
+            <div class="text-center py-3 text-muted">
+                <i class="icofont-close-circled"></i>
+                <p class="small mt-2">Gagal memuat data</p>
+            </div>
+        `;
+    }
+}
+
+// Update top employees list
+function updateTopEmployees(employees) {
+    const listElement = document.getElementById('topEmployeesList');
+    const periodElement = document.getElementById('topEmployeePeriod');
+    
+    if (employees.length > 0) {
+        const latestPeriod = employees[0]?.period_month + ' ' + employees[0]?.period_year;
+        periodElement.textContent = latestPeriod;
+        
+        listElement.innerHTML = '';
+        
+        employees.slice(0, 5).forEach((employee, index) => {
+            const item = `
+                <div class="list-group-item d-flex align-items-center">
+                    <img class="avatar rounded-circle me-3" 
+                         src="${employee.photo}" 
+                         alt="${employee.nama}" width="40" height="40"
+                         onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
+                    
+                    <div class="flex-fill" style="min-width: 0;">
+                        <h6 class="mb-0 small-14 fw-bold text-truncate">
+                            ${employee.nama}
+                        </h6>
+                    </div>
+
+                    <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
+                        <span class="fw-bold text-primary">${employee.score.toFixed(0)}%</span>
+                    </div>
+                </div>
+            `;
+            listElement.innerHTML += item;
+        });
+    }
+}
+
+// Helper function untuk status class
+function getStatusClass(status) {
+    const statusMap = {
+        'Sangat Baik': 'badge-excellent',
+        'Baik': 'badge-good', 
+        'Cukup': 'badge-average',
+        'Kurang': 'badge-poor',
+        'Sangat Kurang': 'badge-poor'
+    };
+    return statusMap[status] || 'badge-average';
+}
+
+// Fungsi untuk mengambil data absensi
+function fetchAttendanceData() {
+    let url = `/api/attendances/employee/${currentEmployeeId}`;
+    
     document.getElementById('attendanceLoading').classList.remove('d-none');
     document.getElementById('attendanceError').classList.add('d-none');
     document.getElementById('attendanceContent').classList.add('d-none');
     
     fetch(url)
       .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
+        if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
       })
       .then(data => {
         if (data.success) {
-          // Update data absensi
           document.getElementById('presentCount').textContent = data.summary.hadir || 0;
           document.getElementById('absentCount').textContent = data.summary.mangkir || 0;
           document.getElementById('permissionCount').textContent = data.summary.izin || 0;
           document.getElementById('lateCount').textContent = data.summary.jumlah_terlambat || 0;
           
-          // Sembunyikan loading, tampilkan content
           document.getElementById('attendanceLoading').classList.add('d-none');
           document.getElementById('attendanceContent').classList.remove('d-none');
         } else {
@@ -277,11 +538,40 @@
         document.getElementById('attendanceError').classList.remove('d-none');
         document.getElementById('attendanceError').textContent = 'Gagal memuat data absensi: ' + error.message;
       });
-  }
+}
 
-  // Ambil data absensi saat halaman dimuat
-  document.addEventListener('DOMContentLoaded', function() {
-    fetchAttendanceData();
-  });
+// Add CSS untuk badge
+const style = document.createElement('style');
+style.textContent = `
+    .kpi-badge {
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+        font-size: 0.7rem;
+        white-space: nowrap;
+    }
+    .badge-excellent {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+    .badge-good {
+        background-color: rgba(23, 162, 184, 0.2);
+        color: #17a2b8;
+    }
+    .badge-average {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+    }
+    .badge-poor {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+`;
+document.head.appendChild(style);
+
+// Load data ketika halaman siap
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+});
 </script>
 @endsection

@@ -395,111 +395,107 @@ $(document).ready(function() {
     fetchEmployees();
     fetchDivisions();
 });
-</script>
 
-<script>
   // KPI Divisi
 $(document).ready(function() {
-    var options = {
-        chart: {
-            height: 300,
-            type: 'area',
-            stacked: true,
-            toolbar: {
-                show: false,
-            },
-            events: {
-                selection: function(chart, e) {
-                console.log(new Date(e.xaxis.min) )
-                }
-            },
-        },
+    const chartContainer = document.querySelector("#apex-stacked-area");
 
-        colors: ['#ff4560', '#f67280', '#c06c84'],
-        dataLabels: {
-            enabled: false
-        },
-
-        series: [
-            {
-                name: 'South',
-                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
-                    min: 10,
-                    max: 60
-                })
-            },{
-                name: 'North',
-                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
-                    min: 10,
-                    max: 20
-                })
-            },{
-                name: 'Central',
-                data: generateDayWiseTimeSeries(new Date('11 Feb 2017 GMT').getTime(), 20, {
-                    min: 10,
-                    max: 15
-                })
-            }
-        ],
-
-        fill: {
-            type: 'gradient',
-            gradient: {
-                opacityFrom: 0.6,
-                opacityTo: 0.8,
-            }
-        },
-
-        legend: {
-            position: 'top',
-            horizontalAlign: 'right',
-            show: true,
-        },
-        xaxis: {
-            type: 'datetime',            
-        },
-        grid: {
-            yaxis: {
-                lines: {
-                    show: false,
-                }
-            },
-            padding: {
-                top: 20,
-                right: 0,
-                bottom: 0,
-                left: 0
-            },
-        },
-        stroke: {
-            show: true,
-            curve: 'smooth',
-            width: 2,
-        },
+    if (!chartContainer) {
+        console.error('Elemen #apex-stacked-area tidak ditemukan.');
+        return;
     }
+    chartContainer.innerHTML = 'Memuat data perkembangan KPI...';
 
-    var chart = new ApexCharts(
-        document.querySelector("#apex-stacked-area"),
-        options
-    );
-    chart.render();
-    function generateDayWiseTimeSeries(baseval, count, yrange) {
-        var i = 0;
-        var series = [];
-        while (i < count) {
-            var x = baseval;
-            var y = Math.floor(Math.random() * (yrange.max - yrange.min + 1)) + yrange.min;
-
-            series.push([x, y]);
-            baseval += 86400000;
-            i++;
+    // Mengambil data dari API menggunakan jQuery AJAX
+    $.ajax({
+        url: '/api/periods/performance-across-periods',
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.data.series.length > 0) {
+                // Jika data berhasil didapat, panggil fungsi untuk render grafik
+                renderChart(response.data);
+            } else {
+                chartContainer.innerHTML = 'Tidak ada data perkembangan KPI untuk ditampilkan.';
+            }
+        },
+        error: function(error) {
+            console.error('Error fetching data:', error);
+            chartContainer.innerHTML = '<div class="alert alert-danger p-2">Gagal memuat data grafik.</div>';
         }
-        return series;
+    });
+
+    /**
+     * Fungsi untuk merender grafik dengan data dari API.
+     * @param {object} apiData - Berisi 'categories' dan 'series'.
+     */
+    function renderChart(apiData) {
+        var options = {
+            chart: {
+                height: 300,
+                type: 'area',
+                stacked: true,
+                toolbar: {
+                    show: true, // Diubah menjadi true agar lebih fungsional
+                },
+            },
+            colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'],
+            dataLabels: {
+                enabled: false
+            },
+            // Menggunakan data 'series' dari backend
+            series: apiData.series,
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    opacityFrom: 0.6,
+                    opacityTo: 0.8,
+                }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right',
+                show: true,
+            },
+            xaxis: {
+                // Mengubah tipe menjadi 'category' karena kita menggunakan nama periode
+                type: 'category',
+                // Menggunakan data 'categories' dari backend sebagai label
+                categories: apiData.categories,
+            },
+            yaxis: {
+                title: { text: 'Rata-rata Nilai KPI' }
+            },
+            grid: {
+                yaxis: {
+                    lines: {
+                        show: false,
+                    }
+                },
+                padding: {
+                    top: 20,
+                    right: 20, // Memberi sedikit ruang
+                    bottom: 0,
+                    left: 20
+                },
+            },
+            stroke: {
+                show: true,
+                curve: 'smooth',
+                width: 2,
+            },
+            tooltip: {
+                theme: 'dark'
+                // Tooltip akan otomatis menggunakan nama kategori (periode)
+            }
+        };
+
+        chartContainer.innerHTML = ''; // Hapus pesan loading
+        var chart = new ApexCharts(chartContainer, options);
+        chart.render();
     }
 });
-</script>
 
-<script>
+
 // Distribusi Karyawan per Divisi (Stacked Bar per Bulan)
 $(document).ready(function() {
     function fetchEmployeeDistribution() {

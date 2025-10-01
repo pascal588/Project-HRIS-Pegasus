@@ -36,23 +36,22 @@ Route::prefix('divisions')->group(function () {
 
 // ==================== EMPLOYEE ROUTES ====================
 Route::prefix('employees')->group(function () {
-    Route::get('/', [EmployeeApiController::class, 'index']);
-    Route::post('/', [EmployeeApiController::class, 'store']);
-    
-    // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
-    Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
-    Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
-    Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
-    Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
-    
-    // ✅ TAMBAHKAN INI DI SINI:
-    Route::get('/jumlahkaryawan-by-month', [EmployeeApiController::class, 'getEmployeeTotalByMonth']);
-    
-    // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
-    Route::get('/{employee}', [EmployeeApiController::class, 'show']);
-    Route::put('/{employee}', [EmployeeApiController::class, 'update']);
-    Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
-    
+  Route::get('/', [EmployeeApiController::class, 'index']);
+  Route::post('/', [EmployeeApiController::class, 'store']);
+
+  // ⚠️ PASTIKAN ROUTE KHUSUS DITULIS SEBELUM ROUTE PARAMETER
+  Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
+  Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
+  Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
+  Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
+
+  // ✅ TAMBAHKAN INI DI SINI:
+  Route::get('/jumlahkaryawan-by-month', [EmployeeApiController::class, 'getEmployeeTotalByMonth']);
+
+  // ⚠️ ROUTE PARAMETER HARUS DITULIS TERAKHIR
+  Route::get('/{employee}', [EmployeeApiController::class, 'show']);
+  Route::put('/{employee}', [EmployeeApiController::class, 'update']);
+  Route::delete('/{employee}', [EmployeeApiController::class, 'destroy']);
 });
 
 // ==================== ROLE ROUTES ====================
@@ -63,6 +62,7 @@ Route::prefix('kpis')->group(function () {
   // KPI Templates & Management
   Route::get('/', [KpiController::class, 'getAllKpis']);
   Route::post('/', [KpiController::class, 'storeKpi']);
+  Route::get('/division-performance', [KpiController::class, 'getDivisionKpiPerformance']);
   Route::get('/templates', [KpiController::class, 'getKpiTemplates']);
   Route::post('/copy-to-period/{periodId}', [KpiController::class, 'copyTemplatesToPeriod']);
   Route::get('/period/{periodId}', [KpiController::class, 'getKpisByPeriod']);
@@ -100,15 +100,16 @@ Route::prefix('kpis')->group(function () {
 
   // ✅ PERBAIKAN: Route publishing yang benar
   Route::get('/available-periods-publishing', [KpiController::class, 'getAvailablePeriodsForPublishing']);
-  Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']); 
+  Route::post('/publish-to-period', [KpiController::class, 'publishToPeriod']);
 
-Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceCalculationData']);
+  Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiController::class, 'getAttendanceCalculationData']);
 });
 
 // ==================== PERIOD ROUTES ====================
 Route::prefix('periods')->group(function () {
   // CRUD Operations
   Route::get('/', [PeriodController::class, 'index']);
+  Route::get('/performance-across-periods', [PeriodController::class, 'getPerformanceAcrossPeriods']);
   Route::get('/{id}', [PeriodController::class, 'show']);
   Route::post('/', [PeriodController::class, 'store']);
   Route::put('/{id}', [PeriodController::class, 'update']);

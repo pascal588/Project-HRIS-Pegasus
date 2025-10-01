@@ -687,7 +687,7 @@ function updateKpiSummary(summary) {
     document.getElementById('rankingText').textContent = `(Dari ${summary.total_employees} Karyawan)`;
 }
 
-// ⚠️ OPSI 1: Kontribusi = Nilai (tanpa dikali bobot)
+// ⚠️ PERBAIKAN: Total Nilai = JUMLAH semua nilai, bukan rata-rata
 function updateKpiDetails(details) {
     const tbody = document.getElementById('kpiDetailBody');
     const tfoot = document.getElementById('kpiDetailFooter');
@@ -696,33 +696,38 @@ function updateKpiDetails(details) {
     
     let totalBobot = 0;
     let totalKontribusi = 0;
-    let totalNilaiTerbobot = 0;
+    let totalNilai = 0;
 
     details.forEach(item => {
         const nilai = parseFloat(item.score) || 0;
         const bobot = parseFloat(item.bobot) || 0;
         
-        // OPSI 1: Kontribusi = Nilai
-        const kontribusi = nilai;
+        // Kontribusi = (Nilai ÷ Bobot) × 100%
+        const kontribusi = bobot > 0 ? (nilai / bobot) * 100 : 0;
         
-        const statusClass = getStatusClass(item.status);
+        // Progress = Kontribusi (untuk visual progress bar)
+        const progress = kontribusi;
+        
+        // Status berdasarkan KONTRIBUSI
+        const status = getStatusByContribution(kontribusi);
+        const statusClass = getStatusClass(status);
         
         const row = `
             <tr>
                 <td>${item.aspek_kpi}</td>
                 <td>${bobot.toFixed(1)}%</td>
                 <td>${nilai.toFixed(2)}</td>              <!-- NILAI -->
-                <td>${kontribusi.toFixed(2)}%</td>        <!-- KONTRIBUSI = NILAI -->
-                <td><span class="kpi-badge ${statusClass}">${item.status}</span></td>
+                <td>${kontribusi.toFixed(2)}%</td>        <!-- KONTRIBUSI -->
+                <td><span class="kpi-badge ${statusClass}">${status}</span></td>
                 <td>
                     <div class="progress kpi-progress">
                         <div class="progress-bar bg-primary" role="progressbar" 
-                            style="width: ${nilai}%" 
-                            aria-valuenow="${nilai}" 
+                            style="width: ${progress}%" 
+                            aria-valuenow="${progress}" 
                             aria-valuemin="0" 
                             aria-valuemax="100"></div>
                     </div>
-                    <div class="progress-percentage">${nilai.toFixed(1)}%</div>
+                    <div class="progress-percentage">${progress.toFixed(1)}%</div>
                 </td>
             </tr>
         `;
@@ -731,47 +736,59 @@ function updateKpiDetails(details) {
         
         totalBobot += bobot;
         totalKontribusi += kontribusi;
-        totalNilaiTerbobot += (nilai * bobot);
+        totalNilai += nilai; // ⚠️ PERBAIKAN: JUMLAH nilai, bukan rata-rata
     });
 
-    // Total Nilai = Rata-rata terbobot
-    const nilaiTotal = totalBobot > 0 ? (totalNilaiTerbobot / totalBobot) : 0;
+    // ⚠️ PERBAIKAN: Total Nilai = JUMLAH semua nilai
+    const nilaiTotal = totalNilai;
     
-    // Total Kontribusi = Rata-rata sederhana
+    // Rata-rata Kontribusi
     const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
     
-    const overallStatus = getOverallStatus(nilaiTotal);
+    // Status total berdasarkan KONTRIBUSI TOTAL
+    const overallStatus = getStatusByContribution(kontribusiTotal);
     const overallStatusClass = getStatusClass(overallStatus);
     
     tfoot.innerHTML = `
         <tr class="table-active">
             <th>Total</th>
             <th>${totalBobot.toFixed(1)}%</th>
-            <th>${nilaiTotal.toFixed(2)}</th>          <!-- NILAI TOTAL -->
-            <th>${kontribusiTotal.toFixed(2)}%</th>    <!-- KONTRIBUSI TOTAL -->
+            <th>${nilaiTotal.toFixed(2)}</th>          <!-- ⚠️ TOTAL NILAI = JUMLAH -->
+            <th>${kontribusiTotal.toFixed(2)}%</th>    <!-- RATA-RATA KONTRIBUSI -->
             <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
             <th>
                 <div class="progress kpi-progress">
                     <div class="progress-bar bg-primary" role="progressbar" 
-                         style="width: ${nilaiTotal}%" 
-                         aria-valuenow="${nilaiTotal}" 
+                         style="width: ${kontribusiTotal}%" 
+                         aria-valuenow="${kontribusiTotal}" 
                          aria-valuemin="0" 
                          aria-valuemax="100"></div>
                 </div>
-                <div class="progress-percentage">${nilaiTotal.toFixed(1)}%</div>
+                <div class="progress-percentage">${kontribusiTotal.toFixed(1)}%</div>
             </th>
         </tr>
     `;
 }
 
-// ⚠️ PERBAIKAN: Threshold status
-function getOverallStatus(score) {
-    const numericScore = parseFloat(score) || 0;
-    if (numericScore >= 85) return 'Excellent';
-    if (numericScore >= 75) return 'Good';
-    if (numericScore >= 65) return 'Average';
-    if (numericScore >= 50) return 'Below Average';
-    return 'Poor';
+// ⚠️ PERBAIKAN: Status berdasarkan KONTRIBUSI (bukan nilai)
+function getStatusByContribution(contribution) {
+    const numericContribution = parseFloat(contribution) || 0;
+    if (numericContribution >= 90) return 'Sangat Baik';
+    if (numericContribution >= 80) return 'Baik';
+    if (numericContribution >= 70) return 'Cukup';
+    if (numericContribution >= 50) return 'Kurang';
+    return 'Sangat Kurang';
+}
+
+function getStatusClass(status) {
+    const statusMap = {
+        'Sangat Baik': 'badge-excellent',
+        'Baik': 'badge-good',
+        'Cukup': 'badge-average',
+        'Kurang': 'badge-poor',
+        'Sangat Kurang': 'badge-poor'
+    };
+    return statusMap[status] || 'badge-average';
 }
 
 function getStatusClass(status) {

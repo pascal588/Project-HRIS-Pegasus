@@ -1615,7 +1615,6 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
 
         $employee = Employee::with(['roles.division'])->findOrFail($employeeId);
         
-        // Jika tidak ada periodId, cari periode aktif
         if (!$periodId) {
             $activePeriod = Period::where('status', 'active')
                 ->where('kpi_published', true)
@@ -1632,7 +1631,6 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
 
         $period = Period::findOrFail($periodId);
 
-        // Ambil data KPI menggunakan method yang sudah ada
         $kpiResponse = $this->getEmployeeKpiForPeriod($employeeId, $periodId);
         $kpiData = json_decode($kpiResponse->getContent(), true);
 
@@ -1640,7 +1638,6 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
             throw new \Exception($kpiData['message'] ?? 'Failed to get KPI data');
         }
 
-        // Hitung summary
         $totalScore = 0;
         $totalBobot = 0;
         $kpiDetails = [];
@@ -1653,57 +1650,61 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
                 $pointBobot = floatval($point['bobot']);
                 
                 if ($point['is_absensi']) {
-                    // ⚠️ PERBAIKAN: Nilai absensi sudah 0-100, langsung gunakan
                     $pointScore = $point['point_score']; // Nilai 0-100
                 } else {
-                    // Hitung dari questions (skala 1-4)
                     $pointTotal = 0;
                     $answeredQuestions = 0;
                     
                     foreach ($point['questions'] as $question) {
                         if ($question['answer'] !== null) {
-                            // ⚠️ PERBAIKAN: Konversi nilai 1-4 ke 0-100
-                            $questionScore = (($question['answer'] - 1) / 3) * 100; // 1->0, 2->33, 3->67, 4->100
+                            $questionScore = (($question['answer'] - 1) / 3) * 100;
                             $pointTotal += $questionScore;
                             $answeredQuestions++;
                         }
                     }
                     
                     if ($answeredQuestions > 0) {
-                        $pointScore = $pointTotal / $answeredQuestions; // Rata-rata dalam skala 0-100
+                        $pointScore = $pointTotal / $answeredQuestions;
                     } else {
                         $pointScore = 0;
                     }
                 }
                 
-                // ⚠️ PERBAIKAN: Kontribusi point = (Score Point × Bobot Point) / 100
+                // Kontribusi point = (Score Point × Bobot Point) / 100
                 $pointContribution = ($pointScore * $pointBobot) / 100;
                 $kpiScore += $pointContribution;
             }
             
-            // ⚠️ PERBAIKAN: Score KPI sudah dalam persentase (0-100)
-            $displayScore = $kpiScore; // Tidak perlu dikali 100 lagi
-            // ⚠️ PERBAIKAN: Kontribusi KPI = Score KPI × (Bobot KPI / 100)
-            $contribution = $kpiScore * ($kpiBobot / 100);
+            $displayScore = $kpiScore;
+            
+            // ⚠️ PERBAIKAN: Kontribusi = (Nilai ÷ Bobot) × 100%
+            $contribution = $kpiBobot > 0 ? ($displayScore / $kpiBobot) * 100 : 0;
+            
+            // ⚠️ PERBAIKAN: Status berdasarkan KONTRIBUSI
+            $status = $this->getStatusByContribution($contribution);
             
             $kpiDetails[] = [
                 'aspek_kpi' => $kpi['nama'],
                 'bobot' => $kpiBobot,
-                'score' => round($displayScore, 2), // 0-100
-                'contribution' => round($contribution, 2), // dalam %
-                'achievement_percentage' => round($displayScore, 2), // 0-100
-                'status' => $this->getPerformanceStatus($displayScore)
+                'score' => round($displayScore, 2), // Nilai (0-100)
+                'contribution' => round($contribution, 2), // Kontribusi = (Nilai ÷ Bobot) × 100%
+                'achievement_percentage' => round($contribution, 2), // Progress = Kontribusi (sama dengan kontribusi)
+                'status' => $status
             ];
             
-            $totalScore += $contribution;
+            $totalScore += $displayScore;
             $totalBobot += $kpiBobot;
         }
 
-        // ⚠️ PERBAIKAN: Average score = total kontribusi (karena bobot total harus 100%)
-        $averageScore = $totalScore;
+        // Average score = total nilai / jumlah aspek
+        $averageScore = count($kpiDetails) > 0 ? ($totalScore / count($kpiDetails)) : 0;
+        
+        // Rata-rata kontribusi
+        $averageContribution = count($kpiDetails) > 0 ? 
+            (array_sum(array_column($kpiDetails, 'contribution')) / count($kpiDetails)) : 0;
 
-        // Hitung ranking (sederhana)
-        $ranking = 1; // Default
+        // Hitung ranking
+        $ranking = 1;
         $totalEmployees = Employee::where('status', 'Aktif')->count();
 
         return response()->json([
@@ -1719,7 +1720,8 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
                 'kpi_summary' => [
                     'total_score' => round($totalScore, 2),
                     'average_score' => round($averageScore, 2),
-                    'performance_status' => $this->getPerformanceStatus($averageScore),
+                    'average_contribution' => round($averageContribution, 2),
+                    'performance_status' => $this->getStatusByContribution($averageContribution),
                     'ranking' => $ranking,
                     'total_employees' => $totalEmployees
                 ],
@@ -1736,16 +1738,17 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
     }
 }
 
-// ⚠️ PERBAIKAN: Threshold yang lebih realistis
-private function getPerformanceStatus($score)
+private function getStatusByContribution($contribution)
 {
-    // Untuk skala 0-100
-    if ($score >= 85) return 'Excellent';
-    if ($score >= 75) return 'Good';
-    if ($score >= 65) return 'Average';
-    if ($score >= 50) return 'Below Average';
-    return 'Poor';
+    $numericContribution = floatval($contribution);
+    
+    if ($numericContribution >= 90) return 'Sangat Baik';
+    if ($numericContribution >= 80) return 'Baik';
+    if ($numericContribution >= 70) return 'Cukup';
+    if ($numericContribution >= 50) return 'Kurang';
+    return 'Sangat Kurang';
 }
+
 // Helper function untuk menentukan status score
 private function getScoreStatus($score)
 {

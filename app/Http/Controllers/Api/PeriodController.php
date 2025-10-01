@@ -14,40 +14,40 @@ use Carbon\Carbon;
 
 class PeriodController extends Controller
 {
-public function index(Request $request)
-{
-    $query = Period::withCount(['attendances', 'kpis', 'kpiEvaluations']);
+    public function index(Request $request)
+    {
+        $query = Period::withCount(['attendances', 'kpis', 'kpiEvaluations']);
 
-    // Filter by status
-    if ($request->has('status')) {
-        $query->where('status', $request->status);
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // ✅ FILTER BARU: Hanya periode dengan KPI published
+        if ($request->has('kpi_published')) {
+            $query->where('kpi_published', $request->boolean('kpi_published'));
+        }
+
+        // Filter lainnya tetap...
+        if ($request->has('start_date')) {
+            $query->where('tanggal_mulai', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date')) {
+            $query->where('tanggal_selesai', '<=', $request->end_date);
+        }
+
+        if ($request->has('attendance_uploaded')) {
+            $query->where('attendance_uploaded', $request->attendance_uploaded);
+        }
+
+        $periods = $query->orderBy('tanggal_mulai', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $periods
+        ], 200);
     }
-
-    // ✅ FILTER BARU: Hanya periode dengan KPI published
-    if ($request->has('kpi_published')) {
-        $query->where('kpi_published', $request->boolean('kpi_published'));
-    }
-
-    // Filter lainnya tetap...
-    if ($request->has('start_date')) {
-        $query->where('tanggal_mulai', '>=', $request->start_date);
-    }
-
-    if ($request->has('end_date')) {
-        $query->where('tanggal_selesai', '<=', $request->end_date);
-    }
-
-    if ($request->has('attendance_uploaded')) {
-        $query->where('attendance_uploaded', $request->attendance_uploaded);
-    }
-
-    $periods = $query->orderBy('tanggal_mulai', 'desc')->get();
-
-    return response()->json([
-        'success' => true,
-        'data' => $periods
-    ], 200);
-}
 
     // GET /api/periods/{id} - Detail periode lengkap
     public function show($id)
@@ -586,6 +586,63 @@ public function index(Request $request)
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengecek status periode: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getPerformanceAcrossPeriods()
+    {
+        try {
+            // Query utama, diperbaiki untuk menggunakan 'periods.nama'
+            $results = DB::table('kpis_has_employees')
+                ->join('roles_has_employees', 'kpis_has_employees.employees_id_karyawan', '=', 'roles_has_employees.employee_id')
+                ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                ->join('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
+                ->join('periods', 'kpis_has_employees.periode_id', '=', 'periods.id_periode')
+                ->select(
+                    'divisions.nama_divisi',
+                    'periods.id_periode',
+                    'periods.nama', // <-- INI YANG DIPERBAIKI
+                    DB::raw('AVG(kpis_has_employees.nilai_akhir) as average_score')
+                )
+                ->groupBy('divisions.nama_divisi', 'periods.id_periode', 'periods.nama') // <-- INI JUGA DIPERBAIKI
+                ->orderBy('periods.id_periode')
+                ->get();
+
+            if ($results->isEmpty()) {
+                return response()->json(['success' => true, 'data' => ['categories' => [], 'series' => []]]);
+            }
+
+            // Susun data untuk frontend
+            $categories = $results->pluck('nama')->unique()->values()->all(); // <-- INI JUGA DIPERBAIKI
+            $seriesData = [];
+            $groupedByDivision = $results->groupBy('nama_divisi');
+
+            foreach ($groupedByDivision as $divisionName => $scores) {
+                $dataPoints = [];
+                foreach ($categories as $periodName) {
+                    $scoreForPeriod = $scores->firstWhere('nama', $periodName); // <-- INI JUGA DIPERBAIKI
+                    $dataPoints[] = $scoreForPeriod ? round($scoreForPeriod->average_score, 2) : null;
+                }
+
+                $seriesData[] = [
+                    'name' => $divisionName,
+                    'data' => $dataPoints,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'categories' => $categories,
+                    'series' => $seriesData,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error in getPerformanceAcrossPeriods: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan server: ' . $e->getMessage()
             ], 500);
         }
     }

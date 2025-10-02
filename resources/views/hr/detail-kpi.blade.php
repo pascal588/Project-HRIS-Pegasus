@@ -261,14 +261,6 @@
           <h6 class="dropdown-header">Pilih Tahun</h6>
         </li>
         <li>
-          <a class="dropdown-item" href="#" data-tahun="2023">2023</a>
-        </li>
-        <li>
-          <a class="dropdown-item" href="#" data-tahun="2022">2022</a>
-        </li>
-        <li>
-          <a class="dropdown-item" href="#" data-tahun="2021">2021</a>
-        </li>
       </ul>
     </div>
 
@@ -536,147 +528,207 @@
         </tr>`;
   }
 
-  // --- BAGIAN BARU: FUNGSI UNTUK CHART TREN KPI ---
-  async function loadAndRenderKpiTrendChart(employeeId, year) {
-    try {
-      console.log(`Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
-      const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
+ // --- BAGIAN BARU: FUNGSI UNTUK CHART TREN KPI (LINE CHART MINIMALIS) ---
+async function loadAndRenderKpiTrendChart(employeeId, year) {
+  try {
+    console.log(`Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
+    const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      const result = await response.json();
-      console.log('Data untuk chart:', result);
+    const result = await response.json();
+    console.log('Data untuk chart:', result);
 
-      if (!result || !result.kpi_data || result.kpi_data.length === 0) {
-        const chartContainer = document.getElementById('kpiTrendChart').parentElement;
-        chartContainer.innerHTML = '<div class="text-center p-5"><p>Tidak ada data KPI untuk tahun ' + year + '</p></div>';
-        return;
-      }
+    if (!result || !result.kpi_data || result.kpi_data.length === 0) {
+      const chartContainer = document.getElementById('kpiTrendChart').parentElement;
+      chartContainer.innerHTML = '<div class="text-center p-5"><p>Tidak ada data KPI untuk tahun ' + year + '</p></div>';
+      return;
+    }
 
-      const monthlyData = result.kpi_data;
-      console.log('Monthly data untuk chart:', monthlyData);
+    const monthlyData = result.kpi_data;
+    console.log('Monthly data untuk chart:', monthlyData);
 
-      // Urutkan data berdasarkan bulan
-      const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
+    // Urutkan data berdasarkan bulan
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
 
-      monthlyData.sort((a, b) => {
-        return monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name);
-      });
+    monthlyData.sort((a, b) => {
+      return monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name);
+    });
 
-      // Siapkan data untuk chart
-      const labels = monthlyData.map(item => item.month_name);
-      const scores = monthlyData.map(item => parseFloat(item.total_score) || 0);
+    // Siapkan data untuk chart
+    const labels = monthlyData.map(item => item.month_name);
+    const scores = monthlyData.map(item => parseFloat(item.total_score) || 0);
 
-      // Target line (80)
-      const targetData = Array(labels.length).fill(80);
+    // Target line (80)
+    const targetData = Array(labels.length).fill(80);
 
-      // Hancurkan chart sebelumnya jika ada
-      if (kpiTrendChart) {
-        kpiTrendChart.destroy();
-      }
+    // Hancurkan chart sebelumnya jika ada
+    if (kpiTrendChart) {
+      kpiTrendChart.destroy();
+    }
 
-      // Buat chart baru
-      const ctx = document.getElementById('kpiTrendChart').getContext('2d');
-      kpiTrendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-              label: 'Nilai KPI',
-              data: scores,
-              borderColor: '#3498db',
-              backgroundColor: 'rgba(52, 152, 219, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#3498db',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6,
-              pointHoverRadius: 8
-            },
-            {
-              label: 'Target (80)',
-              data: targetData,
-              borderColor: '#e74c3c',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              pointRadius: 0
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: {
-                usePointStyle: true,
-                padding: 20
-              }
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) {
-                    label += ': ';
-                  }
-                  label += context.parsed.y.toFixed(2);
-                  return label;
-                }
-              }
+    // Buat gradient untuk area chart
+    const ctx = document.getElementById('kpiTrendChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(74, 144, 226, 0.3)');
+    gradient.addColorStop(0.7, 'rgba(74, 144, 226, 0.1)');
+    gradient.addColorStop(1, 'rgba(74, 144, 226, 0.01)');
+
+    // Buat chart baru dengan desain minimalis
+    kpiTrendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Nilai KPI',
+            data: scores,
+            borderColor: '#4a90e2',
+            backgroundColor: gradient,
+            borderWidth: 4,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#4a90e2',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 10,
+            pointHoverBackgroundColor: '#357abd',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 4
+          },
+          {
+            label: 'Target Minimum',
+            data: targetData,
+            borderColor: '#ff6b6b',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: '#2d3748',
+              font: {
+                size: 12,
+                weight: '600'
+              },
+              padding: 20,
+              usePointStyle: true,
+              pointStyle: 'circle'
             }
           },
-          scales: {
-            y: {
-              beginAtZero: false,
-              min: 50,
-              max: 100,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.1)'
-              },
-              ticks: {
-                callback: function(value) {
-                  return value.toFixed(0);
-                }
-              },
-              title: {
-                display: true,
-                text: 'Nilai KPI'
-              }
-            },
-            x: {
-              grid: {
-                display: false
-              },
-              title: {
-                display: true,
-                text: 'Bulan'
-              }
-            }
-          },
-          interaction: {
+          tooltip: {
+            mode: 'index',
             intersect: false,
-            mode: 'nearest'
+            backgroundColor: 'rgba(45, 55, 72, 0.95)',
+            titleColor: '#f7fafc',
+            bodyColor: '#f7fafc',
+            borderColor: '#4a90e2',
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: 12,
+            displayColors: true,
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                const value = context.parsed.y;
+                label += value.toFixed(2);
+                
+                if (context.datasetIndex === 0) {
+                  const status = value >= 80 ? '✅' : value >= 70 ? '⚠️' : '❌';
+                  label += ` ${status}`;
+                }
+                return label;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            min: 60,
+            max: 100,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.06)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#718096',
+              font: {
+                size: 11,
+                weight: '500'
+              },
+              callback: function(value) {
+                return value + '';
+              }
+            },
+            title: {
+              display: true,
+              text: 'Nilai KPI',
+              color: '#4a5568',
+              font: {
+                size: 13,
+                weight: '600'
+              }
+            }
+          },
+          x: {
+            grid: {
+              display: false,
+              drawBorder: false
+            },
+            ticks: {
+              color: '#718096',
+              font: {
+                size: 11,
+                weight: '500'
+              }
+            },
+            title: {
+              display: true,
+              text: 'Periode Bulanan - ' + year,
+              color: '#4a5568',
+              font: {
+                size: 13,
+                weight: '600'
+              }
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'nearest'
+        },
+        elements: {
+          line: {
+            tension: 0.4
           }
         }
-      });
+      }
+    });
 
-    } catch (error) {
-      console.error('Gagal memuat chart tren KPI:', error);
-      const chartContainer = document.getElementById('kpiTrendChart').parentElement;
-      chartContainer.innerHTML = '<div class="text-center text-danger p-5"><p>Terjadi kesalahan saat memuat chart: ' + error.message + '</p></div>';
-    }
+  } catch (error) {
+    console.error('Gagal memuat chart tren KPI:', error);
+    const chartContainer = document.getElementById('kpiTrendChart').parentElement;
+    chartContainer.innerHTML = '<div class="text-center text-danger p-5"><p>Terjadi kesalahan saat memuat chart: ' + error.message + '</p></div>';
   }
+}
 
   // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN ---
   async function loadAndRenderMonthlyRecap(employeeId, year) {

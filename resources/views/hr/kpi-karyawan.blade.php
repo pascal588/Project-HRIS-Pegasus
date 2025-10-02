@@ -285,20 +285,20 @@
     // Ganti function loadKpiData() di kpi-karyawan.blade.php
 async function loadKpiData() {
   try {
-    console.log('🔄 Fetching KPI data...');
+    console.log('Fetching KPI data...');
     const res = await fetch('/api/kpis/all-employee-scores');
     
-    console.log('📊 Response status:', res.status);
-    console.log('📊 Response ok:', res.ok);
+    console.log('Response status:', res.status);
+    console.log('Response ok:', res.ok);
     
     if (!res.ok) {
       const errorText = await res.text();
-      console.error('❌ Error response:', errorText);
+      console.error('Error response:', errorText);
       throw new Error(`HTTP ${res.status}: ${errorText}`);
     }
     
     const response = await res.json();
-    console.log('✅ API Response:', response);
+    console.log('API Response:', response);
     
     if (response.success && response.data) {
       kpiData = response.data;
@@ -319,7 +319,7 @@ async function loadKpiData() {
         };
       });
       
-      console.log('📈 Processed KPI data:', kpiData);
+      console.log('Processed KPI data:', kpiData);
       
       populateDropdowns(kpiData);
       
@@ -330,11 +330,11 @@ async function loadKpiData() {
       populateTopEmployees(kpiData);
       updateStats(kpiData);
     } else {
-      console.error('❌ API returned unsuccessful:', response);
+      console.error('API returned unsuccessful:', response);
       throw new Error(response.message || 'Format data tidak valid');
     }
   } catch (err) {
-    console.error('💥 Error:', err);
+    console.error('Error:', err);
     alert('Gagal memuat data KPI: ' + err.message);
   }
 }

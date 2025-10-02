@@ -106,7 +106,6 @@ $(function() {
             localStorage.setItem('theme', 'light');
         }    
     }
-    toggleSwitch.addEventListener('change', switchTheme, false);
     // end
 });
 

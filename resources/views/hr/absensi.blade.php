@@ -208,7 +208,6 @@
 
 
 @section('script')
-<script src="{{asset('assets/bundles/apexcharts.bundle.js')}}"></script>
 <script src="{{asset('assets/bundles/dataTables.bundle.js')}}"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -440,7 +439,6 @@ function loadYearsFromPeriods(periods) {
             }
         });
         
-        // Load periods dengan parameter refresh untuk memastikan data terbaru
         // Load periods dengan parameter refresh untuk memastikan data terbaru
 $.ajax({
     url: '/api/attendances/periods?refresh=true&' + timestamp,

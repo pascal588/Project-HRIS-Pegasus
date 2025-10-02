@@ -237,7 +237,7 @@
 @section('script')
 <script>
     $(document).ready(function() {
-        const employeeId = "{{ $employee_id }}"; // Get employee_id from route parameter
+        const employeeId = "{{ $employee_id }}"; // Get employee_id dari route parameter
         let currentPeriod = "";
 
         // Show/hide loading spinner

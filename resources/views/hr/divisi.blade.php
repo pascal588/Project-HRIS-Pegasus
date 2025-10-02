@@ -124,8 +124,6 @@
                       <th>Nama</th>
                       <th>Jumlah Karyawan</th>
                       <th>Kepala Divisi</th>
-                      <th>KPI Lalu</th>
-                      <th>KPI Kini</th>
                       <th class="text-center">Aksi</th>
                     </tr>
                   </thead>
@@ -299,8 +297,6 @@
             return data && data !== '-' ? `${data} <span class="head-badge">Kepala</span>` : '-';
           }
         },
-        { data: null, defaultContent: "-" }, // KPI Lalu
-        { data: null, defaultContent: "-" }, // KPI Kini
         {
           data: null,
           className: "text-center",

@@ -230,7 +230,7 @@
             <h6 class="mb-0 fw-bold text-center">Karyawan</h6>
           </div>
           <div class="card-body stat-card">
-            <img src="user.png" alt="User Icon" />
+            <img src="{{ asset('img/user.png') }}" alt="User Icon"/>
             <h4 class="fw-bold" id="total-employees">0</h4>
             <span class="text-muted">Total</span>
           </div>
@@ -244,7 +244,7 @@
             <h6 class="mb-0 fw-bold text-center">Divisi</h6>
           </div>
           <div class="card-body stat-card">
-            <img src="employment.png" alt="Divisi Icon" />
+            <img src="{{ asset('img/employment.png') }}" alt="Divisi Icon" />
             <h4 class="fw-bold" id="total-divisions">0</h4>
             <span class="text-muted">Total</span>
           </div>

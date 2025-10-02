@@ -215,7 +215,6 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title">Indikator KPI</h5>
-            <button class="btn btn-sm btn-primary" id="exportExcelBtn">Export Excel</button>
           </div>
           <div class="card-body">
             <div class="table-responsive">
@@ -776,14 +775,14 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
         return row;
       });
 
-      let headerHtml = '<tr><th>Bulan</th><th>Tahun</th>';
+      let headerHtml = '<tr><th>Bulan</th>';
       aspectHeaders.forEach(h => headerHtml += `<th>${h}</th>`);
       headerHtml += '<th>Total KPI</th><th>Status</th></tr>';
       thead.innerHTML = headerHtml;
 
       let bodyHtml = '';
       pivotedData.forEach(row => {
-        bodyHtml += `<tr><td>${row.month}</td><td>${row.year}</td>`;
+        bodyHtml += `<tr><td>${row.month}</td>`;
         aspectHeaders.forEach(h => bodyHtml += `<td class="monthly-score">${(row.scores[h] || 0).toFixed(2)}</td>`);
         bodyHtml += `<td class="monthly-total">${row.total.toFixed(2)}</td>`;
         const statusClass = getKpiStatusClass(row.status);

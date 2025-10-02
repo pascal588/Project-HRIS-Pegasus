@@ -329,15 +329,15 @@
 
 <script>
   // ===================================================================================
-  // KODE YANG SUDAH DIPERBAIKI DAN DISEMPURNAKAN
+  // KODE YANG SUDAH DIPERBAIKI DENGAN DEBUGGING
   // ===================================================================================
 
-  // [FIX] Hapus kurung kurawal {} ekstra di sekitar Blade directive
   let currentEmployeeId = {{ $employeeId ?? 'null' }};
   let kpiData = null;
   let availablePeriods = [];
+  let kpiTrendChart = null;
 
-  // [IMPROVEMENT] Menggabungkan fungsi helper status menjadi satu set yang efisien
+  // Fungsi helper status
   function getKpiStatus(score) {
     const numeric = parseFloat(score) || 0;
     if (numeric >= 90) return 'Sangat Baik';
@@ -361,11 +361,21 @@
   // --- BAGIAN 1: FUNGSI DETAIL KPI (BAGIAN ATAS) ---
   async function loadAvailablePeriods() {
     try {
+      console.log('Memulai loadAvailablePeriods...');
       const response = await fetch('/api/periods?kpi_published=true');
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Data periods:', data);
+
       if (!data.success) throw new Error(data.message);
 
       availablePeriods = data.data;
+      console.log('Available periods:', availablePeriods);
+
       populateMonthDropdown(availablePeriods);
 
       if (availablePeriods.length > 0) {
@@ -375,7 +385,7 @@
       }
     } catch (error) {
       console.error('Error loading periods:', error);
-      document.getElementById('monthList').innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat bulan</h6></li>';
+      document.getElementById('monthList').innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat bulan: ' + error.message + '</h6></li>';
     }
   }
 
@@ -385,6 +395,7 @@
       monthList.innerHTML = '<li><h6 class="dropdown-header">Tidak ada data</h6></li>';
       return;
     }
+
     const sortedMonths = periods.map(period => ({
       month: new Date(period.tanggal_mulai).toLocaleDateString('id-ID', {
         month: 'long'
@@ -429,9 +440,17 @@
 
   async function loadKpiDetail(employeeId, periodId) {
     try {
+      console.log(`Memuat detail KPI untuk employee ${employeeId}, period ${periodId}`);
       const url = `/api/kpis/employee/${employeeId}/detail/${periodId}`;
       const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('Data KPI detail:', data);
+
       if (data.success) {
         kpiData = data.data;
         updateEmployeeInfo(kpiData.employee);
@@ -473,9 +492,11 @@
       tfoot.innerHTML = '';
       return;
     }
+
     let totalBobot = 0,
       totalKontribusi = 0,
       totalNilai = 0;
+
     details.forEach(item => {
       const nilai = parseFloat(item.score) || 0;
       const bobot = parseFloat(item.bobot) || 0;
@@ -500,6 +521,7 @@
       totalKontribusi += kontribusi;
       totalNilai += nilai;
     });
+
     const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
     const overallStatus = getKpiStatus(kontribusiTotal);
     const overallStatusClass = getKpiStatusClass(overallStatus);
@@ -514,14 +536,156 @@
         </tr>`;
   }
 
+  // --- BAGIAN BARU: FUNGSI UNTUK CHART TREN KPI ---
+  async function loadAndRenderKpiTrendChart(employeeId, year) {
+    try {
+      console.log(`Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
+      const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
 
-  // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN (BAGIAN BAWAH) ---
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Data untuk chart:', result);
+
+      if (!result || !result.kpi_data || result.kpi_data.length === 0) {
+        const chartContainer = document.getElementById('kpiTrendChart').parentElement;
+        chartContainer.innerHTML = '<div class="text-center p-5"><p>Tidak ada data KPI untuk tahun ' + year + '</p></div>';
+        return;
+      }
+
+      const monthlyData = result.kpi_data;
+      console.log('Monthly data untuk chart:', monthlyData);
+
+      // Urutkan data berdasarkan bulan
+      const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+
+      monthlyData.sort((a, b) => {
+        return monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name);
+      });
+
+      // Siapkan data untuk chart
+      const labels = monthlyData.map(item => item.month_name);
+      const scores = monthlyData.map(item => parseFloat(item.total_score) || 0);
+
+      // Target line (80)
+      const targetData = Array(labels.length).fill(80);
+
+      // Hancurkan chart sebelumnya jika ada
+      if (kpiTrendChart) {
+        kpiTrendChart.destroy();
+      }
+
+      // Buat chart baru
+      const ctx = document.getElementById('kpiTrendChart').getContext('2d');
+      kpiTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+              label: 'Nilai KPI',
+              data: scores,
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#3498db',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6,
+              pointHoverRadius: 8
+            },
+            {
+              label: 'Target (80)',
+              data: targetData,
+              borderColor: '#e74c3c',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y.toFixed(2);
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              min: 50,
+              max: 100,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return value.toFixed(0);
+                }
+              },
+              title: {
+                display: true,
+                text: 'Nilai KPI'
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              title: {
+                display: true,
+                text: 'Bulan'
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'nearest'
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Gagal memuat chart tren KPI:', error);
+      const chartContainer = document.getElementById('kpiTrendChart').parentElement;
+      chartContainer.innerHTML = '<div class="text-center text-danger p-5"><p>Terjadi kesalahan saat memuat chart: ' + error.message + '</p></div>';
+    }
+  }
+
+  // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN ---
   async function loadAndRenderMonthlyRecap(employeeId, year) {
     const loader = document.getElementById('monthlyRecapLoader');
     const container = document.getElementById('monthlyRecapContainer');
     const thead = document.getElementById('monthlyKpiThead');
     const tbody = document.getElementById('monthlyKpiTbody');
     const tfoot = document.getElementById('monthlyKpiTfoot');
+
     loader.style.display = 'block';
     container.style.display = 'none';
     thead.innerHTML = '';
@@ -529,12 +693,21 @@
     tfoot.innerHTML = '';
 
     try {
+      console.log(`Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
       const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json();
+      console.log('Data untuk rekap bulanan:', result);
+
       if (!result || !result.kpi_data || result.kpi_data.length === 0) {
         loader.innerHTML = '<p class="text-center p-5">Tidak ada data rekap KPI untuk ditampilkan pada tahun yang dipilih.</p>';
         return;
       }
+
       const monthlyData = result.kpi_data;
       const aspectHeaders = [...new Set(monthlyData.flatMap(m => m.details.map(d => d.aspect_name)))].sort();
       const pivotedData = monthlyData.map(month => {
@@ -574,6 +747,7 @@
         aspectHeaders.forEach(h => averages[h] += (row.scores[h] || 0));
         averages.total += row.total;
       });
+
       const dataCount = pivotedData.length;
       if (dataCount > 0) {
         let footerHtml = '<tr class="table-active"><th>Rata-rata</th><th></th>';
@@ -585,100 +759,115 @@
         footerHtml += `<th><span class="kpi-badge ${avgStatusClass}">${avgStatus}</span></th></tr>`;
         tfoot.innerHTML = footerHtml;
       }
+
       loader.style.display = 'none';
       container.style.display = 'block';
+
     } catch (error) {
       console.error('Gagal memuat rekap bulanan:', error);
       loader.innerHTML = `<p class="text-center text-danger p-5">Terjadi kesalahan: ${error.message}</p>`;
     }
   }
 
+  // --- FUNGSI UNTUK MEMUAT SEMUA DATA BERDASARKAN TAHUN ---
+  function loadYearlyData(year) {
+    if (!currentEmployeeId) {
+      console.error('currentEmployeeId tidak tersedia');
+      return;
+    }
+
+    console.log(`Memuat data untuk tahun: ${year}`);
+
+    // Update teks dropdown tahun
+    document.querySelector('#tahunDropdown').textContent = `Tahun: ${year}`;
+
+    // Muat chart tren KPI
+    loadAndRenderKpiTrendChart(currentEmployeeId, year);
+
+    // Muat tabel rekap bulanan
+    loadAndRenderMonthlyRecap(currentEmployeeId, year);
+  }
+
   // --- INISIALISASI HALAMAN ---
   document.addEventListener('DOMContentLoaded', function() {
-    if (currentEmployeeId) {
-      loadAvailablePeriods();
-      const currentYear = new Date().getFullYear();
-      document.querySelector('#tahunDropdown').textContent = `Tahun: ${currentYear}`;
-      loadAndRenderMonthlyRecap(currentEmployeeId, currentYear);
+    console.log('DOM Content Loaded, currentEmployeeId:', currentEmployeeId);
 
+    if (currentEmployeeId) {
+      // Muat data periode untuk dropdown bulan
+      loadAvailablePeriods();
+
+      const currentYear = new Date().getFullYear();
+      console.log('Tahun saat ini:', currentYear);
+
+      // Muat data untuk tahun saat ini (chart dan tabel)
+      loadYearlyData(currentYear);
+
+      // Event listener untuk dropdown tahun
       document.querySelectorAll('#tahunDropdown + .dropdown-menu a').forEach(item => {
         item.addEventListener('click', function(e) {
           e.preventDefault();
           const selectedYear = this.getAttribute('data-tahun');
-          document.querySelector('#tahunDropdown').textContent = `Tahun: ${selectedYear}`;
-          loadAndRenderMonthlyRecap(currentEmployeeId, selectedYear);
+          console.log('Tahun dipilih:', selectedYear);
+          loadYearlyData(selectedYear);
         });
       });
 
+      // Tombol export
       document.getElementById('exportExcelBtn').addEventListener('click', function() {
         alert('Fitur export Excel akan diimplementasi');
       });
 
       document.getElementById('exportMonthlyBtn').addEventListener('click', async function() {
-    // 1. Validasi ID Karyawan
-    if (!currentEmployeeId) {
-        alert('ID Karyawan tidak valid!');
-        return;
-    }
-
-    const button = this;
-    const exportUrl = `/api/hr/kpi/monthly-export/${currentEmployeeId}`;
-
-    // 2. Beri feedback ke pengguna
-    button.textContent = 'Mengekspor...';
-    button.disabled = true;
-
-    try {
-        // 3. Lakukan request ke server secara asynchronous
-        const response = await fetch(exportUrl);
-
-        // Jika response gagal (misal: error 404 atau 500)
-        if (!response.ok) {
-            throw new Error(`Gagal mengunduh file. Status: ${response.statusText}`);
+        if (!currentEmployeeId) {
+          alert('ID Karyawan tidak valid!');
+          return;
         }
 
-        // 4. Ambil nama file dari header 'Content-Disposition'
-        const disposition = response.headers.get('content-disposition');
-        let fileName = 'laporan-kpi.xlsx'; // Nama default
-        if (disposition && disposition.indexOf('attachment') !== -1) {
+        const button = this;
+        const exportUrl = `/api/hr/kpi/monthly-export/${currentEmployeeId}`;
+
+        button.textContent = 'Mengekspor...';
+        button.disabled = true;
+
+        try {
+          const response = await fetch(exportUrl);
+
+          if (!response.ok) {
+            throw new Error(`Gagal mengunduh file. Status: ${response.statusText}`);
+          }
+
+          const disposition = response.headers.get('content-disposition');
+          let fileName = 'laporan-kpi.xlsx';
+          if (disposition && disposition.indexOf('attachment') !== -1) {
             const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
             const matches = filenameRegex.exec(disposition);
             if (matches != null && matches[1]) {
-                fileName = matches[1].replace(/['"]/g, '');
+              fileName = matches[1].replace(/['"]/g, '');
             }
+          }
+
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+
+        } catch (error) {
+          console.error('Terjadi kesalahan saat mengekspor:', error);
+          alert('Gagal mengekspor data. Silakan coba lagi.');
+        } finally {
+          button.textContent = 'Export Excel';
+          button.disabled = false;
         }
-
-        // 5. Ubah response menjadi Blob (objek file)
-        const blob = await response.blob();
-
-        // 6. Buat URL sementara untuk file yang ada di memori browser
-        const url = window.URL.createObjectURL(blob);
-
-        // 7. Buat link <a> "tak terlihat" untuk memicu download
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = fileName; // Gunakan nama file dari server
-        document.body.appendChild(a);
-
-        // 8. "Klik" link tersebut secara otomatis
-        a.click();
-
-        // 9. Lakukan pembersihan
-        window.URL.revokeObjectURL(url);
-        a.remove();
-
-    } catch (error) {
-        console.error('Terjadi kesalahan saat mengekspor:', error);
-        alert('Gagal mengekspor data. Silakan coba lagi.');
-    } finally {
-        // 10. Kembalikan kondisi tombol seperti semula
-        button.textContent = 'Export Excel';
-        button.disabled = false;
-    }
-});
+      });
 
     } else {
+      console.error('currentEmployeeId tidak ditemukan');
       document.body.innerHTML = '<div class="alert alert-danger">ID Karyawan tidak ditemukan.</div>';
     }
   });

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\KpiController;
 use App\Http\Controllers\Api\AttendanceApiController;
 use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\HrController;
+use App\Http\Controllers\Api\RecapController;
 
 // ==================== ATTENDANCE ROUTES ====================
 Route::prefix('attendances')->group(function () {
@@ -151,8 +152,9 @@ Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
 Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);
 
 //laporan
-// Route untuk mengambil data melalui AJAX
-Route::get('/hr/kpi/monthly-data/{employeeId}', [HrController::class, 'getMonthlyKpiData'])->name('hr.kpi.monthly.data');
+// Route BARU untuk mengambil daftar tahun rekap per karyawan
+Route::get('/hr/kpi/employee/{employeeId}/years', [HrController::class, 'getAvailableYearsForEmployee'])->name('hr.kpi.employee.years');
 
-// Route untuk ekspor Excel
+// Route LAMA yang sudah disesuaikan (pastikan sudah ada)
+Route::get('/hr/kpi/monthly-data/{employeeId}', [HrController::class, 'getMonthlyKpiData'])->name('hr.kpi.monthly.data');
 Route::get('/hr/kpi/monthly-export/{employeeId}', [HrController::class, 'exportMonthlyKpi'])->name('hr.kpi.monthly.export');

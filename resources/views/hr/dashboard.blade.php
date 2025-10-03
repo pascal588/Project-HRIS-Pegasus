@@ -71,42 +71,221 @@
     font-size: 0.75rem;
   }
 
-  /* Compact employee list items */
-  .employee-item {
+ /* Compact employee list cards */
+.employee-list-card {
+    border: 1px solid #e9ecef;
+    transition: box-shadow 0.2s;
+}
+
+.employee-list-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.employee-list-card .card-body {
+    padding: 0;
+    max-height: 280px; /* Sedikit lebih tinggi */
+    overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.employee-list-card .card-body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.employee-list-card .card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+.employee-list-card .card-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 2px;
+}
+
+.employee-list-card .card-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Employee item styling */
+.employee-item {
     display: flex;
     align-items: center;
-    padding: 8px 12px;
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.2s;
-  }
+    padding: 10px 15px;
+    border-bottom: 1px solid #f8f9fa;
+    transition: all 0.2s ease;
+    margin: 0 5px;
+}
 
-  .employee-item:last-child {
+.employee-item:first-child {
+    margin-top: 5px;
+}
+
+.employee-item:last-child {
     border-bottom: none;
-  }
+    margin-bottom: 5px;
+}
 
-  .employee-item:hover {
+.employee-item:hover {
     background-color: #f8f9fa;
-  }
+    border-radius: 8px;
+    margin: 2px 5px;
+}
 
-  .employee-item .avatar {
-    width: 32px;
-    height: 32px;
-    margin-right: 10px;
-  }
+.employee-item .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
 
-  .employee-item .employee-info h6 {
+.employee-item .employee-info {
+    flex: 1;
+    min-width: 0; /* Untuk text truncate */
+    margin: 0 12px;
+}
+
+.employee-item .employee-info h6 {
     font-size: 0.8rem;
+    font-weight: 600;
     margin-bottom: 2px;
-  }
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-  .employee-item .employee-info span {
+.employee-item .employee-info .position {
     font-size: 0.7rem;
-  }
-
-  .employee-item .employee-time {
     color: #6c757d;
+    margin-bottom: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employee-item .employee-info .division {
+    font-size: 0.65rem;
+    color: #95a5a6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.employee-item .employee-score {
     font-size: 0.7rem;
-  }
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}
+
+/* Score color variations */
+.score-excellent { color: #27ae60; background: #e8f6ef !important; }
+.score-good { color: #2980b9; background: #e8f4fc !important; }
+.score-average { color: #f39c12; background: #fef5e6 !important; }
+.score-poor { color: #e74c3c; background: #fdedec !important; }
+
+/* Action buttons */
+.employee-actions {
+    display: flex;
+    gap: 5px;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.employee-actions .btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.7rem;
+}
+
+/* Card header improvements */
+.employee-list-card .card-header {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+}
+
+.employee-list-card .card-header h6 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.employee-count {
+    font-size: 0.7rem;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+/* Empty state styling */
+.employee-empty-state {
+    padding: 30px 20px;
+    text-align: center;
+    color: #95a5a6;
+}
+
+.employee-empty-state i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.employee-empty-state p {
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .employee-list-card .card-body {
+        max-height: 220px;
+    }
+    
+    .employee-item {
+        padding: 8px 10px;
+    }
+    
+    .employee-item .avatar {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .employee-actions .btn {
+        width: 26px;
+        height: 26px;
+    }
+}
+
+@media (max-width: 576px) {
+    .best-card {
+        order: 1;
+        margin-bottom: 10px;
+    }
+    
+    .worst-card {
+        order: 2;
+    }
+    
+    .employee-list-card .card-body {
+        max-height: 200px;
+    }
+}
 
   /* Default (desktop & tablet) */
   .card-header h6 {
@@ -431,7 +610,7 @@ $(document).ready(function() {
                 if (response.success) {
                     const worstEmployees = response.data.slice(-5).map(emp => ({
                         ...emp,
-                        score: Math.floor(Math.random() * 20) + 30, // Random score 30-50 untuk demo
+                        score: Math.floor(Math.random() * 20) + 30, 
                         phone: emp.no_telp || '62'
                     }));
                     renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
@@ -447,76 +626,96 @@ $(document).ready(function() {
     }
 
     // FUNGSI RENDER YANG SAMA PERSIS DENGAN DASHBOARD PENILAI
-    function renderEmployeeList(selector, employees, title) {
-        const listElement = $(selector);
-        listElement.empty();
+   // FUNGSI RENDER YANG LEBIH RAPI
+function renderEmployeeList(selector, employees, title) {
+    const listElement = $(selector);
+    listElement.empty();
+    
+    if (!employees || employees.length === 0) {
+        listElement.append(`
+            <div class="employee-empty-state">
+                <i class="icofont-info-circle"></i>
+                <p class="mt-2">Tidak ada data ${title.toLowerCase()}</p>
+                <small class="text-muted">Data akan muncul ketika tersedia</small>
+            </div>
+        `);
+        return;
+    }
+    
+    // Update count badge di header
+    const cardHeader = listElement.closest('.card').find('.card-header h6');
+    cardHeader.find('.employee-count').remove();
+    cardHeader.append(`<span class="employee-count">${employees.length}</span>`);
+    
+    employees.forEach((employee, index) => {
+        // Handle berbagai format data
+        const employeeName = employee.nama || employee.name || 'Tidak ada nama';
+        const employeePosition = employee.position || 
+                               (employee.roles && employee.roles.length > 0 ? 
+                                employee.roles[0].nama_jabatan : 'Tidak ada jabatan');
+        const employeeDivision = employee.division || 
+                               (employee.roles && employee.roles.length > 0 ? 
+                                employee.roles[0].division?.nama_divisi : '-');
         
-        if (!employees || employees.length === 0) {
-            listElement.append(`
-                <div class="text-center text-muted py-4">
-                    <i class="icofont-checked fs-1"></i>
-                    <p class="mt-2">Tidak ada data ${title.toLowerCase()}</p>
+        const hasScore = employee.score !== undefined;
+        const scoreColor = hasScore ? getScoreColorClass(employee.score) : 'score-average';
+        const scoreText = hasScore ? employee.score.toFixed(1) : 'N/A';
+        
+        // Foto employee
+        const photoUrl = employee.foto ? 
+            '/storage/' + employee.foto : 
+            '{{ asset('assets/images/profile_av.png') }}';
+        
+        const employeeItem = `
+            <div class="employee-item">
+                <img class="avatar" 
+                     src="${photoUrl}" 
+                     alt="${employeeName}"
+                     onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
+                
+                <div class="employee-info">
+                    <h6 class="mb-1">${employeeName}</h6>
+                    <div class="position">${employeePosition}</div>
+                    <div class="division">${employeeDivision}</div>
                 </div>
-            `);
-            return;
-        }
-        
-        employees.forEach(employee => {
-            // Handle berbagai format data
-            const employeeName = employee.nama || 'Tidak ada nama';
-            const employeePosition = employee.position || 
-                                   (employee.roles && employee.roles.length > 0 ? 
-                                    employee.roles[0].nama_jabatan : 'Tidak ada jabatan');
-            const employeeDivision = employee.division || 
-                                   (employee.roles && employee.roles.length > 0 ? 
-                                    employee.roles[0].division?.nama_divisi : '-');
-            
-            const hasScore = employee.score !== undefined;
-            const scoreColor = hasScore ? getScoreColor(employee.score) : '';
-            const scoreHtml = hasScore ? `<small class="${scoreColor}">Score: ${employee.score.toFixed(1)}</small>` : '';
-            
-            // Foto employee - sama seperti dashboard penilai
-            const photoUrl = employee.foto ? 
-                '/storage/' + employee.foto : 
-                '{{ asset('assets/images/profile_av.png') }}';
-            
-            const employeeItem = `
-                <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
-                    <img class="avatar lg rounded-circle img-thumbnail" 
-                         src="${photoUrl}" 
-                         alt="${employeeName}"
-                         onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
-                    <div class="d-flex flex-column ps-3 flex-fill">
-                        <h6 class="fw-bold mb-0 small-14">${employeeName}</h6>
-                        <span class="text-muted">${employeePosition}</span>
-                        ${scoreHtml}
+                
+                ${hasScore ? `
+                    <div class="employee-score ${scoreColor}">
+                        ${scoreText}
                     </div>
-                    ${title === 'Perlu Perhatian' && employee.phone ? `
-                        <div class="d-flex gap-1">
-                            <a class="btn btn-outline-success btn-sm" href="https://wa.me/${employee.phone}" target="_blank">
-                                <i class="icofont-brand-whatsapp"></i>
-                            </a>
-                            <a class="btn btn-outline-info btn-sm" href="/kpi/detail/${employee.id_karyawan}">
-                                <i class="icofont-eye-alt"></i>
-                            </a>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-            
-            listElement.append(employeeItem);
-        });
-    }
+                ` : ''}
+                
+                ${title === 'Perlu Perhatian' && employee.phone ? `
+                    <div class="employee-actions">
+                        <a class="btn btn-outline-success btn-sm" 
+                           href="https://wa.me/${employee.phone}" 
+                           target="_blank"
+                           title="Hubungi via WhatsApp">
+                            <i class="icofont-brand-whatsapp"></i>
+                        </a>
+                        <a class="btn btn-outline-primary btn-sm" 
+                           href="/kpi/detail/${employee.id_karyawan || employee.id}"
+                           title="Lihat Detail">
+                            <i class="icofont-eye-alt"></i>
+                        </a>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        listElement.append(employeeItem);
+    });
+}
 
-    // Helper function untuk menentukan warna score - sama seperti dashboard penilai
-    function getScoreColor(score) {
-        const numericScore = parseFloat(score) || 0;
-        if (numericScore >= 90) return 'text-success';
-        if (numericScore >= 80) return 'text-primary';
-        if (numericScore >= 70) return 'text-warning';
-        if (numericScore >= 60) return 'text-orange';
-        return 'text-danger';
-    }
+// Helper function untuk score color yang lebih baik
+function getScoreColorClass(score) {
+    const numericScore = parseFloat(score) || 0;
+    if (numericScore >= 90) return 'score-excellent';
+    if (numericScore >= 80) return 'score-good';
+    if (numericScore >= 70) return 'score-average';
+    if (numericScore >= 60) return 'score-average';
+    return 'score-poor';
+}
 
     // Fungsi untuk merender chart gender
     function renderGenderChart(priaCount, wanitaCount) {
@@ -583,7 +782,7 @@ $(document).ready(function() {
                     type: 'area',
                     stacked: true,
                     toolbar: {
-                        show: true,
+                        show: false,
                     },
                 },
                 colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0'],

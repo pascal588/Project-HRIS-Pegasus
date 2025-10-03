@@ -50,6 +50,8 @@ Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
     Route::get('/kpi', function() {
         return view('hr.kpi');
     })->name('hr.kpi');
+
+    Route::get('/hr/kpi/monthly-export/{employeeId}', [HrController::class, 'exportMonthlyKpi']);
 });
 
 Route::middleware(['auth', 'nama_jabatan:Kepala Divisi'])->group(function () {

@@ -47,6 +47,10 @@ class HrController extends Controller
                 $weight = $point->bobot;
 
                 $subAspectScore = ($averageAnswer * 2.5) * ($weight / 100);
+
+                // KALIKAN DENGAN 10 UNTUK MENYESUAIKAN SKALA
+                $subAspectScore = $subAspectScore * 10;
+
                 $totalScore += $subAspectScore;
 
                 return [
@@ -154,6 +158,7 @@ class HrController extends Controller
     {
         Log::info("Memulai proses ekspor KPI bulanan untuk employee_id: {$employeeId}");
         try {
+            // PERBAIKAN: Hapus 'position' dari with()
             $employee = Employee::with('division')->find($employeeId);
             if (!$employee) {
                 return redirect()->back()->with('error', 'Employee not found.');
@@ -165,23 +170,15 @@ class HrController extends Controller
                 return redirect()->back()->with('error', 'No KPI data to export for this employee.');
             }
 
-            // Panggil method pivot yang sudah dimodifikasi
             $pivotedKpiData = $this->pivotKpiData($kpiData);
-
-            // 1. Ambil data periode terakhir dari koleksi KPI
-            $lastPeriod = $kpiData->last();
-
-            // 2. Format bulan dan tahun (misal: 09-2025)
-            $dateString = sprintf('%02d-%d', $lastPeriod['month'], $lastPeriod['year']);
-
-            // 3. Ganti spasi di nama karyawan dengan underscore
+            $exportYear = $kpiData->first()['year'] ?? date('Y');
             $employeeName = str_replace(' ', '_', $employee->nama);
+            $fileName = "Kpi_{$employeeName}_{$exportYear}.xlsx";
 
-            // 4. Buat nama file sesuai format yang Anda inginkan
-            $fileName = "recap_karyawan_{$employeeName}_{$dateString}.xlsx";
-
-
-            return Excel::download(new MonthlyKpiExport($employee, $pivotedKpiData), $fileName);
+            return Excel::download(
+                new MonthlyKpiExport($employee, $pivotedKpiData, $exportYear),
+                $fileName
+            );
         } catch (Exception $e) {
             Log::error("Error saat exportMonthlyKpi untuk employee_id: {$employeeId}", [
                 'message' => $e->getMessage(),

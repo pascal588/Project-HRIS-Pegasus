@@ -593,53 +593,93 @@ class PeriodController extends Controller
     public function getPerformanceAcrossPeriods()
     {
         try {
-            // Query utama, diperbaiki untuk menggunakan 'periods.nama'
-            $results = DB::table('kpis_has_employees')
-                ->join('roles_has_employees', 'kpis_has_employees.employees_id_karyawan', '=', 'roles_has_employees.employee_id')
-                ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
-                ->join('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
-                ->join('periods', 'kpis_has_employees.periode_id', '=', 'periods.id_periode')
-                ->select(
-                    'divisions.nama_divisi',
-                    'periods.id_periode',
-                    'periods.nama', // <-- INI YANG DIPERBAIKI
-                    DB::raw('AVG(kpis_has_employees.nilai_akhir) as average_score')
-                )
-                ->groupBy('divisions.nama_divisi', 'periods.id_periode', 'periods.nama') // <-- INI JUGA DIPERBAIKI
-                ->orderBy('periods.id_periode')
+            // STEP 1: Ambil SEMUA divisi yang ada
+            $allDivisions = DB::table('divisions')
+                ->select('id_divisi', 'nama_divisi')
+                ->orderBy('nama_divisi')
                 ->get();
 
-            if ($results->isEmpty()) {
-                return response()->json(['success' => true, 'data' => ['categories' => [], 'series' => []]]);
-            }
+            // STEP 2: Ambil SEMUA periode yang ada
+            $allPeriods = DB::table('periods')
+                ->select('id_periode', 'nama')
+                ->orderBy('id_periode')
+                ->get();
 
-            // Susun data untuk frontend
-            $categories = $results->pluck('nama')->unique()->values()->all(); // <-- INI JUGA DIPERBAIKI
+            \Log::info('DEBUG All Divisions:', $allDivisions->toArray());
+            \Log::info('DEBUG All Periods:', $allPeriods->toArray());
+
+            // STEP 3: Hitung rata-rata divisi yang punya data KPI
+            $divisionAverages = DB::table('kpis_has_employees as khe')
+                ->select(
+                    'd.nama_divisi',
+                    'p.id_periode',
+                    'p.nama as period_name',
+                    DB::raw('ROUND(AVG(employee_totals.final_score), 2) as division_average')
+                )
+                ->joinSub(
+                    DB::table('kpis_has_employees')
+                        ->select(
+                            'employees_id_karyawan',
+                            'periode_id',
+                            DB::raw('SUM(nilai_akhir) as final_score')
+                        )
+                        ->whereNotNull('nilai_akhir')
+                        ->where('nilai_akhir', '>', 0)
+                        ->groupBy('employees_id_karyawan', 'periode_id'),
+                    'employee_totals',
+                    function ($join) {
+                        $join->on('khe.employees_id_karyawan', '=', 'employee_totals.employees_id_karyawan')
+                            ->on('khe.periode_id', '=', 'employee_totals.periode_id');
+                    }
+                )
+                ->join('roles_has_employees as rhe', 'khe.employees_id_karyawan', '=', 'rhe.employee_id')
+                ->join('roles as r', 'rhe.role_id', '=', 'r.id_jabatan')
+                ->join('divisions as d', 'r.division_id', '=', 'd.id_divisi')
+                ->join('periods as p', 'khe.periode_id', '=', 'p.id_periode')
+                ->groupBy('d.nama_divisi', 'p.id_periode', 'p.nama')
+                ->orderBy('p.id_periode')
+                ->orderBy('d.nama_divisi')
+                ->get();
+
+            \Log::info('DEBUG Division Averages with Data:', $divisionAverages->toArray());
+
+            // STEP 4: Format data untuk chart - INCLUDE SEMUA DIVISI
+            $categories = $allPeriods->pluck('nama')->all();
             $seriesData = [];
-            $groupedByDivision = $results->groupBy('nama_divisi');
 
-            foreach ($groupedByDivision as $divisionName => $scores) {
+            foreach ($allDivisions as $division) {
                 $dataPoints = [];
-                foreach ($categories as $periodName) {
-                    $scoreForPeriod = $scores->firstWhere('nama', $periodName); // <-- INI JUGA DIPERBAIKI
-                    $dataPoints[] = $scoreForPeriod ? round($scoreForPeriod->average_score, 2) : null;
+
+                foreach ($allPeriods as $period) {
+                    // Cari data untuk divisi dan periode ini
+                    $scoreData = $divisionAverages->first(function ($item) use ($division, $period) {
+                        return $item->nama_divisi === $division->nama_divisi &&
+                            $item->id_periode === $period->id_periode;
+                    });
+
+                    // Jika ada data, gunakan nilainya; jika tidak, 0
+                    $dataPoints[] = $scoreData ? (float) $scoreData->division_average : 0;
                 }
 
                 $seriesData[] = [
-                    'name' => $divisionName,
+                    'name' => $division->nama_divisi,
                     'data' => $dataPoints,
                 ];
             }
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'data' => [
                     'categories' => $categories,
                     'series' => $seriesData,
                 ]
-            ]);
+            ];
+
+            \Log::info('DEBUG Final Response with All Divisions:', $response);
+
+            return response()->json($response);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Error in getPerformanceAcrossPeriods: ' . $e->getMessage());
+            \Log::error('Error in getPerformanceAcrossPeriods: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan server: ' . $e->getMessage()

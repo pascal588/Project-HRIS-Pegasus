@@ -864,10 +864,6 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
       });
 
       // Tombol export
-      document.getElementById('exportExcelBtn').addEventListener('click', function() {
-        alert('Fitur export Excel akan diimplementasi');
-      });
-
       document.getElementById('exportMonthlyBtn').addEventListener('click', async function() {
         if (!currentEmployeeId) {
           alert('ID Karyawan tidak valid!');

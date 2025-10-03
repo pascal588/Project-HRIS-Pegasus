@@ -7,8 +7,6 @@ use App\Http\Controllers\Api\RoleApiController;
 use App\Http\Controllers\Api\KpiController;
 use App\Http\Controllers\Api\AttendanceApiController;
 use App\Http\Controllers\Api\PeriodController;
-use App\Http\Controllers\HrController;
-use App\Http\Controllers\Api\RecapController;
 
 // ==================== ATTENDANCE ROUTES ====================
 Route::prefix('attendances')->group(function () {
@@ -113,6 +111,11 @@ Route::get('/low-performing-employees-all', [KpiController::class, 'getLowPerfor
     Route::get('/division/{divisionId}/unrated-employees', [KpiController::class, 'getUnratedEmployees']);
     Route::get('/division/{divisionId}/low-performing-employees', [KpiController::class, 'getLowPerformingEmployees']);
     Route::get('/division/{divisionId}/stats', [KpiController::class, 'getDivisionKpiStats']);
+
+    Route::get('/published-periods', [KpiController::class, 'getPublishedPeriods']);
+Route::get('/period/{periodId}/scores', [KpiController::class, 'getEmployeeScoresByPeriod']);
+Route::get('/available-years', [KpiController::class, 'getAvailableYears']);
+Route::get('/year/{year}/scores', [KpiController::class, 'getScoresByYear']);
 });
 
 // ==================== PERIOD ROUTES ====================
@@ -150,11 +153,3 @@ Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
 
 // Test routes for attendance data
 Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);
-
-//laporan
-// Route BARU untuk mengambil daftar tahun rekap per karyawan
-Route::get('/hr/kpi/employee/{employeeId}/years', [HrController::class, 'getAvailableYearsForEmployee'])->name('hr.kpi.employee.years');
-
-// Route LAMA yang sudah disesuaikan (pastikan sudah ada)
-Route::get('/hr/kpi/monthly-data/{employeeId}', [HrController::class, 'getMonthlyKpiData'])->name('hr.kpi.monthly.data');
-Route::get('/hr/kpi/monthly-export/{employeeId}', [HrController::class, 'exportMonthlyKpi'])->name('hr.kpi.monthly.export');

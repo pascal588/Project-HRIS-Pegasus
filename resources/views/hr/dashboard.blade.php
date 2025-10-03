@@ -39,11 +39,19 @@
   }
 
   /* Employee list cards */
-  .employee-list-card .card-body {
+  .employee-list-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-list-card .card-body {
+    flex: 1;
     padding: 0;
-    max-height: 200px;
+    max-height: 300px; /* HAPUS max-height fixed */
+    min-height: 200px; /* BERI MINIMUM HEIGHT */
     overflow-y: auto;
-  }
+}
 
   /* Compact stat cards */
   .stat-card {
@@ -555,26 +563,38 @@ $(document).ready(function() {
         });
     }
 
-    // FUNGSI BARU: Load karyawan perlu perhatian dengan tampilan sama seperti dashboard penilai
     function loadLowPerformingEmployeesAll() {
-        $.ajax({
-            url: '/api/kpis/low-performing-employees-all',
-            method: 'GET',
-            success: function(response) {
-                if (response.success && response.data.length > 0) {
-                    console.log('Low performing employees loaded:', response.data.length, 'items');
-                    renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
-                } else {
-                    console.error('Failed to load low performing employees:', response.message);
-                    renderFallbackWorstEmployees();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading low performing employees:', error);
+    console.log('Loading low performing employees from all divisions...');
+    
+    $.ajax({
+        url: '/api/kpis/low-performing-employees-all',
+        method: 'GET',
+        success: function(response) {
+            console.log('Low performing API response:', response);
+            
+            if (response.success && response.data.length > 0) {
+                console.log('Low performing employees loaded:', {
+                    count: response.data.length,
+                    period: response.period_info,
+                    employees: response.data.map(emp => ({
+                        name: emp.nama, 
+                        score: emp.score,
+                        division: emp.division
+                    }))
+                });
+                
+                renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
+            } else {
+                console.warn('No low performing employees found:', response.message);
                 renderFallbackWorstEmployees();
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading low performing employees:', error);
+            renderFallbackWorstEmployees();
+        }
+    });
+}
 
     // FUNGSI FALLBACK untuk karyawan terbaik
     function renderFallbackBestEmployees() {

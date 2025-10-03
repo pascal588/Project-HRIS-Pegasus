@@ -56,4 +56,36 @@ class Employee extends Model
     {
         return $this->hasMany(KpiHasEmployee::class, 'employees_id_karyawan', 'id_karyawan');
     }
+
+    public function divisionThroughRole()
+{
+    return $this->hasOneThrough(
+        Division::class,
+        Role::class,
+        'id_jabatan',      // FK di roles
+        'id_divisi',       // FK di divisions  
+        'id_karyawan',     // PK di employees
+        'division_id'      // FK di roles ke divisions
+    );
+}
+
+// TAMBAHKAN ACCESSOR UNTUK MEMUDAHKAN
+public function getDivisiAttribute()
+{
+    // Coba akses melalui role pertama
+    if ($this->roles->isNotEmpty()) {
+        return $this->roles->first()->division;
+    }
+    return null;
+}
+
+public function getNamaDivisiAttribute()
+{
+    return $this->divisi ? $this->divisi->nama_divisi : 'Tidak Ada Divisi';
+}
+
+public function getJabatanAttribute()
+{
+    return $this->roles->first()->nama_jabatan ?? 'Tidak Ada Jabatan';
+}
 }

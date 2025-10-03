@@ -258,73 +258,106 @@ class KpiController extends Controller
     }
     // checkpoint
     public function listKpiByDivision($divisionId, Request $request)
-    {
-        $periodeId = $request->get('periode_id');
+{
+    $periodeId = $request->get('periode_id');
 
-        Log::info("listKpiByDivision Debug:", [
-            'division_id' => $divisionId,
-            'periode_id' => $periodeId
-        ]);
+    Log::info("listKpiByDivision Debug:", [
+        'division_id' => $divisionId,
+        'periode_id' => $periodeId
+    ]);
 
-        if ($periodeId) {
-            // ⚠️ PERBAIKAN KRITIS: Query yang lebih spesifik
-            $globalKpis = Kpi::where('periode_id', $periodeId)
-                ->where('is_global', true)
-                ->with('points.questions')
-                ->get();
+    if ($periodeId) {
+        // ⚠️ PERBAIKAN: Query yang LEBIH SPESIFIK dengan distinct
+        $globalKpis = Kpi::where('periode_id', $periodeId)
+            ->where('is_global', true)
+            ->with(['points.questions'])
+            ->get();
 
-            $divisionKpis = Kpi::where('periode_id', $periodeId)
-                ->whereHas('divisions', function ($q) use ($divisionId) {
-                    $q->where('divisions.id_divisi', $divisionId);
-                })
-                ->with('points.questions')
-                ->get();
-
-            // ⚠️ PERBAIKAN: Gabungkan dan hapus duplikasi berdasarkan ID KPI
-            $allKpis = $globalKpis->merge($divisionKpis);
-
-            // Hapus duplikasi berdasarkan id_kpi
-            $uniqueKpis = $allKpis->unique('id_kpi')->values();
-
-            Log::info("KPI Deduplication Results:", [
-                'global_count' => $globalKpis->count(),
-                'division_count' => $divisionKpis->count(),
-                'before_dedup' => $allKpis->count(),
-                'after_dedup' => $uniqueKpis->count(),
-                'duplicates_removed' => $allKpis->count() - $uniqueKpis->count()
-            ]);
-
-            $kpis = $uniqueKpis;
-        } else {
-            // Template KPI (tanpa periode)
-            $globalKpis = Kpi::where('is_global', true)
-                ->whereNull('periode_id')
-                ->with('points.questions')
-                ->get();
-
-            $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+        $divisionKpis = Kpi::where('periode_id', $periodeId)
+            ->whereHas('divisions', function ($q) use ($divisionId) {
                 $q->where('divisions.id_divisi', $divisionId);
             })
-                ->whereNull('periode_id')
-                ->with('points.questions')
-                ->get();
+            ->with(['points.questions'])
+            ->get();
 
-            // Hapus duplikasi
-            $kpis = $globalKpis->merge($divisionKpis)
-                ->unique('id_kpi')
-                ->values();
+        // ⚠️ PERBAIKAN: Gabungkan dan hapus duplikasi berdasarkan ID KPI
+        $allKpis = $globalKpis->merge($divisionKpis);
+
+        // ⚠️ PERBAIKAN KRITIS: Hapus duplikasi berdasarkan id_kpi
+        $uniqueKpis = collect();
+        $seenKpiIds = [];
+
+        foreach ($allKpis as $kpi) {
+            $kpiId = $kpi->id_kpi;
+            if (!in_array($kpiId, $seenKpiIds)) {
+                $seenKpiIds[] = $kpiId;
+                $uniqueKpis->push($kpi);
+                
+                Log::info("Unique KPI Added:", [
+                    'id' => $kpi->id_kpi,
+                    'nama' => $kpi->nama,
+                    'is_global' => $kpi->is_global
+                ]);
+            } else {
+                Log::warning("Duplicate KPI Skipped:", [
+                    'id' => $kpi->id_kpi,
+                    'nama' => $kpi->nama
+                ]);
+            }
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $kpis,
-            'debug' => [
-                'division_id' => $divisionId,
-                'periode_id' => $periodeId,
-                'total_kpis' => $kpis->count()
-            ]
+        Log::info("KPI Deduplication Results:", [
+            'global_count' => $globalKpis->count(),
+            'division_count' => $divisionKpis->count(),
+            'before_dedup' => $allKpis->count(),
+            'after_dedup' => $uniqueKpis->count(),
+            'duplicates_removed' => $allKpis->count() - $uniqueKpis->count(),
+            'unique_kpi_ids' => $seenKpiIds
         ]);
+
+        $kpis = $uniqueKpis;
+    } else {
+        // Template KPI (tanpa periode) - juga perbaiki deduplikasi di sini
+        $globalKpis = Kpi::where('is_global', true)
+            ->whereNull('periode_id')
+            ->with('points.questions')
+            ->get();
+
+        $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+            $q->where('divisions.id_divisi', $divisionId);
+        })
+            ->whereNull('periode_id')
+            ->with('points.questions')
+            ->get();
+
+        // Hapus duplikasi dengan cara yang sama
+        $allKpis = $globalKpis->merge($divisionKpis);
+        $uniqueKpis = collect();
+        $seenKpiIds = [];
+
+        foreach ($allKpis as $kpi) {
+            $kpiId = $kpi->id_kpi;
+            if (!in_array($kpiId, $seenKpiIds)) {
+                $seenKpiIds[] = $kpiId;
+                $uniqueKpis->push($kpi);
+            }
+        }
+
+        $kpis = $uniqueKpis;
     }
+
+    return response()->json([
+        'success' => true,
+        'data' => $kpis,
+        'debug' => [
+            'division_id' => $divisionId,
+            'periode_id' => $periodeId,
+            'total_kpis' => $kpis->count(),
+            'kpi_names' => $kpis->pluck('nama'),
+            'kpi_ids' => $kpis->pluck('id_kpi')
+        ]
+    ]);
+}
     public function listGlobalKpi()
     {
         $kpis = Kpi::where('is_global', true)->whereNull('periode_id')->with('points.questions')->get();
@@ -1345,97 +1378,112 @@ class KpiController extends Controller
     }
 
     public function publishToPeriod(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'period_id' => 'required|exists:periods,id_periode',
-            'deadline_days' => 'required|integer|min:1|max:60', // Deadline dalam hari
+{
+    $validator = Validator::make($request->all(), [
+        'period_id' => 'required|exists:periods,id_periode',
+        'deadline_days' => 'required|integer|min:1|max:60',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation error',
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    DB::beginTransaction();
+    try {
+        $period = Period::findOrFail($request->period_id);
+
+        // Validasi: periode harus memiliki absensi yang sudah diupload
+        if (!$period->attendance_uploaded) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa mempublish KPI: Absensi untuk periode ini belum diupload'
+            ], 400);
+        }
+
+        // Validasi: periode tidak boleh sudah locked
+        if ($period->status === 'locked') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa mempublish KPI: Periode sudah dikunci'
+            ], 400);
+        }
+
+        // Hitung tanggal evaluasi
+        $evaluationStartDate = now();
+        $evaluationEndDate = now()->addDays($request->deadline_days);
+        $editingEndDate = $evaluationEndDate->copy()->addDays(3);
+
+        // Update periode
+        $period->update([
+            'evaluation_start_date' => $evaluationStartDate,
+            'evaluation_end_date' => $evaluationEndDate,
+            'editing_start_date' => $evaluationEndDate->addDay(),
+            'editing_end_date' => $editingEndDate,
+            'status' => 'active', // ⚠️ PASTIKAN status di-set ke 'active'
+            'kpi_published' => true,
+            'kpi_published_at' => now()
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
+        // Copy template KPI ke periode
+        $copiedCount = 0;
+        $templates = Kpi::whereNull('periode_id')->with('points.questions', 'divisions')->get();
+
+        foreach ($templates as $template) {
+            $existingKpi = Kpi::where('periode_id', $period->id_periode)
+                ->where('nama', $template->nama)
+                ->where('is_global', $template->is_global)
+                ->first();
+
+            if (!$existingKpi) {
+                $this->copyKpiToPeriod($template, $period->id_periode);
+                $copiedCount++;
+                
+                // ⚠️ LOG SETIAP KPI YANG DICOPY
+                Log::info("KPI Copied to Period:", [
+                    'template_id' => $template->id_kpi,
+                    'template_name' => $template->nama,
+                    'period_id' => $period->id_periode,
+                    'period_name' => $period->nama
+                ]);
+            }
         }
 
-        DB::beginTransaction();
-        try {
-            $period = Period::findOrFail($request->period_id);
+        DB::commit();
 
-            // Validasi: periode harus memiliki absensi yang sudah diupload
-            if (!$period->attendance_uploaded) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak bisa mempublish KPI: Absensi untuk periode ini belum diupload'
-                ], 400);
-            }
+        // ⚠️ LOG SUKSES PUBLISH
+        Log::info("KPI Successfully Published:", [
+            'period_id' => $period->id_periode,
+            'period_name' => $period->nama,
+            'copied_kpi_count' => $copiedCount,
+            'status' => $period->status
+        ]);
 
-            // Validasi: periode tidak boleh sudah locked
-            if ($period->status === 'locked') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak bisa mempublish KPI: Periode sudah dikunci'
-                ], 400);
-            }
-
-            // Hitung tanggal evaluasi berdasarkan deadline
-            $evaluationStartDate = now();
-            $evaluationEndDate = now()->addDays($request->deadline_days);
-            $editingEndDate = $evaluationEndDate->copy()->addDays(3); // Tambah 3 hari untuk editing
-
-            // Update periode dengan tanggal evaluasi
-            $period->update([
-                'evaluation_start_date' => $evaluationStartDate,
-                'evaluation_end_date' => $evaluationEndDate,
-                'editing_start_date' => $evaluationEndDate->addDay(), // Editing mulai setelah evaluasi
-                'editing_end_date' => $editingEndDate,
-                'status' => 'active',
-                'kpi_published' => true,
-                'kpi_published_at' => now()
-            ]);
-
-            // Copy template KPI ke periode
-            $copiedCount = 0;
-            $templates = Kpi::whereNull('periode_id')->with('points.questions', 'divisions')->get();
-
-            foreach ($templates as $template) {
-                // Cek apakah KPI sudah ada di periode ini
-                $existingKpi = Kpi::where('periode_id', $period->id_periode)
-                    ->where('nama', $template->nama)
-                    ->where('is_global', $template->is_global)
-                    ->first();
-
-                if (!$existingKpi) {
-                    $this->copyKpiToPeriod($template, $period->id_periode);
-                    $copiedCount++;
-                }
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'KPI berhasil dipublish ke periode ' . $period->nama,
-                'data' => [
-                    'period' => $period,
-                    'copied_kpi_count' => $copiedCount,
-                    'evaluation_period' => [
-                        'start' => $evaluationStartDate->format('d M Y'),
-                        'end' => $evaluationEndDate->format('d M Y'),
-                        'deadline_days' => $request->deadline_days
-                    ]
+        return response()->json([
+            'success' => true,
+            'message' => 'KPI berhasil dipublish ke periode ' . $period->nama,
+            'data' => [
+                'period' => $period,
+                'copied_kpi_count' => $copiedCount,
+                'evaluation_period' => [
+                    'start' => $evaluationStartDate->format('d M Y'),
+                    'end' => $evaluationEndDate->format('d M Y'),
+                    'deadline_days' => $request->deadline_days
                 ]
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to publish KPI: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mempublish KPI: ' . $e->getMessage()
-            ], 500);
-        }
+            ]
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Failed to publish KPI: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mempublish KPI: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function getAvailablePeriodsForPublishing()
     {
@@ -1457,21 +1505,22 @@ class KpiController extends Controller
     public function getAllEmployeeKpis(Request $request)
 {
     try {
-        $activePeriod = Period::where('status', 'active')
-            ->where('kpi_published', true)
+        // Ambil periode TERBARU yang sudah dipublish
+        $latestPeriod = Period::where('kpi_published', true)
+            ->orderBy('tanggal_mulai', 'desc')
             ->first();
 
-        if (!$activePeriod) {
+        if (!$latestPeriod) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode aktif dengan KPI yang dipublish'
+                'message' => 'Tidak ada periode dengan KPI yang dipublish'
             ]);
         }
 
-        // VERSI SEDERHANA: Hanya ambil dari kpis_has_employees dan employees
+        // Ambil SEMUA karyawan
         $employeeScores = DB::table('kpis_has_employees')
-            ->where('periode_id', $activePeriod->id_periode)
+            ->where('periode_id', $latestPeriod->id_periode)
             ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
             ->select(
                 'employees.id_karyawan',
@@ -1483,41 +1532,49 @@ class KpiController extends Controller
             ->where('employees.status', 'Aktif')
             ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
             ->orderBy('total_score', 'desc')
-            ->limit(10)
             ->get();
 
         $formattedData = [];
 
         foreach ($employeeScores as $emp) {
-            if ($emp->total_score > 0) {
-                // Untuk mendapatkan divisi dan jabatan, gunakan query terpisah
-                $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
-                $division = '-';
-                $position = '-';
-                
-                if ($employeeDetails && $employeeDetails->roles->count() > 0) {
-                    $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
-                    $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
-                }
-
-                $formattedData[] = [
-                    'id_karyawan' => $emp->id_karyawan,
-                    'nama' => $emp->nama,
-                    'status' => $emp->status,
-                    'score' => floatval($emp->total_score),
-                    'period' => $activePeriod->nama,
-                    'period_month' => date('F', strtotime($activePeriod->tanggal_mulai)),
-                    'period_year' => date('Y', strtotime($activePeriod->tanggal_mulai)),
-                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                    'division' => $division,
-                    'position' => $position
-                ];
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            $division = '-';
+            $position = '-';
+            
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
             }
+
+            // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
+            $periodMonth = date('F', strtotime($latestPeriod->tanggal_mulai));
+            $periodYear = date('Y', strtotime($latestPeriod->tanggal_mulai));
+
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'status' => $emp->status,
+                'score' => floatval($emp->total_score),
+                'period' => $latestPeriod->nama,
+                'period_month' => $periodMonth, // Contoh: "June", "July"
+                'period_month_number' => date('n', strtotime($latestPeriod->tanggal_mulai)), // 1-12
+                'period_year' => $periodYear,
+                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                'division' => $division,
+                'position' => $position
+            ];
         }
 
         return response()->json([
             'success' => true,
-            'data' => $formattedData
+            'data' => $formattedData,
+            'debug_info' => [
+                'period_used' => $latestPeriod->nama,
+                'period_id' => $latestPeriod->id_periode,
+                'tanggal_mulai' => $latestPeriod->tanggal_mulai,
+                'period_month' => date('F', strtotime($latestPeriod->tanggal_mulai)),
+                'total_employees_returned' => count($formattedData)
+            ]
         ]);
 
     } catch (\Exception $e) {
@@ -1525,6 +1582,96 @@ class KpiController extends Controller
         return response()->json([
             'success' => false,
             'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+    public function getEmployeeScoresByPeriod($periodId)
+{
+    try {
+        $period = Period::findOrFail($periodId);
+
+        $employeeScores = DB::table('kpis_has_employees')
+            ->where('periode_id', $periodId)
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.status',
+                'employees.foto',
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+            )
+            ->where('employees.status', 'Aktif')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+            ->orderBy('total_score', 'desc')
+            ->get();
+
+        $formattedData = [];
+
+        foreach ($employeeScores as $emp) {
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            $division = '-';
+            $position = '-';
+            
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+            }
+
+            // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
+            $periodMonth = date('F', strtotime($period->tanggal_mulai));
+            $periodYear = date('Y', strtotime($period->tanggal_mulai));
+
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'status' => $emp->status,
+                'score' => floatval($emp->total_score),
+                'period' => $period->nama,
+                'period_month' => $periodMonth,
+                'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
+                'period_year' => $periodYear,
+                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                'division' => $division,
+                'position' => $position
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedData,
+            'period_info' => [
+                'id' => $period->id_periode,
+                'nama' => $period->nama,
+                'tanggal_mulai' => $period->tanggal_mulai,
+                'period_month' => date('F', strtotime($period->tanggal_mulai))
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Failed to fetch KPI data for period: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getPublishedPeriods()
+{
+    try {
+        $periods = Period::where('kpi_published', true)
+            ->orderBy('tanggal_mulai', 'desc')
+            ->get(['id_periode', 'nama', 'tanggal_mulai', 'tanggal_selesai', 'status']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $periods
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching periods: ' . $e->getMessage()
         ], 500);
     }
 }
@@ -1693,44 +1840,64 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
     }
 }
 
-    private function getStatusByContribution($contribution)
-    {
-        $numericContribution = floatval($contribution);
+    // Di KpiController.php - STANDARDISASI GRADE
+private function getStatusByContribution($contribution)
+{
+    $numericContribution = floatval($contribution);
 
-        if ($numericContribution >= 90) return 'Sangat Baik';
-        if ($numericContribution >= 80) return 'Baik';
-        if ($numericContribution >= 70) return 'Cukup';
-        if ($numericContribution >= 50) return 'Kurang';
-        return 'Sangat Kurang';
-    }
+    if ($numericContribution >= 90) return 'Sangat Baik';
+    if ($numericContribution >= 80) return 'Baik'; 
+    if ($numericContribution >= 70) return 'Cukup';
+    if ($numericContribution >= 50) return 'Kurang';
+    return 'Sangat Kurang';
+}
 
-    // Helper function untuk menentukan status score
-    private function getScoreStatus($score)
-    {
-        if ($score >= 90) return 'Excellent';
-        if ($score >= 80) return 'Good';
-        if ($score >= 70) return 'Average';
-        return 'Poor';
-    }
+// STANDARDISASI UNTUK SEMUA METHOD
+private function getScoreStatus($score)
+{
+    $numericScore = floatval($score);
     
+    if ($numericScore >= 90) return 'Sangat Baik';
+    if ($numericScore >= 80) return 'Baik';
+    if ($numericScore >= 70) return 'Cukup'; 
+    if ($numericScore >= 50) return 'Kurang';
+    return 'Sangat Kurang';
+}
 
-// Di KpiController.php - PERBAIKI method getUnratedEmployees
+// STANDARDISASI UNTUK GRADE HURUF
+private function getLetterGrade($score)
+{
+    $numericScore = floatval($score);
+    
+    if ($numericScore >= 90) return 'A';
+    if ($numericScore >= 80) return 'B';
+    if ($numericScore >= 70) return 'C';
+    if ($numericScore >= 50) return 'D';
+    return 'E';
+}    
+
 public function getUnratedEmployees($divisionId)
 {
     try {
         \Log::info("getUnratedEmployees called", ['division_id' => $divisionId]);
 
-        $activePeriod = Period::where('status', 'active')
-            ->where('kpi_published', true)
+        // ⚠️ PAKAI CARA YANG SAMA PERSIS DENGAN getAllEmployeeKpis
+        $latestPeriod = Period::where('kpi_published', true)
+            ->orderBy('tanggal_mulai', 'desc')
             ->first();
 
-        if (!$activePeriod) {
+        if (!$latestPeriod) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode aktif'
+                'message' => 'Tidak ada periode dengan KPI yang dipublish'
             ]);
         }
+
+        \Log::info("Using LATEST period for unrated check:", [
+            'period_id' => $latestPeriod->id_periode,
+            'period_name' => $latestPeriod->nama
+        ]);
 
         // Ambil semua karyawan di divisi yang aktif
         $divisionEmployees = Employee::whereHas('roles', function($query) use ($divisionId) {
@@ -1740,15 +1907,13 @@ public function getUnratedEmployees($divisionId)
         ->with(['roles.division'])
         ->get();
 
-        \Log::info("Division employees found", ['count' => $divisionEmployees->count()]);
-
         $unratedEmployees = [];
 
         foreach ($divisionEmployees as $employee) {
-            // Cek apakah sudah ada penilaian KPI di periode aktif
+            // ⚠️ CEK APAKAH SUDAH ADA NILAI DI PERIODE TERBARU
             $hasKpiScore = DB::table('kpis_has_employees')
                 ->where('employees_id_karyawan', $employee->id_karyawan)
-                ->where('periode_id', $activePeriod->id_periode)
+                ->where('periode_id', $latestPeriod->id_periode)
                 ->exists();
 
             if (!$hasKpiScore) {
@@ -1762,19 +1927,16 @@ public function getUnratedEmployees($divisionId)
             }
         }
 
-        \Log::info("Unrated employees", ['count' => count($unratedEmployees)]);
-
         return response()->json([
             'success' => true,
             'data' => $unratedEmployees,
-            'period' => $activePeriod->nama,
+            'period' => $latestPeriod->nama,
+            'period_id' => $latestPeriod->id_periode,
             'total_unrated' => count($unratedEmployees)
         ]);
 
     } catch (\Exception $e) {
         \Log::error('Error getting unrated employees: ' . $e->getMessage());
-        \Log::error('Error trace: ' . $e->getTraceAsString());
-        
         return response()->json([
             'success' => false,
             'message' => 'Error getting unrated employees: ' . $e->getMessage()
@@ -1782,70 +1944,78 @@ public function getUnratedEmployees($divisionId)
     }
 }
 
-// Di KpiController.php - PERBAIKI getLowPerformingEmployees
 public function getLowPerformingEmployees($divisionId)
 {
     try {
         \Log::info("getLowPerformingEmployees called", ['division_id' => $divisionId]);
 
-        $activePeriod = Period::where('status', 'active')
-            ->where('kpi_published', true)
+        // ⚠️ PAKAI CARA YANG SAMA PERSIS DENGAN getAllEmployeeKpis
+        $latestPeriod = Period::where('kpi_published', true)
+            ->orderBy('tanggal_mulai', 'desc')
             ->first();
 
-        if (!$activePeriod) {
+        if (!$latestPeriod) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode aktif'
+                'message' => 'Tidak ada periode dengan KPI yang dipublish'
             ]);
         }
 
-        // PERBAIKAN: Gunakan id_jabatan bukan id_role
+        // ⚠️ QUERY YANG SAMA DENGAN getAllEmployeeKpis + FILTER DIVISI + SCORE RENDAH
         $lowPerformers = DB::table('kpis_has_employees')
-            ->where('periode_id', $activePeriod->id_periode)
+            ->where('periode_id', $latestPeriod->id_periode)
             ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-            ->leftJoin('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
-            ->leftJoin('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan') // ✅ DIPERBAIKI: id_jabatan
-            ->leftJoin('divisions', 'roles.division_id', '=', 'divisions.id_divisi')
             ->select(
                 'employees.id_karyawan',
                 'employees.nama',
                 'employees.foto',
                 'employees.no_telp as phone',
-                'roles.nama_jabatan as position',
                 DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
             )
-            ->where('divisions.id_divisi', $divisionId)
             ->where('employees.status', 'Aktif')
-            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.foto', 'employees.no_telp', 'roles.nama_jabatan')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.foto', 'employees.no_telp')
             ->having('total_score', '<=', 50) // Nilai E
+            ->orderBy('total_score', 'asc')
             ->get();
 
-        \Log::info("Low performers found", ['count' => $lowPerformers->count()]);
-
-        $formattedData = [];
-
+        // Filter berdasarkan divisi
+        $filteredLowPerformers = [];
         foreach ($lowPerformers as $emp) {
-            $formattedData[] = [
-                'id_karyawan' => $emp->id_karyawan,
-                'nama' => $emp->nama,
-                'foto' => $emp->foto,
-                'phone' => $emp->phone,
-                'position' => $emp->position,
-                'score' => floatval($emp->total_score)
-            ];
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            
+            // Cek apakah karyawan termasuk di divisi yang diminta
+            $isInDivision = false;
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                foreach ($employeeDetails->roles as $role) {
+                    if ($role->division_id == $divisionId) {
+                        $isInDivision = true;
+                        break;
+                    }
+                }
+            }
+
+            if ($isInDivision) {
+                $filteredLowPerformers[] = [
+                    'id_karyawan' => $emp->id_karyawan,
+                    'nama' => $emp->nama,
+                    'foto' => $emp->foto,
+                    'phone' => $emp->phone,
+                    'position' => $employeeDetails->roles->first()->nama_jabatan ?? '-',
+                    'score' => floatval($emp->total_score)
+                ];
+            }
         }
 
         return response()->json([
             'success' => true,
-            'data' => $formattedData,
-            'period' => $activePeriod->nama
+            'data' => $filteredLowPerformers,
+            'period' => $latestPeriod->nama,
+            'period_id' => $latestPeriod->id_periode
         ]);
 
     } catch (\Exception $e) {
         \Log::error('Error getting low performing employees: ' . $e->getMessage());
-        \Log::error('Error trace: ' . $e->getTraceAsString());
-        
         return response()->json([
             'success' => false,
             'message' => 'Error getting low performing employees: ' . $e->getMessage()
@@ -1993,42 +2163,48 @@ public function getLowPerformingEmployeesAllDivisions()
     try {
         \Log::info("getLowPerformingEmployeesAllDivisions called");
 
-        $activePeriod = Period::where('status', 'active')
-            ->where('kpi_published', true)
+        // AMBIL PERIODE TERBARU YANG SUDAH DIPUBLISH (SAMA DENGAN getAllEmployeeKpis)
+        $latestPeriod = Period::where('kpi_published', true)
+            ->orderBy('tanggal_mulai', 'desc')
             ->first();
 
-        if (!$activePeriod) {
+        if (!$latestPeriod) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode aktif'
+                'message' => 'Tidak ada periode dengan KPI yang dipublish'
             ]);
         }
 
-        // VERSI SEDERHANA: Hanya ambil dari kpis_has_employees dan employees
+        // QUERY YANG SAMA PERSIS DENGAN getAllEmployeeKpis TAPI FILTER SCORE RENDAH
         $lowPerformers = DB::table('kpis_has_employees')
-            ->where('periode_id', $activePeriod->id_periode)
+            ->where('periode_id', $latestPeriod->id_periode)
             ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
             ->select(
                 'employees.id_karyawan',
                 'employees.nama',
+                'employees.status',
                 'employees.foto',
                 'employees.no_telp as phone',
                 DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
             )
             ->where('employees.status', 'Aktif')
-            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.foto', 'employees.no_telp')
-            ->having('total_score', '<=', 50)
-            ->orderBy('total_score', 'asc')
-            ->limit(10)
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto', 'employees.no_telp')
+            ->having('total_score', '<=', 50) // FILTER: score <= 50
+            ->orderBy('total_score', 'asc') // URUTKAN DARI TERENDAH
+            ->limit(10) // MAKSIMAL 10 KARYAWAN
             ->get();
 
-        \Log::info("Low performers from all divisions found", ['count' => $lowPerformers->count()]);
+        \Log::info("Low performers from all divisions", [
+            'period_id' => $latestPeriod->id_periode,
+            'period_name' => $latestPeriod->nama,
+            'count' => $lowPerformers->count()
+        ]);
 
         $formattedData = [];
 
         foreach ($lowPerformers as $emp) {
-            // Untuk mendapatkan divisi dan jabatan, gunakan query terpisah
+            // Ambil detail divisi dan jabatan
             $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
             $division = '-';
             $position = '-';
@@ -2052,7 +2228,11 @@ public function getLowPerformingEmployeesAllDivisions()
         return response()->json([
             'success' => true,
             'data' => $formattedData,
-            'period' => $activePeriod->nama
+            'period_info' => [ // TAMBAH INFO PERIODE UNTUK DEBUG
+                'id' => $latestPeriod->id_periode,
+                'nama' => $latestPeriod->nama,
+                'tanggal_mulai' => $latestPeriod->tanggal_mulai
+            ]
         ]);
 
     } catch (\Exception $e) {
@@ -2062,6 +2242,106 @@ public function getLowPerformingEmployeesAllDivisions()
         return response()->json([
             'success' => false,
             'message' => 'Error getting low performing employees: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getAvailableYears()
+{
+    try {
+        $years = Period::where('kpi_published', true)
+            ->selectRaw('YEAR(tanggal_mulai) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+            
+        return response()->json([
+            'success' => true,
+            'data' => $years
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching years: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getScoresByYear($year)
+{
+    try {
+        // Cari semua periode di tahun tersebut
+        $periods = Period::where('kpi_published', true)
+            ->whereYear('tanggal_mulai', $year)
+            ->pluck('id_periode');
+
+        if ($periods->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'message' => 'Tidak ada data KPI untuk tahun ' . $year
+            ]);
+        }
+
+        // Ambil data KPI untuk semua periode di tahun tersebut
+        $employeeScores = DB::table('kpis_has_employees')
+            ->whereIn('periode_id', $periods)
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.status',
+                'employees.foto',
+                DB::raw('AVG(kpis_has_employees.nilai_akhir) as avg_score') // Rata-rata score per tahun
+            )
+            ->where('employees.status', 'Aktif')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+            ->orderBy('avg_score', 'desc')
+            ->get();
+
+        $formattedData = [];
+
+        foreach ($employeeScores as $emp) {
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            $division = '-';
+            $position = '-';
+            
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+            }
+
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'status' => $emp->status,
+                'score' => floatval($emp->avg_score),
+                'period' => 'Tahun ' . $year,
+                'period_month' => 'Yearly',
+                'period_month_number' => 0,
+                'period_year' => $year,
+                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                'division' => $division,
+                'position' => $position,
+                'period_id' => 'yearly_' . $year
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedData,
+            'debug_info' => [
+                'year' => $year,
+                'periods_count' => $periods->count(),
+                'total_employees' => count($formattedData)
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Failed to fetch KPI data by year: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
         ], 500);
     }
 }

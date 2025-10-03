@@ -39,11 +39,19 @@
   }
 
   /* Employee list cards */
-  .employee-list-card .card-body {
+  .employee-list-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.employee-list-card .card-body {
+    flex: 1;
     padding: 0;
-    max-height: 200px;
+    max-height: 300px; /* HAPUS max-height fixed */
+    min-height: 200px; /* BERI MINIMUM HEIGHT */
     overflow-y: auto;
-  }
+}
 
   /* Compact stat cards */
   .stat-card {
@@ -230,7 +238,7 @@
             <h6 class="mb-0 fw-bold text-center">Karyawan</h6>
           </div>
           <div class="card-body stat-card">
-            <img src="user.png" alt="User Icon" />
+            <img src="{{asset ('asset/user.png')}}" alt="User Icon" />
             <h4 class="fw-bold" id="total-employees">0</h4>
             <span class="text-muted">Total</span>
           </div>
@@ -376,26 +384,38 @@ $(document).ready(function() {
         });
     }
 
-    // FUNGSI BARU: Load karyawan perlu perhatian dengan tampilan sama seperti dashboard penilai
     function loadLowPerformingEmployeesAll() {
-        $.ajax({
-            url: '/api/kpis/low-performing-employees-all',
-            method: 'GET',
-            success: function(response) {
-                if (response.success && response.data.length > 0) {
-                    console.log('Low performing employees loaded:', response.data.length, 'items');
-                    renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
-                } else {
-                    console.error('Failed to load low performing employees:', response.message);
-                    renderFallbackWorstEmployees();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading low performing employees:', error);
+    console.log('Loading low performing employees from all divisions...');
+    
+    $.ajax({
+        url: '/api/kpis/low-performing-employees-all',
+        method: 'GET',
+        success: function(response) {
+            console.log('Low performing API response:', response);
+            
+            if (response.success && response.data.length > 0) {
+                console.log('Low performing employees loaded:', {
+                    count: response.data.length,
+                    period: response.period_info,
+                    employees: response.data.map(emp => ({
+                        name: emp.nama, 
+                        score: emp.score,
+                        division: emp.division
+                    }))
+                });
+                
+                renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
+            } else {
+                console.warn('No low performing employees found:', response.message);
                 renderFallbackWorstEmployees();
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading low performing employees:', error);
+            renderFallbackWorstEmployees();
+        }
+    });
+}
 
     // FUNGSI FALLBACK untuk karyawan terbaik
     function renderFallbackBestEmployees() {
@@ -421,30 +441,39 @@ $(document).ready(function() {
         });
     }
 
-    // FUNGSI FALLBACK untuk karyawan perlu perhatian
-    function renderFallbackWorstEmployees() {
-        // Ambil data karyawan dari API employees sebagai fallback
-        $.ajax({
-            url: '/api/employees',
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const worstEmployees = response.data.slice(-5).map(emp => ({
-                        ...emp,
-                        score: Math.floor(Math.random() * 20) + 30, // Random score 30-50 untuk demo
-                        phone: emp.no_telp || '62'
-                    }));
-                    renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
-                }
-            },
-            error: function() {
-                const fallbackData = [
-                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
-                ];
-                renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
+    // FUNGSI FALLBACK untuk karyawan perlu perhatian - PERBAIKI
+function renderFallbackWorstEmployees() {
+    // Gunakan API yang sama dengan data utama, tapi tanpa filter score
+    $.ajax({
+        url: '/api/kpis/all-employee-scores',
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.data.length > 0) {
+                // Ambil 5 karyawan dengan score terendah dari data aktual
+                const sortedByScore = [...response.data].sort((a, b) => a.score - b.score);
+                const worstEmployees = sortedByScore.slice(0, 5);
+                renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
+            } else {
+                showFallbackMessage('#worst-employees-list', 'Perlu Perhatian');
             }
-        });
-    }
+        },
+        error: function() {
+            showFallbackMessage('#worst-employees-list', 'Perlu Perhatian');
+        }
+    });
+}
+
+// Fungsi untuk menampilkan pesan fallback
+function showFallbackMessage(selector, title) {
+    const listElement = $(selector);
+    listElement.html(`
+        <div class="text-center text-muted py-4">
+            <i class="icofont-info-circle fs-1"></i>
+            <p class="mt-2">Data ${title.toLowerCase()} sedang tidak tersedia</p>
+            <small class="text-muted">Silakan refresh halaman</small>
+        </div>
+    `);
+}
 
     // FUNGSI RENDER YANG SAMA PERSIS DENGAN DASHBOARD PENILAI
     function renderEmployeeList(selector, employees, title) {

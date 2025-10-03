@@ -387,30 +387,51 @@ function loadAttendanceData() {
         });
     }
     
-    // Function untuk extract tahun dari periods
+    // Function untuk extract tahun dari periods - FIXED VERSION
 function loadYearsFromPeriods(periods) {
     const years = new Set();
     
-    // Extract years from periods yang sudah berbentuk "5 Jul 2025 - 5 Aug 2025"
+    console.log('Extracting years from periods:', periods);
+    
     periods.forEach(period => {
-        // Ambil tahun dari kedua sisi periode
-        const parts = period.split(' - ');
-        if (parts.length === 2) {
-            const startYear = parts[0].trim().split(' ').pop(); // Ambil tahun dari start date
-            const endYear = parts[1].trim().split(' ').pop();   // Ambil tahun dari end date
-            
-            if (startYear && !isNaN(startYear)) years.add(parseInt(startYear));
-            if (endYear && !isNaN(endYear)) years.add(parseInt(endYear));
+        // Handle multiple format:
+        // Format 1: "5 Jul 2025 - 5 Aug 2025"
+        // Format 2: "July-2025" atau "July 2025 - August 2025"
+        
+        // Coba ekstrak tahun dengan regex yang lebih robust
+        const yearMatches = period.match(/\b(19|20)\d{2}\b/g);
+        
+        if (yearMatches && yearMatches.length > 0) {
+            yearMatches.forEach(year => {
+                const yearNum = parseInt(year);
+                if (!isNaN(yearNum) && yearNum >= 2020 && yearNum <= 2030) {
+                    years.add(yearNum);
+                }
+            });
+        } else {
+            // Fallback: cari angka 4 digit manual
+            const parts = period.split(/\s+/);
+            parts.forEach(part => {
+                if (part.length === 4 && !isNaN(part)) {
+                    const yearNum = parseInt(part);
+                    if (yearNum >= 2020 && yearNum <= 2030) {
+                        years.add(yearNum);
+                    }
+                }
+            });
         }
     });
     
     // Add current year if no periods found
     if (years.size === 0) {
         years.add(new Date().getFullYear());
+        console.log('No years found, using current year:', new Date().getFullYear());
     }
     
     // Convert to array and sort descending
     const sortedYears = Array.from(years).sort((a, b) => b - a);
+    
+    console.log('Extracted years:', sortedYears);
     
     let yearOptions = '<option value="">Semua Tahun</option>';
     sortedYears.forEach(year => {

@@ -280,28 +280,19 @@ let currentEmployeeId = '{{ Auth::user()->employee->id_karyawan }}';
 let allMonthlyData = {};
 let kpiChart = null;
 
-// ======================
-// LOAD DATA DASHBOARD
-// ======================
 async function loadDashboardData() {
     try {
-        // Load data KPI personal dulu
-        await loadPersonalKpiData();
+        // Load data secara parallel untuk performa lebih baik
+        await Promise.all([
+            loadPersonalKpiData(),
+            loadDivisionData(),
+            loadUnratedEmployees(),
+            loadEmployeesNeedWarning(),
+            loadDivisionKpiChart()
+        ]);
         
-        // Load data divisi
-        await loadDivisionData();
-        
-        // Load data absensi
+        // Load absensi terpisah
         fetchAttendanceData();
-        
-        // Load data karyawan yang belum dinilai
-        await loadUnratedEmployees();
-        
-        // Load data karyawan perlu teguran
-        await loadEmployeesNeedWarning();
-        
-        // Load chart divisi
-        await loadDivisionKpiChart();
         
     } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -578,32 +569,21 @@ async function loadUnratedEmployees() {
         const response = await fetch(`/api/kpis/division/${currentDivisionId}/unrated-employees`);
         const data = await response.json();
         
+        console.log('Unrated employees data:', data);
+        
         if (data.success) {
             renderUnratedEmployees(data.data);
-            
-            // Update count di informasi
-            const unratedCount = data.data.length || 0;
-            document.getElementById('unratedCount').textContent = unratedCount;
+            document.getElementById('unratedCount').textContent = data.data.length || 0;
         } else {
             throw new Error(data.message);
         }
     } catch (error) {
         console.error('Error loading unrated employees:', error);
-        document.getElementById('belum-dinilai').innerHTML = `
-            <div class="card-body">
-                <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan Belum Dinilai</h6>
-                <div class="text-center text-muted py-4">
-                    <i class="icofont-close-circled fs-1"></i>
-                    <p class="mt-2">Gagal memuat data</p>
-                </div>
-            </div>
-        `;
+        showError('belum-dinilai', error.message);
     }
 }
 
-// ======================
-// RENDER KARYAWAN BELUM DINILAI
-// ======================
+
 function renderUnratedEmployees(employees) {
     const container = document.getElementById('belum-dinilai');
     let html = `
@@ -621,6 +601,9 @@ function renderUnratedEmployees(employees) {
         `;
     } else {
         employees.forEach(employee => {
+            // ⚠️ PERBAIKAN: Update route tombol "Nilai"
+            const evaluateUrl = `{{ url('penilai/kpi-karyawan') }}`;
+            
             html += `
                 <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
                     <img class="avatar lg rounded-circle img-thumbnail" 
@@ -631,7 +614,7 @@ function renderUnratedEmployees(employees) {
                         <h6 class="fw-bold mb-0 small-14">${employee.nama}</h6>
                         <span class="text-muted">${employee.position}</span>
                     </div>
-                    <a class="btn btn-outline-warning btn-sm" href="/kpi/evaluate/${employee.id_karyawan}">
+                    <a class="btn btn-outline-warning btn-sm" href="${evaluateUrl}">
                         Nilai
                     </a>
                 </div>
@@ -643,35 +626,36 @@ function renderUnratedEmployees(employees) {
     container.innerHTML = html;
 }
 
-// ======================
-// LOAD KARYAWAN PERLU TEGURAN (NILAI E)
-// ======================
 async function loadEmployeesNeedWarning() {
     try {
         const response = await fetch(`/api/kpis/division/${currentDivisionId}/low-performing-employees`);
         const data = await response.json();
         
+        console.log('Employees need warning data:', data);
+        
         if (data.success) {
             renderEmployeesNeedWarning(data.data);
-            
-            // Update count di informasi
-            const warningCount = data.data.length || 0;
-            document.getElementById('warningCount').textContent = warningCount;
+            document.getElementById('warningCount').textContent = data.data.length || 0;
         } else {
             throw new Error(data.message);
         }
     } catch (error) {
         console.error('Error loading employees need warning:', error);
-        document.getElementById('perlu-teguran').innerHTML = `
-            <div class="card-body">
-                <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan Perlu Teguran</h6>
-                <div class="text-center text-muted py-4">
-                    <i class="icofont-close-circled fs-1"></i>
-                    <p class="mt-2">Gagal memuat data</p>
-                </div>
-            </div>
-        `;
+        showError('perlu-teguran', error.message);
     }
+}
+
+function showError(cardId, errorMessage) {
+    document.getElementById(cardId).innerHTML = `
+        <div class="card-body">
+            <h6 class="fw-bold mb-3"><i class="icofont-users-alt-2 me-2"></i>Karyawan ${cardId === 'belum-dinilai' ? 'Belum Dinilai' : 'Perlu Teguran'}</h6>
+            <div class="text-center text-muted py-4">
+                <i class="icofont-close-circled fs-1"></i>
+                <p class="mt-2">Gagal memuat data</p>
+                <small class="text-danger">${errorMessage}</small>
+            </div>
+        </div>
+    `;
 }
 
 // ======================

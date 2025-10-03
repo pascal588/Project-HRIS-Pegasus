@@ -347,38 +347,35 @@ div.dataTables_wrapper div.dataTables_paginate {
             { data: null } 
         ],
         columnDefs: [
-            {
-                targets: 0,
-                render: function(data, type, row, meta) {
-                    return meta.row + 1;
-                }
-            },
-            {
-                targets: 5, // Kolom status
-                render: function(data) {
-                    return `<span class="badge ${data==='Aktif'?'bg-success':'bg-danger'}">${data}</span>`;
-                }
-            },
-            {
-                targets: 6, // Kolom score
-                render: function(data) {
-                    const score = parseFloat(data) || 0;
-                    let badgeClass = 'bg-secondary';
-                    if (score >= 80) badgeClass = 'bg-success';
-                    else if (score >= 60) badgeClass = 'bg-primary';
-                    else if (score >= 40) badgeClass = 'bg-warning';
-                    else badgeClass = 'bg-danger';
-                    
-                    return `<span class="badge ${badgeClass}">${score.toFixed(2)}</span>`;
-                }
-            },
-            {
-                targets: 8, // Kolom aksi
-                render: function(data, type, row) {
-                    return `<a href="/kpi/detail/${row.id_karyawan}?period=${row.period_id || 'latest'}" class="btn btn-outline-secondary btn-sm"><i class="icofont-eye-alt"></i> Detail</a>`;
-                }
-            }
-        ]
+    {
+        targets: 0,
+        render: function(data, type, row, meta) {
+            return meta.row + 1;
+        }
+    },
+    {
+        targets: 5, // Kolom status
+        render: function(data) {
+            return `<span class="badge ${data==='Aktif'?'bg-success':'bg-danger'}">${data}</span>`;
+        }
+    },
+    {
+        targets: 6, // Kolom score - PERBAIKAN: STANDAR BARU
+        render: function(data) {
+            const score = parseFloat(data) || 0;
+            const badgeClass = getPerformanceBadgeClass(score);
+            const performanceStatus = getPerformanceStatus(score);
+            
+            return `<span class="badge ${badgeClass}" title="${performanceStatus}">${score.toFixed(2)}</span>`;
+        }
+    },
+    {
+        targets: 8, // Kolom aksi
+        render: function(data, type, row) {
+            return `<a href="/kpi/detail/${row.id_karyawan}?period=${row.period_id || 'latest'}" class="btn btn-outline-secondary btn-sm"><i class="icofont-eye-alt"></i> Detail</a>`;
+        }
+    }
+]
     });
 
     // Load available years from API
@@ -612,61 +609,47 @@ div.dataTables_wrapper div.dataTables_paginate {
     }
 
     // Populate top employees
-    function populateTopEmployees(data) {
-        // Filter hanya yang memiliki score > 0 dan urutkan descending
-        const top = data
-            .filter(emp => emp.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 4);
-        
-        const wrapper = $('.best-employee-wrapper');
-        wrapper.empty();
-        
-        if (top.length === 0) {
-            wrapper.append(`
-                <div class="col-12 text-center py-4">
-                    <p class="text-muted">Tidak ada data karyawan dengan nilai KPI</p>
-                </div>
-            `);
-            return;
-        }
-        
-        top.forEach(emp => {
-            // Determine badge color based on score
-            let badgeClass = 'bg-secondary';
-            let performanceText = 'Unknown';
-            
-            if (emp.score >= 80) {
-                badgeClass = 'bg-success';
-                performanceText = 'Excellent';
-            } else if (emp.score >= 60) {
-                badgeClass = 'bg-primary';
-                performanceText = 'Good';
-            } else if (emp.score >= 40) {
-                badgeClass = 'bg-warning';
-                performanceText = 'Average';
-            } else {
-                badgeClass = 'bg-danger';
-                performanceText = 'Poor';
-            }
-            
-            wrapper.append(`
-                <div class="employee-card flex-shrink-0 me-3" style="width: 200px;">
-                    <div class="card h-100 text-center p-3 border-0 shadow-sm">
-                        <img src="${emp.photo}" class="rounded-circle mx-auto mb-3" width="80" height="80" alt="${emp.nama}" 
-                             onerror="this.src='assets/images/profile_av.png'" />
-                        <h6 class="fw-bold mb-1">${emp.nama}</h6>
-                        <div class="mb-2">
-                            <span class="badge ${badgeClass}">${emp.score.toFixed(2)}</span>
-                            <small class="d-block text-muted mt-1">${performanceText}</small>
-                        </div>
-                        <small class="text-muted">${emp.position}</small>
-                        <small class="text-muted d-block">${emp.division}</small>
-                    </div>
-                </div>
-            `);
-        });
+function populateTopEmployees(data) {
+    // Filter hanya yang memiliki score > 0 dan urutkan descending
+    const top = data
+        .filter(emp => emp.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4);
+    
+    const wrapper = $('.best-employee-wrapper');
+    wrapper.empty();
+    
+    if (top.length === 0) {
+        wrapper.append(`
+            <div class="col-12 text-center py-4">
+                <p class="text-muted">Tidak ada data karyawan dengan nilai KPI</p>
+            </div>
+        `);
+        return;
     }
+    
+    top.forEach(emp => {
+        // PERBAIKAN: Gunakan fungsi helper untuk status dan badge class
+        const performanceStatus = getPerformanceStatus(emp.score);
+        const badgeClass = getPerformanceBadgeClass(emp.score);
+        
+        wrapper.append(`
+            <div class="employee-card flex-shrink-0 me-3" style="width: 200px;">
+                <div class="card h-100 text-center p-3 border-0 shadow-sm">
+                    <img src="${emp.photo}" class="rounded-circle mx-auto mb-3" width="80" height="80" alt="${emp.nama}" 
+                         onerror="this.src='assets/images/profile_av.png'" />
+                    <h6 class="fw-bold mb-1">${emp.nama}</h6>
+                    <div class="mb-2">
+                        <span class="badge ${badgeClass}">${emp.score.toFixed(2)}</span>
+                        <small class="d-block text-muted mt-1">${performanceStatus}</small>
+                    </div>
+                    <small class="text-muted">${emp.position}</small>
+                    <small class="text-muted d-block">${emp.division}</small>
+                </div>
+            </div>
+        `);
+    });
+}
 
     // Update statistics
     function updateStats(data) {
@@ -725,5 +708,22 @@ div.dataTables_wrapper div.dataTables_paginate {
     // Load initial data
     initializePage();
 });
+
+// Fungsi helper untuk status performance - STANDAR BARU
+function getPerformanceStatus(score) {
+  const numeric = parseFloat(score) || 0;
+  if (numeric >= 80) return 'Baik';
+  if (numeric >= 70) return 'Cukup';
+  if (numeric >= 60) return 'Cukup';
+  return 'Kurang';
+}
+
+function getPerformanceBadgeClass(score) {
+  const numeric = parseFloat(score) || 0;
+  if (numeric >= 80) return 'bg-success';
+  if (numeric >= 70) return 'bg-primary';
+  if (numeric >= 60) return 'bg-warning';
+  return 'bg-danger';
+}
 </script>
 @endsection

@@ -359,7 +359,7 @@ async function loadPersonalKpiData() {
 }
 
 // ======================
-// UPDATE SUMMARY DASHBOARD
+// UPDATE SUMMARY DASHBOARD - FIXED
 // ======================
 function updateDashboardSummary() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
@@ -368,34 +368,42 @@ function updateDashboardSummary() {
         const latestData = monthlyArray[0];
         const previousData = monthlyArray[1] || latestData;
         
-        // Update current score
-        document.getElementById('currentScore').textContent = latestData.totalScore.toFixed(1);
+        // Update current score - PAKAI totalScore BUKAN averageScore
+        const currentTotalScore = latestData.totalScore;
+        document.getElementById('currentScore').textContent = currentTotalScore.toFixed(1);
         
         // Update previous score
         const previousScore = previousData.totalScore.toFixed(1);
         document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore}`;
         
-        // Update grade
-        const avgScore = latestData.averageScore;
-        const gradeInfo = calculateGrade(avgScore);
+        // ⚠️ PERBAIKAN: Hitung grade dari TOTAL SCORE bukan average score
+        const gradeInfo = calculateGrade(currentTotalScore);
         document.getElementById('currentGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceText').textContent = gradeInfo.text;
         document.getElementById('performanceStatus').textContent = gradeInfo.status;
         
+        console.log("Dashboard Summary Updated:", {
+            totalScore: currentTotalScore,
+            averageScore: latestData.averageScore,
+            grade: gradeInfo.grade,
+            status: gradeInfo.status
+        });
     }
 }
 
 // ======================
-// CALCULATE GRADE
+// CALCULATE GRADE (STANDARDIZED) - FIXED
 // ======================
 function calculateGrade(score) {
     const numericScore = parseFloat(score) || 0;
-    if (numericScore >= 90) return { grade: 'A', text: 'Sangat Baik', status: 'Excellent' };
-    if (numericScore >= 80) return { grade: 'B', text: 'Baik', status: 'Good' };
-    if (numericScore >= 70) return { grade: 'C', text: 'Cukup', status: 'Average' };
-    if (numericScore >= 60) return { grade: 'D', text: 'Kurang', status: 'Below Average' };
-    return { grade: 'E', text: 'Sangat Kurang', status: 'Poor' };
+    console.log("Calculating grade for score:", numericScore);
+    
+    if (numericScore >= 90) return { grade: 'A', text: 'Sangat Baik', status: 'Sangat Baik' };
+    if (numericScore >= 80) return { grade: 'B', text: 'Baik', status: 'Baik' };
+    if (numericScore >= 70) return { grade: 'C', text: 'Cukup', status: 'Cukup' };
+    if (numericScore >= 50) return { grade: 'D', text: 'Kurang', status: 'Kurang' };
+    return { grade: 'E', text: 'Sangat Kurang', status: 'Sangat Kurang' };
 }
 
 // ======================
@@ -497,9 +505,6 @@ function updateKpiChart() {
     kpiChart.render();
 }
 
-// ======================
-// UPDATE TABEL DETAIL KPI
-// ======================
 function updateKpiDetailTable() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
     
@@ -753,9 +758,6 @@ function renderGenderDonutChart(genderData) {
     chart.render();
 }
 
-// ======================
-// HELPER FUNCTIONS
-// ======================
 function getStatusClass(status) {
     const statusMap = {
         'Sangat Baik': 'badge-excellent',

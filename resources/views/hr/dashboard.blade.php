@@ -625,8 +625,7 @@ $(document).ready(function() {
         });
     }
 
-    // FUNGSI RENDER YANG SAMA PERSIS DENGAN DASHBOARD PENILAI
-   // FUNGSI RENDER YANG LEBIH RAPI
+// FUNGSI RENDER YANG LEBIH RAPI
 function renderEmployeeList(selector, employees, title) {
     const listElement = $(selector);
     listElement.empty();
@@ -661,10 +660,28 @@ function renderEmployeeList(selector, employees, title) {
         const scoreColor = hasScore ? getScoreColorClass(employee.score) : 'score-average';
         const scoreText = hasScore ? employee.score.toFixed(1) : 'N/A';
         
-        // Foto employee
-        const photoUrl = employee.foto ? 
-            '/storage/' + employee.foto : 
-            '{{ asset('assets/images/profile_av.png') }}';
+        // ⚠️ PERBAIKAN: Foto employee - gunakan format yang sama untuk semua
+        let photoUrl = '{{ asset('assets/images/profile_av.png') }}';
+        
+        if (employee.foto) {
+            // Cek apakah foto sudah memiliki path lengkap atau relative
+            if (employee.foto.startsWith('http') || employee.foto.startsWith('/storage')) {
+                photoUrl = employee.foto;
+            } else if (employee.foto.startsWith('assets/')) {
+                photoUrl = '{{ asset('') }}' + employee.foto;
+            } else {
+                photoUrl = '/storage/' + employee.foto;
+            }
+        } else if (employee.photo) {
+            // Handle jika properti namanya 'photo' bukan 'foto'
+            if (employee.photo.startsWith('http') || employee.photo.startsWith('/storage')) {
+                photoUrl = employee.photo;
+            } else if (employee.photo.startsWith('assets/')) {
+                photoUrl = '{{ asset('') }}' + employee.photo;
+            } else {
+                photoUrl = '/storage/' + employee.photo;
+            }
+        }
         
         const employeeItem = `
             <div class="employee-item">
@@ -693,6 +710,14 @@ function renderEmployeeList(selector, employees, title) {
                            title="Hubungi via WhatsApp">
                             <i class="icofont-brand-whatsapp"></i>
                         </a>
+                        <a class="btn btn-outline-primary btn-sm" 
+                           href="/kpi/detail/${employee.id_karyawan || employee.id}"
+                           title="Lihat Detail">
+                            <i class="icofont-eye-alt"></i>
+                        </a>
+                    </div>
+                ` : title === 'Karyawan Terbaik' ? `
+                    <div class="employee-actions">
                         <a class="btn btn-outline-primary btn-sm" 
                            href="/kpi/detail/${employee.id_karyawan || employee.id}"
                            title="Lihat Detail">

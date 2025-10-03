@@ -1,6 +1,6 @@
 @extends('template.template')
 
-@section('title', 'KPI Karyawan')
+@section('title', 'KPI Saya')
 
 @section('content')
    <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/responsive.dataTables.min.css') }}">
@@ -419,23 +419,23 @@ async function loadKpiData(employeeId, periodId) {
     }
 }
 
-// Update summary KPI
+// Update summary KPI - STANDARDIZED WITH CONTROLLER
 function updateKpiSummary(summary) {
     document.getElementById('totalScore').textContent = summary.total_score.toFixed(2);
     document.getElementById('ranking').textContent = summary.ranking;
     document.getElementById('rankingText').textContent = `dari ${summary.total_employees} orang`;
     
-    // Calculate grade berdasarkan average score
-    const avgScore = parseFloat(summary.average_score) || 0;
+    // ⚠️ PERBAIKAN: Calculate grade berdasarkan TOTAL SCORE bukan average score
+    const totalScore = parseFloat(summary.total_score) || 0;
     let grade, gradeText, gradeColor;
     
-    if (avgScore >= 90) {
+    if (totalScore >= 90) {
         grade = 'A'; gradeText = 'Sangat Baik'; gradeColor = 'text-success';
-    } else if (avgScore >= 80) {
+    } else if (totalScore >= 80) {
         grade = 'B'; gradeText = 'Baik'; gradeColor = 'text-success';
-    } else if (avgScore >= 70) {
+    } else if (totalScore >= 70) {
         grade = 'C'; gradeText = 'Cukup'; gradeColor = 'text-warning';
-    } else if (avgScore >= 60) {
+    } else if (totalScore >= 50) {
         grade = 'D'; gradeText = 'Kurang'; gradeColor = 'text-warning';
     } else {
         grade = 'E'; gradeText = 'Sangat Kurang'; gradeColor = 'text-danger';
@@ -444,9 +444,15 @@ function updateKpiSummary(summary) {
     document.getElementById('grade').textContent = grade;
     document.getElementById('grade').className = `fw-bold ${gradeColor}`;
     document.getElementById('gradeText').textContent = gradeText;
+    
+    console.log("KPI Summary Updated:", {
+        totalScore: totalScore,
+        averageScore: summary.average_score,
+        grade: grade,
+        status: gradeText
+    });
 }
 
-// Update tabel KPI
 function updateKpiTable(details) {
     const tbody = document.getElementById('kpiTableBody');
     tbody.innerHTML = '';
@@ -482,10 +488,17 @@ function updateKpiTable(details) {
     document.getElementById('totalBobot').textContent = totalBobot.toFixed(1) + '%';
     document.getElementById('totalNilai').textContent = totalNilai.toFixed(2);
     
-    // Overall status berdasarkan rata-rata
-    const avgScore = rowCount > 0 ? totalNilai / rowCount : 0;
-    const overallStatus = getOverallStatus(avgScore);
+    // ⚠️ PERBAIKAN: Overall status berdasarkan TOTAL SCORE bukan rata-rata
+    const totalScore = rowCount > 0 ? totalNilai : 0;
+    const overallStatus = getOverallStatus(totalScore);
     document.getElementById('totalStatus').innerHTML = `<span class="kpi-badge ${getStatusClass(overallStatus)}">${overallStatus}</span>`;
+
+    console.log("KPI Table Updated:", {
+        totalBobot: totalBobot,
+        totalNilai: totalNilai,
+        totalScore: totalScore,
+        overallStatus: overallStatus
+    });
 }
 
 // Helper functions
@@ -499,6 +512,7 @@ function getStatusClass(status) {
     };
     return statusMap[status] || 'badge-average';
 }
+
 
 function getOverallStatus(score) {
     const numericScore = parseFloat(score) || 0;

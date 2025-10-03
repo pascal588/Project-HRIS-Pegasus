@@ -1,6 +1,6 @@
 @extends('template.template')
 
-@section('title', 'KPI Karyawan')
+@section('title', 'KPI Saya')
 
 @section('content')
    <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/responsive.dataTables.min.css') }}">
@@ -123,6 +123,7 @@ let currentEmployeeId = {{ Auth::user()->employee->id_karyawan ?? 'null' }};
 let currentPeriodId = null;
 let availablePeriods = [];
 let kpiChart = null;
+let allMonthlyData = {}; // Menyimpan semua data bulanan
 
 // Load available periods
 async function loadAvailablePeriods() {
@@ -138,14 +139,200 @@ async function loadAvailablePeriods() {
             if (availablePeriods.length > 0) {
                 const latestPeriod = availablePeriods[0];
                 selectPeriod(latestPeriod);
+                
+                // Load data bulanan untuk grafik
+                await loadAllMonthlyData(currentEmployeeId);
             }
         } else {
             throw new Error(data.message);
         }
     } catch (error) {
         console.error('Error loading periods:', error);
-        document.getElementById('periodList').innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat data periode</h6></li>';
+        document.getElementById('periodList').innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat data bulan</h6></li>';
     }
+}
+
+// Load semua data bulanan untuk grafik
+async function loadAllMonthlyData(employeeId) {
+    try {
+        allMonthlyData = {};
+        
+        // Load data untuk setiap periode
+        for (const period of availablePeriods) {
+            try {
+                const response = await fetch(`/api/kpis/employee/${employeeId}/detail/${period.id_periode}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const periodData = data.data;
+                    const startDate = new Date(period.tanggal_mulai);
+                    const monthKey = startDate.toLocaleDateString('id-ID', { 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    
+                    // Simpan data lengkap termasuk detail aspek
+                    allMonthlyData[monthKey] = {
+                        month: monthKey,
+                        totalScore: periodData.kpi_summary.total_score,
+                        averageScore: periodData.kpi_summary.average_score,
+                        periodName: period.nama,
+                        fullDate: startDate,
+                        kpiDetails: periodData.kpi_details // Simpan detail aspek
+                    };
+                }
+            } catch (error) {
+                console.error(`Error loading data for period ${period.id_periode}:`, error);
+            }
+        }
+        
+        // Update chart dengan data bulanan
+        updateMonthlyChart();
+        
+    } catch (error) {
+        console.error('Error loading monthly data:', error);
+    }
+}
+
+// Update chart dengan data bulanan
+function updateMonthlyChart() {
+    // Convert object ke array dan urutkan berdasarkan tanggal
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - b.fullDate);
+    
+    if (monthlyArray.length === 0) {
+        // Tampilkan pesan jika tidak ada data
+        document.getElementById('chartKPI').innerHTML = `
+            <div class="text-center p-5">
+                <i class="icofont-chart-line-alt fs-1 text-muted"></i>
+                <p class="text-muted mt-2">Tidak ada data KPI bulanan yang tersedia</p>
+            </div>
+        `;
+        return;
+    }
+
+    const categories = monthlyArray.map(item => item.month);
+    const totalScores = monthlyArray.map(item => parseFloat(item.totalScore) || 0);
+
+    if (kpiChart) {
+        kpiChart.destroy();
+    }
+
+    const options = {
+        chart: {
+            type: 'line',
+            height: 350,
+            zoom: {
+                enabled: false
+            },
+            toolbar: {
+                show: true
+            }
+        },
+        series: [
+            {
+                name: 'Total Nilai KPI',
+                data: totalScores
+            }
+        ],
+        stroke: {
+            width: 3,
+            curve: 'smooth'
+        },
+        markers: {
+            size: 5,
+            hover: {
+                size: 7
+            }
+        },
+        xaxis: {
+            categories: categories,
+            labels: {
+                style: {
+                    fontSize: '12px'
+                }
+            }
+        },
+        yaxis: {
+            title: {
+                text: 'Total Nilai KPI',
+                style: {
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                }
+            },
+            min: 0,
+            max: Math.max(...totalScores) * 1.1, // Beri sedikit ruang di atas
+            labels: {
+                formatter: function(val) {
+                    return val.toFixed(0);
+                }
+            }
+        },
+        colors: ['#0d6efd'],
+        grid: {
+            borderColor: '#f1f1f1',
+            strokeDashArray: 4
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'center'
+        },
+        tooltip: {
+            custom: function({ series, seriesIndex, dataPointIndex, w }) {
+                const monthData = monthlyArray[dataPointIndex];
+                const totalScore = series[seriesIndex][dataPointIndex];
+                
+                // Buat tooltip custom dengan detail aspek
+                let tooltipHTML = `
+                    <div class="apexcharts-tooltip-title" style="font-weight: bold; margin-bottom: 8px;">
+                        ${monthData.month}
+                    </div>
+                    <div style="padding: 4px 0;">
+                        <strong>Total Nilai: ${totalScore.toFixed(2)}</strong>
+                    </div>
+                `;
+                
+                // Tambahkan detail aspek jika ada
+                if (monthData.kpiDetails && monthData.kpiDetails.length > 0) {
+                    tooltipHTML += `<div style="border-top: 1px solid #e0e0e0; margin-top: 6px; padding-top: 6px;">`;
+                    tooltipHTML += `<div style="font-weight: 600; margin-bottom: 4px;">Detail Aspek:</div>`;
+                    
+                    monthData.kpiDetails.forEach(aspek => {
+                        const nilai = parseFloat(aspek.score) || 0;
+                        tooltipHTML += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
+                                <span>${aspek.aspek_kpi}:</span>
+                                <strong style="margin-left: 8px;">${nilai.toFixed(1)}</strong>
+                            </div>
+                        `;
+                    });
+                    
+                    tooltipHTML += `</div>`;
+                }
+                
+                return tooltipHTML;
+            }
+        },
+        dataLabels: {
+            enabled: false
+        },
+        responsive: [{
+            breakpoint: 768,
+            options: {
+                chart: {
+                    height: 300
+                },
+                xaxis: {
+                    labels: {
+                        rotate: -45
+                    }
+                }
+            }
+        }]
+    };
+
+    kpiChart = new ApexCharts(document.querySelector("#chartKPI"), options);
+    kpiChart.render();
 }
 
 // Populate dropdown periode
@@ -159,9 +346,11 @@ function populatePeriodDropdown(periods) {
 
     let dropdownHTML = '';
     
-    periods.forEach(period => {
+    // Urutkan periode dari yang terbaru
+    const sortedPeriods = [...periods].sort((a, b) => new Date(b.tanggal_mulai) - new Date(a.tanggal_mulai));
+    
+    sortedPeriods.forEach(period => {
         const startDate = new Date(period.tanggal_mulai);
-        const endDate = new Date(period.tanggal_selesai);
         const monthYear = startDate.toLocaleDateString('id-ID', { 
             month: 'long', 
             year: 'numeric' 
@@ -205,46 +394,48 @@ function selectPeriod(period) {
     document.getElementById('periodMonth').textContent = monthName;
     document.getElementById('periodYear').textContent = year;
     
-    // Load data KPI
+    // Load data KPI untuk periode yang dipilih
     loadKpiData(currentEmployeeId, currentPeriodId);
 }
 
-// Load data KPI
+// Load data KPI untuk periode tertentu
 async function loadKpiData(employeeId, periodId) {
     try {
+        showLoading();
         const response = await fetch(`/api/kpis/employee/${employeeId}/detail/${periodId}`);
         const data = await response.json();
 
         if (data.success) {
             updateKpiSummary(data.data.kpi_summary);
             updateKpiTable(data.data.kpi_details);
-            updateChart(data.data.kpi_details);
         } else {
             throw new Error(data.message);
         }
     } catch (error) {
         console.error('Error loading KPI data:', error);
-        alert('Gagal memuat data KPI: ' + error.message);
+        showError('Gagal memuat data KPI: ' + error.message);
+    } finally {
+        hideLoading();
     }
 }
 
-// Update summary KPI
+// Update summary KPI - STANDARDIZED WITH CONTROLLER
 function updateKpiSummary(summary) {
     document.getElementById('totalScore').textContent = summary.total_score.toFixed(2);
     document.getElementById('ranking').textContent = summary.ranking;
     document.getElementById('rankingText').textContent = `dari ${summary.total_employees} orang`;
     
-    // Calculate grade berdasarkan average score
-    const avgScore = parseFloat(summary.average_score) || 0;
+    // ⚠️ PERBAIKAN: Calculate grade berdasarkan TOTAL SCORE bukan average score
+    const totalScore = parseFloat(summary.total_score) || 0;
     let grade, gradeText, gradeColor;
     
-    if (avgScore >= 90) {
+    if (totalScore >= 90) {
         grade = 'A'; gradeText = 'Sangat Baik'; gradeColor = 'text-success';
-    } else if (avgScore >= 80) {
+    } else if (totalScore >= 80) {
         grade = 'B'; gradeText = 'Baik'; gradeColor = 'text-success';
-    } else if (avgScore >= 70) {
+    } else if (totalScore >= 70) {
         grade = 'C'; gradeText = 'Cukup'; gradeColor = 'text-warning';
-    } else if (avgScore >= 60) {
+    } else if (totalScore >= 50) {
         grade = 'D'; gradeText = 'Kurang'; gradeColor = 'text-warning';
     } else {
         grade = 'E'; gradeText = 'Sangat Kurang'; gradeColor = 'text-danger';
@@ -253,9 +444,15 @@ function updateKpiSummary(summary) {
     document.getElementById('grade').textContent = grade;
     document.getElementById('grade').className = `fw-bold ${gradeColor}`;
     document.getElementById('gradeText').textContent = gradeText;
+    
+    console.log("KPI Summary Updated:", {
+        totalScore: totalScore,
+        averageScore: summary.average_score,
+        grade: grade,
+        status: gradeText
+    });
 }
 
-// Update tabel KPI
 function updateKpiTable(details) {
     const tbody = document.getElementById('kpiTableBody');
     tbody.innerHTML = '';
@@ -291,58 +488,17 @@ function updateKpiTable(details) {
     document.getElementById('totalBobot').textContent = totalBobot.toFixed(1) + '%';
     document.getElementById('totalNilai').textContent = totalNilai.toFixed(2);
     
-    // Overall status berdasarkan rata-rata
-    const avgScore = rowCount > 0 ? totalNilai / rowCount : 0;
-    const overallStatus = getOverallStatus(avgScore);
+    // ⚠️ PERBAIKAN: Overall status berdasarkan TOTAL SCORE bukan rata-rata
+    const totalScore = rowCount > 0 ? totalNilai : 0;
+    const overallStatus = getOverallStatus(totalScore);
     document.getElementById('totalStatus').innerHTML = `<span class="kpi-badge ${getStatusClass(overallStatus)}">${overallStatus}</span>`;
-}
 
-// Update chart
-function updateChart(details) {
-    const categories = details.map(item => item.aspek_kpi);
-    const scores = details.map(item => parseFloat(item.score) || 0);
-    const contributions = details.map(item => parseFloat(item.contribution) || 0);
-
-    if (kpiChart) {
-        kpiChart.destroy();
-    }
-
-    const options = {
-        chart: {
-            type: 'bar',
-            height: 300
-        },
-        series: [
-            {
-                name: 'Nilai KPI',
-                data: scores
-            },
-            {
-                name: 'Kontribusi (%)',
-                data: contributions
-            }
-        ],
-        xaxis: {
-            categories: categories
-        },
-        yaxis: [
-            {
-                title: {
-                    text: 'Nilai KPI'
-                }
-            },
-            {
-                opposite: true,
-                title: {
-                    text: 'Kontribusi (%)'
-                },
-                max: 100
-            }
-        ]
-    };
-
-    kpiChart = new ApexCharts(document.querySelector("#chartKPI"), options);
-    kpiChart.render();
+    console.log("KPI Table Updated:", {
+        totalBobot: totalBobot,
+        totalNilai: totalNilai,
+        totalScore: totalScore,
+        overallStatus: overallStatus
+    });
 }
 
 // Helper functions
@@ -357,6 +513,7 @@ function getStatusClass(status) {
     return statusMap[status] || 'badge-average';
 }
 
+
 function getOverallStatus(score) {
     const numericScore = parseFloat(score) || 0;
     if (numericScore >= 90) return 'Sangat Baik';
@@ -364,6 +521,34 @@ function getOverallStatus(score) {
     if (numericScore >= 70) return 'Cukup';
     if (numericScore >= 50) return 'Kurang';
     return 'Sangat Kurang';
+}
+
+// Loading functions
+function showLoading() {
+    document.getElementById('kpiTableBody').innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                Memuat data...
+            </td>
+        </tr>
+    `;
+}
+
+function hideLoading() {
+    // Hide loading indicator
+}
+
+function showError(message) {
+    document.getElementById('kpiTableBody').innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center text-danger">
+                <i class="icofont-close-circled"></i> ${message}
+            </td>
+        </tr>
+    `;
 }
 
 // Initialize when page loads
@@ -377,7 +562,8 @@ document.addEventListener('DOMContentLoaded', function() {
         responsive: true,
         searching: false,
         paging: false,
-        info: false
+        info: false,
+        ordering: false
     });
 });
 
@@ -405,6 +591,12 @@ style.textContent = `
     .badge-poor {
         background-color: rgba(220, 53, 69, 0.2);
         color: #dc3545;
+    }
+    
+    /* Custom tooltip styling */
+    .apexcharts-tooltip {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
     }
 `;
 document.head.appendChild(style);

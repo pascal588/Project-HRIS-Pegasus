@@ -266,7 +266,7 @@
           <div class="icon"><i class="icofont-trophy"></i></div>
           <div class="title">Rata-rata</div>
           <div class="value">
-            <span id="averageScore">0</span> <small class="fs-6">(Target: 80)</small>
+            <span id="averageScore">0</span> <small class="fs-6"></small>
           </div>
         </div>
       </div>
@@ -409,26 +409,27 @@
   let availablePeriods = [];
   let kpiTrendChart = null;
 
-  // Fungsi helper status
-  function getKpiStatus(score) {
-    const numeric = parseFloat(score) || 0;
-    if (numeric >= 90) return 'Sangat Baik';
-    if (numeric >= 80) return 'Baik';
-    if (numeric >= 70) return 'Cukup';
-    if (numeric >= 50) return 'Kurang';
-    return 'Sangat Kurang';
-  }
+  // Fungsi helper status - DISAMAKAN DENGAN CONTROLLER
+function getKpiStatus(score) {
+  const numeric = parseFloat(score) || 0;
+  if (numeric >= 90) return 'Sangat Baik';
+  if (numeric >= 80) return 'Baik';
+  if (numeric >= 70) return 'Cukup';
+  if (numeric >= 50) return 'Kurang';
+  return 'Sangat Kurang';
+}
 
-  function getKpiStatusClass(status) {
-    const map = {
-      'Sangat Baik': 'badge-excellent',
-      'Baik': 'badge-good',
-      'Cukup': 'badge-average',
-      'Kurang': 'badge-poor',
-      'Sangat Kurang': 'badge-poor'
-    };
-    return map[status] || 'badge-average';
-  }
+function getKpiStatusClass(status) {
+  const map = {
+    'Sangat Baik': 'badge-excellent',
+    'Baik': 'badge-good', 
+    'Cukup': 'badge-average',
+    'Kurang': 'badge-poor',
+    'Sangat Kurang': 'badge-poor'
+  };
+  return map[status] || 'badge-average';
+}
+
 
   // --- BAGIAN 1: FUNGSI DETAIL KPI (BAGIAN ATAS) ---
   async function loadAvailablePeriods() {
@@ -545,68 +546,105 @@
   }
 
   function updateKpiSummary(summary) {
-    document.getElementById('totalScore').textContent = (parseFloat(summary.total_score) || 0).toFixed(2);
-    document.getElementById('averageScore').textContent = (parseFloat(summary.average_score) || 0).toFixed(2);
-    document.getElementById('performanceScore').textContent = (parseFloat(summary.average_score) || 0).toFixed(1);
-    document.getElementById('performanceStatus').textContent = `(${summary.performance_status || '-'})`;
-    document.getElementById('performanceText').textContent = `(${summary.performance_status || '-'})`;
-    document.getElementById('ranking').textContent = summary.ranking || '-';
-    document.getElementById('rankingText').textContent = `(Dari ${summary.total_employees} Karyawan)`;
-  }
+  const totalScore = parseFloat(summary.total_score) || 0;
+  const averageScore = parseFloat(summary.average_score) || 0;
+  
+  // PERBAIKAN: Gunakan fungsi khusus untuk card atas
+  const performanceStatus = getPerformanceStatus(totalScore);
+  const performanceText = getPerformanceText(totalScore);
+  
+  document.getElementById('totalScore').textContent = totalScore.toFixed(2);
+  document.getElementById('averageScore').textContent = averageScore.toFixed(2);
+  document.getElementById('performanceScore').textContent = averageScore.toFixed(1);
+  document.getElementById('performanceStatus').textContent = `(${performanceStatus})`;
+  document.getElementById('performanceText').textContent = `(${performanceStatus})`;
+  document.getElementById('ranking').textContent = summary.ranking || '-';
+  document.getElementById('rankingText').textContent = `(Dari ${summary.total_employees} Karyawan)`;
+}
 
   function updateKpiDetails(details) {
-    const tbody = document.getElementById('kpiDetailBody');
-    const tfoot = document.getElementById('kpiDetailFooter');
-    tbody.innerHTML = '';
+  const tbody = document.getElementById('kpiDetailBody');
+  const tfoot = document.getElementById('kpiDetailFooter');
+  tbody.innerHTML = '';
 
-    if (!details || details.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
-      tfoot.innerHTML = '';
-      return;
-    }
-
-    let totalBobot = 0,
-      totalKontribusi = 0,
-      totalNilai = 0;
-
-    details.forEach(item => {
-      const nilai = parseFloat(item.score) || 0;
-      const bobot = parseFloat(item.bobot) || 0;
-      const kontribusi = bobot > 0 ? (nilai / bobot) * 100 : 0;
-      const status = getKpiStatus(kontribusi);
-      const statusClass = getKpiStatusClass(status);
-      tbody.innerHTML += `
-            <tr>
-                <td>${item.aspek_kpi}</td>
-                <td>${bobot.toFixed(1)}%</td>
-                <td>${nilai.toFixed(2)}</td>
-                <td>${kontribusi.toFixed(2)}%</td>
-                <td><span class="kpi-badge ${statusClass}">${status}</span></td>
-                <td>
-                    <div class="progress kpi-progress">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${kontribusi}%" aria-valuenow="${kontribusi}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="progress-percentage">${kontribusi.toFixed(1)}%</div>
-                </td>
-            </tr>`;
-      totalBobot += bobot;
-      totalKontribusi += kontribusi;
-      totalNilai += nilai;
-    });
-
-    const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
-    const overallStatus = getKpiStatus(kontribusiTotal);
-    const overallStatusClass = getKpiStatusClass(overallStatus);
-    tfoot.innerHTML = `
-        <tr class="table-active">
-            <th>Total</th>
-            <th>${totalBobot.toFixed(1)}%</th>
-            <th>${totalNilai.toFixed(2)}</th>
-            <th>${kontribusiTotal.toFixed(2)}%</th>
-            <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
-            <th>...</th>
-        </tr>`;
+  if (!details || details.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
+    tfoot.innerHTML = '';
+    return;
   }
+
+  let totalBobot = 0,
+    totalKontribusi = 0,
+    totalNilai = 0;
+
+  details.forEach(item => {
+    const nilai = parseFloat(item.score) || 0;
+    const bobot = parseFloat(item.bobot) || 0;
+    const kontribusi = bobot > 0 ? (nilai / bobot) * 100 : 0;
+    const status = getKpiStatus(kontribusi);
+    const statusClass = getKpiStatusClass(status);
+    
+    tbody.innerHTML += `
+          <tr>
+              <td>${item.aspek_kpi}</td>
+              <td>${bobot.toFixed(1)}%</td>
+              <td>${nilai.toFixed(2)}</td>
+              <td>${kontribusi.toFixed(2)}%</td>
+              <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+              <td>
+                  <div class="progress kpi-progress">
+                      <div class="progress-bar bg-primary" role="progressbar" style="width: ${kontribusi}%" aria-valuenow="${kontribusi}" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                  <div class="progress-percentage">${kontribusi.toFixed(1)}%</div>
+              </td>
+          </tr>`;
+    totalBobot += bobot;
+    totalKontribusi += kontribusi;
+    totalNilai += nilai;
+  });
+
+  const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
+  
+  // PERBAIKAN HANYA DI STATUS TOTAL - GUNAKAN STANDAR DASHBOARD
+  const overallStatus = getKpiStatusTotal(totalNilai); // Fungsi khusus untuk total
+  const overallStatusClass = getKpiStatusClass(overallStatus);
+  
+  tfoot.innerHTML = `
+      <tr class="table-active">
+          <th>Total</th>
+          <th>${totalBobot.toFixed(1)}%</th>
+          <th>${totalNilai.toFixed(2)}</th>
+          <th>${kontribusiTotal.toFixed(2)}%</th>
+          <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
+          <th>...</th>
+      </tr>`;
+}
+
+// FUNGSI BARU KHUSUS UNTUK STATUS TOTAL - STANDAR DASHBOARD
+function getKpiStatusTotal(totalScore) {
+  const numeric = parseFloat(totalScore) || 0;
+  if (numeric >= 80) return 'Baik';
+  if (numeric >= 70) return 'Cukup';
+  if (numeric >= 60) return 'Cukup';
+  return 'Kurang';
+}
+
+// Fungsi khusus untuk card atas - STANDAR DASHBOARD
+function getPerformanceStatus(totalScore) {
+  const numeric = parseFloat(totalScore) || 0;
+  if (numeric >= 80) return 'Baik';
+  if (numeric >= 70) return 'Cukup';
+  if (numeric >= 60) return 'Cukup';
+  return 'Kurang';
+}
+
+function getPerformanceText(totalScore) {
+  const numeric = parseFloat(totalScore) || 0;
+  if (numeric >= 80) return '(Baik)';
+  if (numeric >= 70) return '(Cukup)';
+  if (numeric >= 60) return '(Cukup)';
+  return '(Kurang)';
+}
 
  // --- BAGIAN BARU: FUNGSI UNTUK CHART TREN KPI (LINE CHART MINIMALIS) ---
 async function loadAndRenderKpiTrendChart(employeeId, year) {
@@ -643,8 +681,8 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
     const labels = monthlyData.map(item => item.month_name);
     const scores = monthlyData.map(item => parseFloat(item.total_score) || 0);
 
-    // Target line (80)
-    const targetData = Array(labels.length).fill(80);
+    // // Target line (80)
+    // const targetData = Array(labels.length).fill(80);
 
     // Hancurkan chart sebelumnya jika ada
     if (kpiTrendChart) {

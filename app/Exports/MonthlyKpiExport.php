@@ -54,36 +54,54 @@ class MonthlyKpiExport implements FromArray, WithHeadings, ShouldAutoSize, WithT
     }
 
     public function registerEvents(): array
-    {
-        return [
-            BeforeSheet::class => function (BeforeSheet $event) {
-                \Log::info("=== BEFORE SHEET EVENT ===");
+{
+    return [
+        BeforeSheet::class => function (BeforeSheet $event) {
+            \Log::info("=== BEFORE SHEET EVENT ===");
 
-                $event->sheet->setCellValue('A1', 'REKAPITULASI KPI KARYAWAN');
-                $event->sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
-                $event->sheet->mergeCells('A1:F1');
-                $event->sheet->getStyle('A1')->getAlignment()->setHorizontal('center');
+            $event->sheet->setCellValue('A1', 'REKAPITULASI KPI KARYAWAN');
+            $event->sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $event->sheet->mergeCells('A1:F1');
+            $event->sheet->getStyle('A1')->getAlignment()->setHorizontal('center');
 
-                // Informasi karyawan - HAPUS JABATAN
-                $event->sheet->setCellValue('A3', 'NAMA');
-                $event->sheet->setCellValue('B3', ': ' . $this->employee->nama);
+            // INFORMASI KARYAWAN - DENGAN CARA YANG BENAR
+            $divisionName = 'N/A';
+            $positionName = 'N/A';
+            
+            // AMBIL DATA DARI RELASI ROLES
+            if ($this->employee->roles->isNotEmpty()) {
+                $firstRole = $this->employee->roles->first();
+                $positionName = $firstRole->nama_jabatan ?? 'N/A';
+                $divisionName = $firstRole->division->nama_divisi ?? 'N/A';
+                
+                \Log::info("Data Role & Division:", [
+                    'jabatan' => $positionName,
+                    'divisi' => $divisionName
+                ]);
+            }
 
-                $event->sheet->setCellValue('A4', 'ID KARYAWAN');
-                $event->sheet->setCellValue('B4', ': ' . $this->employee->id_karyawan);
+            $event->sheet->setCellValue('A3', 'NAMA');
+            $event->sheet->setCellValue('B3', ': ' . $this->employee->nama);
 
-                // HAPUS BAGIAN JABATAN
-                $event->sheet->setCellValue('C3', 'DIVISI');
-                $event->sheet->setCellValue('D3', ': ' . ($this->employee->divisions->nama_divisi ?? 'N/A'));
+            $event->sheet->setCellValue('A4', 'ID KARYAWAN');
+            $event->sheet->setCellValue('B4', ': ' . $this->employee->id_karyawan);
 
-                $event->sheet->setCellValue('C4', 'TAHUN');
-                $event->sheet->setCellValue('D4', ': ' . $this->year);
+            $event->sheet->setCellValue('C3', 'DIVISI');
+            $event->sheet->setCellValue('D3', ': ' . $divisionName);
 
-                // Style untuk header informasi
-                $event->sheet->getStyle('A3:A4')->getFont()->setBold(true);
-                $event->sheet->getStyle('C3:C4')->getFont()->setBold(true);
-            },
-        ];
-    }
+            $event->sheet->setCellValue('C4', 'JABATAN');
+            $event->sheet->setCellValue('D4', ': ' . $positionName);
+
+            $event->sheet->setCellValue('E3', 'TAHUN');
+            $event->sheet->setCellValue('F3', ': ' . $this->year);
+
+            // Style untuk header informasi
+            $event->sheet->getStyle('A3:A4')->getFont()->setBold(true);
+            $event->sheet->getStyle('C3:C4')->getFont()->setBold(true);
+            $event->sheet->getStyle('E3')->getFont()->setBold(true);
+        },
+    ];
+}
 
     public function title(): string
     {

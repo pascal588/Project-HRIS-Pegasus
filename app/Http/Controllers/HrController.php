@@ -126,33 +126,53 @@ class HrController extends Controller
     }
 
     public function getMonthlyKpiData($employeeId)
-    {
-        Log::info("Memulai pengambilan data KPI bulanan untuk employee_id: {$employeeId}");
-        try {
-            $employee = Employee::with('division')->find($employeeId);
-            if (!$employee) {
-                Log::warning("Employee tidak ditemukan dengan ID: {$employeeId}");
-                return response()->json(['message' => 'Employee not found'], 404);
-            }
-            $processedKpiData = $this->fetchAndProcessKpiData($employeeId);
-            $responseData = [
-                'employee' => [
-                    'id' => $employee->id_karyawan,
-                    'name' => $employee->nama,
-                    'division' => $employee->division->nama_divisi ?? 'N/A',
-                ],
-                'kpi_data' => $processedKpiData
-            ];
-            Log::info("Berhasil mengambil data KPI untuk employee_id: {$employeeId}");
-            return response()->json($responseData);
-        } catch (Exception $e) {
-            Log::error("Error saat getMonthlyKpiData untuk employee_id: {$employeeId}", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
+{
+    Log::info("Memulai pengambilan data KPI bulanan untuk employee_id: {$employeeId}");
+    try {
+        // GUNAKAN EAGER LOADING YANG BENAR
+        $employee = Employee::with(['roles.division'])->find($employeeId);
+        
+        if (!$employee) {
+            Log::warning("Employee tidak ditemukan dengan ID: {$employeeId}");
+            return response()->json(['message' => 'Employee not found'], 404);
         }
+
+        // DEBUG: Lihat struktur data yang didapat
+        Log::info("Employee Data Structure:", [
+            'nama' => $employee->nama,
+            'roles_count' => $employee->roles->count(),
+            'roles_data' => $employee->roles->map(function($role) {
+                return [
+                    'jabatan_id' => $role->id_jabatan,
+                    'jabatan_nama' => $role->nama_jabatan,
+                    'division_id' => $role->division_id,
+                    'division_nama' => $role->division->nama_divisi ?? 'NULL'
+                ];
+            })->toArray()
+        ]);
+
+        $processedKpiData = $this->fetchAndProcessKpiData($employeeId);
+        
+        $responseData = [
+            'employee' => [
+                'id' => $employee->id_karyawan,
+                'name' => $employee->nama,
+                'division' => $employee->roles->first()->division->nama_divisi ?? 'N/A',
+                'position' => $employee->roles->first()->nama_jabatan ?? 'N/A',
+            ],
+            'kpi_data' => $processedKpiData
+        ];
+        
+        Log::info("Berhasil mengambil data KPI untuk employee_id: {$employeeId}");
+        return response()->json($responseData);
+    } catch (Exception $e) {
+        Log::error("Error saat getMonthlyKpiData untuk employee_id: {$employeeId}", [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json(['message' => 'Terjadi kesalahan pada server.'], 500);
     }
+}
 
     public function exportMonthlyKpi($employeeId)
     {

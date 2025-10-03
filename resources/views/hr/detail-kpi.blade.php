@@ -531,7 +531,7 @@
 async function loadAndRenderKpiTrendChart(employeeId, year) {
   try {
     console.log(`Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
-    const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
+    const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -745,7 +745,7 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
 
     try {
       console.log(`Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
-      const response = await fetch(`/api/hr/kpi/monthly-data/${employeeId}?year=${year}`);
+      const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -871,7 +871,7 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
         }
 
         const button = this;
-        const exportUrl = `/api/hr/kpi/monthly-export/${currentEmployeeId}`;
+        const exportUrl = `/api/report/kpi/monthly-export/${currentEmployeeId}`;
 
         button.textContent = 'Mengekspor...';
         button.disabled = true;

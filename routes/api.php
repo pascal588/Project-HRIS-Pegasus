@@ -153,3 +153,13 @@ Route::get('/kpi-global', [KpiController::class, 'listGlobalKpi']);
 
 // Test routes for attendance data
 Route::get('/kpi/test-attendance/{employeeId}/{periodeId}', [KpiController::class, 'testAttendanceData']);
+
+
+Route::prefix('report')->group(function () {
+    // KPI Monthly Data & Export
+    Route::get('/kpi/monthly-data/{employeeId}', [App\Http\Controllers\HrController::class, 'getMonthlyKpiData']);
+    Route::get('/kpi/monthly-export/{employeeId}', [App\Http\Controllers\HrController::class, 'exportMonthlyKpi']);
+    
+    // Detail Absensi
+    Route::get('/detail-absensi/{employee_id}', [App\Http\Controllers\HrController::class, 'detailAbsensi']);
+});

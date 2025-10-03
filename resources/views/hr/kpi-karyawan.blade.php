@@ -74,6 +74,55 @@
     font-size: 0.75rem;
     margin-bottom: 2px;
   }
+
+  /* Fix untuk dropdown pagination DataTables */
+div.dataTables_wrapper div.dataTables_length select {
+  margin: 0 0.5rem;
+  padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+}
+
+div.dataTables_wrapper div.dataTables_length {
+  position: relative;
+  z-index: 1;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Pastikan dropdown tidak terpotong */
+.dataTables_wrapper {
+  position: relative;
+  z-index: auto;
+}
+
+div.dataTables_wrapper div.dataTables_paginate {
+  margin-top: 1rem;
+}
+
+/* Fix untuk overflow di table responsive */
+.table-responsive {
+  position: relative;
+}
+
+/* Pastikan dropdown di DataTables visible */
+.dataTables_length .dropdown-menu {
+  z-index: 1060 !important;
+}
+
+/* Fix khusus untuk select2 jika digunakan */
+.select2-container--open {
+  z-index: 1061 !important;
+}
 </style>
 
 <div class="body d-flex py-lg-3 py-md-2">

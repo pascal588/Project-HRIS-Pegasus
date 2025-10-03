@@ -254,6 +254,55 @@
       padding: 0.3rem 0.5rem;
     }
   }
+
+  /* Fix untuk dropdown pagination di halaman karyawan */
+#myProjectTable_wrapper .dataTables_length {
+  position: relative;
+  z-index: 10;
+}
+
+#myProjectTable_wrapper .dataTables_length select {
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Pastikan wrapper DataTables tidak memotong dropdown */
+#myProjectTable_wrapper {
+  position: relative;
+  z-index: auto;
+}
+
+/* Fix untuk dropdown di dalam table responsive */
+.table-responsive {
+  min-height: 0.01%;
+  overflow-x: auto;
+}
+
+/* Pastikan pagination memiliki spacing yang cukup */
+#myProjectTable_wrapper .dataTables_paginate {
+  margin-top: 15px;
+  padding-top: 10px;
+}
+
+/* Z-index untuk dropdown agar tidak tertutup */
+.dataTables_length {
+  position: relative;
+}
+
+.dataTables_length select:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
 </style>
 
 <div class="body d-flex py-3">

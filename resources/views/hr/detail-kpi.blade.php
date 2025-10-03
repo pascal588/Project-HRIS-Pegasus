@@ -81,55 +81,136 @@
   }
 
   /* Style untuk tabel bulanan */
-  .monthly-table th {
-    position: sticky;
-    top: 0;
-    background-color: #f8f9fa;
-    z-index: 10;
-  }
+.monthly-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
 
-  .monthly-score {
-    font-weight: bold;
-    text-align: center;
-  }
+.monthly-table th {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 10;
+  font-weight: 600;
+  color: #2d3748;
+  padding: 12px 15px;
+  border-bottom: 2px solid #e2e8f0;
+  text-align: center;
+  white-space: nowrap;
+}
 
-  .monthly-total {
-    font-weight: bold;
-    background-color: #f8f9fa;
-  }
+.monthly-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+}
 
+.monthly-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.monthly-table tbody tr:hover {
+  background-color: #f7fafc;
+}
+
+.monthly-table tbody tr:nth-child(even) {
+  background-color: #fafbfc;
+}
+
+.monthly-table tbody tr:nth-child(even):hover {
+  background-color: #f1f5f9;
+}
+
+.monthly-score {
+  font-weight: 500;
+  text-align: center;
+  color: #4a5568;
+}
+
+.monthly-total {
+  font-weight: 600;
+  text-align: center;
+  background-color: #f8f9fa;
+  color: #2d3748;
+}
+
+.monthly-table tfoot tr {
+  background-color: #edf2f7;
+}
+
+.monthly-table tfoot th {
+  font-weight: 600;
+  color: #2d3748;
+  padding: 12px 15px;
+  border-top: 2px solid #e2e8f0;
+}
+
+.table-container {
+  max-height: 500px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Header tabel yang tetap */
+.monthly-table thead th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.monthly-table thead th:last-child {
+  border-top-right-radius: 8px;
+}
+
+/* Footer tabel */
+.monthly-table tfoot th:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+.monthly-table tfoot th:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+/* Kolom bulan */
+.monthly-table td:first-child {
+  font-weight: 500;
+  color: #4a5568;
+  white-space: nowrap;
+}
+
+/* Responsif untuk mobile */
+@media (max-width: 768px) {
+  .monthly-table {
+    font-size: 0.8rem;
+  }
+  
+  .monthly-table th,
+  .monthly-table td {
+    padding: 8px 10px;
+  }
+  
   .table-container {
-    max-height: 500px;
-    overflow-y: auto;
+    max-height: 400px;
   }
+}
 
-  @media (max-width: 576px) {
-    .stat-card {
-      padding: 10px;
-    }
-
-    .stat-card .icon {
-      font-size: 1.5rem;
-      margin-bottom: 5px;
-    }
-
-    .stat-card .title {
-      font-size: 0.75rem;
-    }
-
-    .stat-card .value {
-      font-size: 1rem;
-    }
-
-    .card-body h4 {
-      font-size: 1.1rem;
-    }
-
-    .card-body span {
-      display: block;
-      margin-bottom: 5px;
-    }
+@media (max-width: 576px) {
+  .monthly-table {
+    font-size: 0.75rem;
   }
+  
+  .monthly-table th,
+  .monthly-table td {
+    padding: 6px 8px;
+  }
+  
+  .kpi-badge {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+}
 </style>
 
 <div class="body d-flex py-3">
@@ -729,96 +810,106 @@ async function loadAndRenderKpiTrendChart(employeeId, year) {
   }
 }
 
-  // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN ---
-  async function loadAndRenderMonthlyRecap(employeeId, year) {
-    const loader = document.getElementById('monthlyRecapLoader');
-    const container = document.getElementById('monthlyRecapContainer');
-    const thead = document.getElementById('monthlyKpiThead');
-    const tbody = document.getElementById('monthlyKpiTbody');
-    const tfoot = document.getElementById('monthlyKpiTfoot');
 
-    loader.style.display = 'block';
-    container.style.display = 'none';
-    thead.innerHTML = '';
-    tbody.innerHTML = '';
-    tfoot.innerHTML = '';
+ // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN ---
+async function loadAndRenderMonthlyRecap(employeeId, year) {
+  const loader = document.getElementById('monthlyRecapLoader');
+  const container = document.getElementById('monthlyRecapContainer');
+  const thead = document.getElementById('monthlyKpiThead');
+  const tbody = document.getElementById('monthlyKpiTbody');
+  const tfoot = document.getElementById('monthlyKpiTfoot');
 
-    try {
-      console.log(`Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
-      const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
+  loader.style.display = 'block';
+  container.style.display = 'none';
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  try {
+    console.log(`Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
+    const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
 
-      const result = await response.json();
-      console.log('Data untuk rekap bulanan:', result);
-
-      if (!result || !result.kpi_data || result.kpi_data.length === 0) {
-        loader.innerHTML = '<p class="text-center p-5">Tidak ada data rekap KPI untuk ditampilkan pada tahun yang dipilih.</p>';
-        return;
-      }
-
-      const monthlyData = result.kpi_data;
-      const aspectHeaders = [...new Set(monthlyData.flatMap(m => m.details.map(d => d.aspect_name)))].sort();
-      const pivotedData = monthlyData.map(month => {
-        const row = {
-          month: month.month_name,
-          year: month.year,
-          total: month.total_score,
-          status: getKpiStatus(month.total_score),
-          scores: {}
-        };
-        for (const detail of month.details) {
-          row.scores[detail.aspect_name] = (row.scores[detail.aspect_name] || 0) + detail.sub_aspect_score;
-        }
-        return row;
-      });
-
-      let headerHtml = '<tr><th>Bulan</th>';
-      aspectHeaders.forEach(h => headerHtml += `<th>${h}</th>`);
-      headerHtml += '<th>Total KPI</th><th>Status</th></tr>';
-      thead.innerHTML = headerHtml;
-
-      let bodyHtml = '';
-      pivotedData.forEach(row => {
-        bodyHtml += `<tr><td>${row.month}</td>`;
-        aspectHeaders.forEach(h => bodyHtml += `<td class="monthly-score">${(row.scores[h] || 0).toFixed(2)}</td>`);
-        bodyHtml += `<td class="monthly-total">${row.total.toFixed(2)}</td>`;
-        const statusClass = getKpiStatusClass(row.status);
-        bodyHtml += `<td><span class="kpi-badge ${statusClass}">${row.status}</span></td></tr>`;
-      });
-      tbody.innerHTML = bodyHtml;
-
-      const averages = {
-        total: 0
-      };
-      aspectHeaders.forEach(h => averages[h] = 0);
-      pivotedData.forEach(row => {
-        aspectHeaders.forEach(h => averages[h] += (row.scores[h] || 0));
-        averages.total += row.total;
-      });
-
-      const dataCount = pivotedData.length;
-      if (dataCount > 0) {
-        let footerHtml = '<tr class="table-active"><th>Rata-rata</th><th></th>';
-        aspectHeaders.forEach(h => footerHtml += `<th>${(averages[h] / dataCount).toFixed(2)}</th>`);
-        const avgTotal = averages.total / dataCount;
-        const avgStatus = getKpiStatus(avgTotal);
-        const avgStatusClass = getKpiStatusClass(avgStatus);
-        footerHtml += `<th>${avgTotal.toFixed(2)}</th>`;
-        footerHtml += `<th><span class="kpi-badge ${avgStatusClass}">${avgStatus}</span></th></tr>`;
-        tfoot.innerHTML = footerHtml;
-      }
-
-      loader.style.display = 'none';
-      container.style.display = 'block';
-
-    } catch (error) {
-      console.error('Gagal memuat rekap bulanan:', error);
-      loader.innerHTML = `<p class="text-center text-danger p-5">Terjadi kesalahan: ${error.message}</p>`;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const result = await response.json();
+    console.log('Data untuk rekap bulanan:', result);
+
+    if (!result || !result.kpi_data || result.kpi_data.length === 0) {
+      loader.innerHTML = '<p class="text-center p-5">Tidak ada data rekap KPI untuk ditampilkan pada tahun yang dipilih.</p>';
+      return;
+    }
+
+    const monthlyData = result.kpi_data;
+    const aspectHeaders = [...new Set(monthlyData.flatMap(m => m.details.map(d => d.aspect_name)))].sort();
+    const pivotedData = monthlyData.map(month => {
+      const row = {
+        month: month.month_name,
+        year: month.year,
+        total: month.total_score,
+        status: getKpiStatus(month.total_score),
+        scores: {}
+      };
+      for (const detail of month.details) {
+        row.scores[detail.aspect_name] = (row.scores[detail.aspect_name] || 0) + detail.sub_aspect_score;
+      }
+      return row;
+    });
+
+    // Urutkan data berdasarkan bulan
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    pivotedData.sort((a, b) => {
+      return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+    });
+
+    let headerHtml = '<tr><th>Bulan</th>';
+    aspectHeaders.forEach(h => headerHtml += `<th>${h}</th>`);
+    headerHtml += '<th>Total KPI</th><th>Status</th></tr>';
+    thead.innerHTML = headerHtml;
+
+    let bodyHtml = '';
+    pivotedData.forEach(row => {
+      bodyHtml += `<tr><td class="text-nowrap">${row.month}</td>`;
+      aspectHeaders.forEach(h => bodyHtml += `<td class="monthly-score">${(row.scores[h] || 0).toFixed(2)}</td>`);
+      bodyHtml += `<td class="monthly-total">${row.total.toFixed(2)}</td>`;
+      const statusClass = getKpiStatusClass(row.status);
+      bodyHtml += `<td class="text-center"><span class="kpi-badge ${statusClass}">${row.status}</span></td></tr>`;
+    });
+    tbody.innerHTML = bodyHtml;
+
+    const averages = {
+      total: 0
+    };
+    aspectHeaders.forEach(h => averages[h] = 0);
+    pivotedData.forEach(row => {
+      aspectHeaders.forEach(h => averages[h] += (row.scores[h] || 0));
+      averages.total += row.total;
+    });
+
+    const dataCount = pivotedData.length;
+    if (dataCount > 0) {
+      let footerHtml = '<tr class="table-active"><th>Rata-rata</th>';
+      aspectHeaders.forEach(h => footerHtml += `<th class="monthly-score">${(averages[h] / dataCount).toFixed(2)}</th>`);
+      const avgTotal = averages.total / dataCount;
+      const avgStatus = getKpiStatus(avgTotal);
+      const avgStatusClass = getKpiStatusClass(avgStatus);
+      footerHtml += `<th class="monthly-total">${avgTotal.toFixed(2)}</th>`;
+      footerHtml += `<th class="text-center"><span class="kpi-badge ${avgStatusClass}">${avgStatus}</span></th></tr>`;
+      tfoot.innerHTML = footerHtml;
+    }
+
+    loader.style.display = 'none';
+    container.style.display = 'block';
+
+  } catch (error) {
+    console.error('Gagal memuat rekap bulanan:', error);
+    loader.innerHTML = `<p class="text-center text-danger p-5">Terjadi kesalahan: ${error.message}</p>`;
   }
+}
 
   // --- FUNGSI UNTUK MEMUAT SEMUA DATA BERDASARKAN TAHUN ---
   function loadYearlyData(year) {

@@ -83,6 +83,9 @@
             <a class="ms-link {{ request()->routeIs('hr.kpi') ? 'active' : '' }}" href="{{route('hr.kpi')}}">
               <span>Penilaian KPI</span></a>
           </li>
+          <li>
+            <a class="ms-link {{ request()->routeIs('hr.jabatan') ? 'active' : '' }}" href="{{route('hr.jabatan')}}">
+              <span>Jabatan</span></a>
         </ul>
       </li>
     </ul>

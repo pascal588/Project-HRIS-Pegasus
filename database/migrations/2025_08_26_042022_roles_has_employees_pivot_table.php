@@ -20,6 +20,7 @@ return new class extends Migration
         $table->foreign('role_id')->references('id_jabatan')->on('roles')->onDelete('cascade');
         $table->foreign('employee_id')->references('id_karyawan')->on('employees')->onDelete('cascade');
         $table->unique(['role_id', 'employee_id']);
+        $table->index(['role_id', 'employee_id']); // Composite index
     });
 
     }

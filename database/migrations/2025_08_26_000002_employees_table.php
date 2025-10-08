@@ -16,13 +16,17 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id'); // FK ke tabel users
             $table->string('nama', 100);
             $table->string('no_telp', 15);
-            $table->enum('gender', ['Pria', 'Wanita']); 
+            $table->enum('gender', ['Pria', 'Wanita']);
             $table->string('foto', 255)->nullable();
             $table->enum('status', ['Aktif', 'Non-Aktif', 'Cuti'])->default('Aktif');
             $table->timestamps();
             $table->softDeletes();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+        });
+
+        Schema::table('employees', function (Blueprint $table) {
+            $table->index('user_id');
         });
     }
 

@@ -50,215 +50,255 @@ class AttendanceApiController extends Controller
         ], 200);
     }
 
-    // POST /api/attendances/import
     public function import(Request $request)
-    {
-        $request->validate([
-            'files.*' => 'required|mimes:xlsx,xls' // Ubah ke files.* untuk multiple
+{
+    \Log::info('=== ATTENDANCE IMPORT START ===');
+    
+    $request->validate([
+        'file' => 'required|mimes:xlsx,xls' // Pastikan 'file' bukan 'files.*'
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $file = $request->file('file');
+        \Log::info('File uploaded:', [
+            'name' => $file->getClientOriginalName(),
+            'size' => $file->getSize()
         ]);
 
-        try {
-            $file = $request->file('file');
-            $spreadsheet = IOFactory::load($file->getPathname());
-            $worksheet = $spreadsheet->getActiveSheet();
-            $rows = $worksheet->toArray();
+        $spreadsheet = IOFactory::load($file->getPathname());
+        $worksheet = $spreadsheet->getActiveSheet();
+        $rows = $worksheet->toArray();
 
-            // Get employee ID and period from Excel
-            $employeeId = null;
-            $periodString = null;
+        \Log::info('Excel loaded, total rows: ' . count($rows));
 
-            foreach ($rows as $rowIndex => $row) {
-                foreach ($row as $index => $cell) {
-                    if (trim($cell) === 'Personnel ID' && isset($row[$index + 1])) {
-                        $employeeId = trim($row[$index + 1]);
-                    }
-                    if (trim($cell) === 'Period' && isset($row[$index + 1])) {
-                        $periodString = trim($row[$index + 1]);
-                    }
+        // Get employee ID and period from Excel
+        $employeeId = null;
+        $periodString = null;
+
+        foreach ($rows as $rowIndex => $row) {
+            foreach ($row as $index => $cell) {
+                if (trim($cell) === 'Personnel ID' && isset($row[$index + 1])) {
+                    $employeeId = trim($row[$index + 1]);
                 }
-
-                if ($employeeId && $periodString) {
-                    break;
+                if (trim($cell) === 'Period' && isset($row[$index + 1])) {
+                    $periodString = trim($row[$index + 1]);
                 }
             }
 
-            if (!$employeeId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Employee ID not found in the Excel file'
-                ], 400);
-            }
-
-            // Check if employee exists
-            $employee = Employee::where('id_karyawan', $employeeId)->first();
-            if (!$employee) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Employee with ID ' . $employeeId . ' not found in database'
-                ], 400);
-            }
-
-            // ✅ AUTO-CREATE/LINK PERIOD (YANG DITAMBAH)
-            $period = Period::firstOrCreate(
-                ['nama' => $periodString],
-                $this->createPeriodData($periodString) // ✅ METHOD BARU
-            );
-
-            // Find header rows - kita perlu membaca dua baris header
-            $headerRowIndex1 = null;
-            $headerRowIndex2 = null;
-            $columnMapping = [];
-
-            foreach ($rows as $index => $row) {
-                // Cari baris dengan "No", "Date", "Status"
-                if (in_array('No', $row) && in_array('Date', $row) && in_array('Status', $row)) {
-                    $headerRowIndex1 = $index;
-                    $headerRowIndex2 = $index + 1; // Baris header kedua ada di bawahnya
-                    break;
-                }
-            }
-
-            if ($headerRowIndex1 === null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Could not find header row in Excel file'
-                ], 400);
-            }
-
-            // Dapatkan kedua baris header
-            $headerRow1 = $rows[$headerRowIndex1];
-            $headerRow2 = $rows[$headerRowIndex2];
-
-            // Buat mapping kolom berdasarkan kedua baris header
-            $columnMapping = $this->createColumnMapping($headerRow1, $headerRow2);
-
-            $importedCount = 0;
-            $skippedCount = 0;
-
-            // Process attendance data starting from row after second header
-            for ($i = $headerRowIndex2 + 1; $i < count($rows); $i++) {
-                $row = $rows[$i];
-
-                // Skip empty rows atau rows tanpa nomor
-                if (empty($row[$columnMapping['no']]) || !is_numeric($row[$columnMapping['no']])) {
-                    continue;
-                }
-
-                try {
-                    // Parse date
-                    $dateValue = $row[$columnMapping['date']];
-                    $date = \Carbon\Carbon::createFromFormat('d M Y', $dateValue)->format('Y-m-d');
-
-                    // ✅ VALIDASI TANGGAL DALAM PERIODE (YANG DITAMBAH)
-                    if (!$period->isDateInPeriod($date)) {
-                        Log::warning("Date $date not in period {$period->nama}");
-                        $skippedCount++;
-                        continue;
-                    }
-
-                    // Process status
-                    $status = $row[$columnMapping['status']] ?? null;
-                    $statusMap = [
-                        'Present at workday (PW)' => 'Present at workday (PW)',
-                        'Non-working day (NW)' => 'Non-working day (NW)',
-                        'Absent (A)' => 'Absent (A)',
-                        'Sick (S)' => 'Sick (S)',
-                        'Permission (I)' => 'Permission (I)'
-                    ];
-
-                    $status = $statusMap[$status] ?? 'Absent (A)';
-
-                    // Prepare attendance data
-                    $attendanceData = [
-                        'employee_id' => $employeeId,
-                        'periode_id' => $period->id_periode, // ✅ DITAMBAH
-                        'period' => $periodString,
-                        'date' => $date,
-                        'status' => $status,
-                        'work_pattern_clock_in' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_in'),
-                        'work_pattern_clock_out' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_out'),
-                        'work_pattern_late_tolerance' => $this->getCellValue($row, $columnMapping, 'work_pattern_late_tolerance', 'int'),
-                        'daily_attendance_clock_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_in'),
-                        'daily_attendance_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_break'),
-                        'daily_attendance_after_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_after_break'),
-                        'daily_attendance_clock_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_out'),
-                        'daily_attendance_overtime_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_in'),
-                        'daily_attendance_overtime_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_out'),
-                        'late' => $this->getCellValue($row, $columnMapping, 'late', 'int'),
-                        'early_leave' => $this->getCellValue($row, $columnMapping, 'early_leave', 'int'),
-                        'total_attendance' => $this->getCellValue($row, $columnMapping, 'total_attendance', 'duration'),
-                        'total_break_duration' => $this->getCellValue($row, $columnMapping, 'total_break_duration', 'duration'),
-                        'total_overtime' => $this->getCellValue($row, $columnMapping, 'total_overtime', 'duration'),
-                        'timezone_clock_in' => $this->getCellValue($row, $columnMapping, 'timezone_clock_in'),
-                        'timezone_clock_out' => $this->getCellValue($row, $columnMapping, 'timezone_clock_out'),
-                    ];
-
-                    // Check if attendance already exists
-                    $existing = Attendance::where('employee_id', $employeeId)
-                        ->where('date', $attendanceData['date'])
-                        ->first();
-
-                    if ($existing) {
-                        $existing->update($attendanceData);
-                        $importedCount++;
-                    } else {
-                        Attendance::create($attendanceData);
-                        $importedCount++;
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Error processing row ' . $i . ': ' . $e->getMessage());
-                    $skippedCount++;
-                    continue;
-                }
-            }
-
-            // ✅ UPDATE STATUS PERIODE SETELAH IMPORT (YANG DITAMBAH)
-            // PERBAIKI CARA MEMANGGIL CONTROLLER:
-            if ($importedCount > 0) {
-                $period->update([
-                    'attendance_uploaded' => true,
-                    'attendance_uploaded_at' => now(),
-                    'status' => 'active',
-                    'is_active' => true
+            if ($employeeId && $periodString) {
+                \Log::info('Found employee and period:', [
+                    'employee_id' => $employeeId,
+                    'period' => $periodString
                 ]);
-
-                // ✅ COPY TEMPLATES KE PERIODE INI (FIXED)
-                $kpiController = new \App\Http\Controllers\Api\KpiController();
-                $result = $kpiController->copyTemplatesToPeriod($period->id_periode);
-
-                // Handle response properly
-                if ($result->getStatusCode() !== 200) {
-                    Log::error('Failed to copy KPI templates', [
-                        'response' => $result->getData()
-                    ]);
-                } else {
-                    Log::info('KPI templates copied successfully', [
-                        'copied_count' => $result->getData()->copied_count
-                    ]);
-                }
+                break;
             }
-
-            // Refresh periods cache after import
-            $this->refreshPeriodsCache();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Imported ' . $importedCount . ' attendance records successfully',
-                'skipped' => $skippedCount,
-                'period' => $periodString,
-                'period_id' => $period->id_periode // ✅ DITAMBAH
-
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Attendance import error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to import attendance data: ' . $e->getMessage()
-            ], 500);
         }
 
-        $this->autoLinkAttendancesToPeriods();
+        if (!$employeeId) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID not found in the Excel file'
+            ], 400);
+        }
+
+        // Check if employee exists
+        $employee = Employee::where('id_karyawan', $employeeId)->first();
+        if (!$employee) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee with ID ' . $employeeId . ' not found in database'
+            ], 400);
+        }
+
+        \Log::info('Employee found:', ['employee_name' => $employee->nama]);
+
+        // ✅ AUTO-CREATE/LINK PERIOD 
+        $period = Period::where('nama', $periodString)->first();
+        
+        if (!$period) {
+            \Log::info('Creating new period: ' . $periodString);
+            $periodData = $this->createPeriodData($periodString);
+            $period = Period::create($periodData);
+        } else {
+            \Log::info('Period already exists:', ['period_id' => $period->id_periode]);
+        }
+
+        // Find header rows
+        $headerRowIndex1 = null;
+        $headerRowIndex2 = null;
+
+        foreach ($rows as $index => $row) {
+            // Cari baris dengan "No", "Date", "Status"
+            if (in_array('No', $row) && in_array('Date', $row) && in_array('Status', $row)) {
+                $headerRowIndex1 = $index;
+                $headerRowIndex2 = $index + 1;
+                break;
+            }
+        }
+
+        if ($headerRowIndex1 === null) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not find header row in Excel file'
+            ], 400);
+        }
+
+        \Log::info('Header found at rows: ' . $headerRowIndex1 . ' and ' . $headerRowIndex2);
+
+        // Dapatkan kedua baris header
+        $headerRow1 = $rows[$headerRowIndex1];
+        $headerRow2 = $rows[$headerRowIndex2];
+
+        // Buat mapping kolom
+        $columnMapping = $this->createColumnMapping($headerRow1, $headerRow2);
+        \Log::info('Column mapping:', $columnMapping);
+
+        $importedCount = 0;
+        $skippedCount = 0;
+
+        // Process attendance data starting from row after second header
+        for ($i = $headerRowIndex2 + 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            // Skip empty rows atau rows tanpa nomor
+            if (empty($row[$columnMapping['no']]) || !is_numeric($row[$columnMapping['no']])) {
+                continue;
+            }
+
+            try {
+                // Parse date
+                $dateValue = $row[$columnMapping['date']];
+                \Log::info('Processing date: ' . $dateValue);
+                
+                $date = \Carbon\Carbon::createFromFormat('d M Y', $dateValue)->format('Y-m-d');
+
+                // Process status
+                $status = $row[$columnMapping['status']] ?? null;
+                $statusMap = [
+                    'Present at workday (PW)' => 'Present at workday (PW)',
+                    'Non-working day (NW)' => 'Non-working day (NW)',
+                    'Absent (A)' => 'Absent (A)',
+                    'Sick (S)' => 'Sick (S)',
+                    'Permission (I)' => 'Permission (I)'
+                ];
+
+                $status = $statusMap[$status] ?? 'Absent (A)';
+
+                // Prepare attendance data
+                $attendanceData = [
+                    'employee_id' => $employeeId,
+                    'periode_id' => $period->id_periode,
+                    'period' => $periodString,
+                    'date' => $date,
+                    'status' => $status,
+                    'work_pattern_clock_in' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_in'),
+                    'work_pattern_clock_out' => $this->getCellValue($row, $columnMapping, 'work_pattern_clock_out'),
+                    'work_pattern_late_tolerance' => $this->getCellValue($row, $columnMapping, 'work_pattern_late_tolerance', 'int'),
+                    'daily_attendance_clock_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_in'),
+                    'daily_attendance_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_break'),
+                    'daily_attendance_after_break' => $this->getCellValue($row, $columnMapping, 'daily_attendance_after_break'),
+                    'daily_attendance_clock_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_clock_out'),
+                    'daily_attendance_overtime_in' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_in'),
+                    'daily_attendance_overtime_out' => $this->getCellValue($row, $columnMapping, 'daily_attendance_overtime_out'),
+                    'late' => $this->getCellValue($row, $columnMapping, 'late', 'int'),
+                    'early_leave' => $this->getCellValue($row, $columnMapping, 'early_leave', 'int'),
+                    'total_attendance' => $this->getCellValue($row, $columnMapping, 'total_attendance', 'duration'),
+                    'total_break_duration' => $this->getCellValue($row, $columnMapping, 'total_break_duration', 'duration'),
+                    'total_overtime' => $this->getCellValue($row, $columnMapping, 'total_overtime', 'duration'),
+                    'timezone_clock_in' => $this->getCellValue($row, $columnMapping, 'timezone_clock_in'),
+                    'timezone_clock_out' => $this->getCellValue($row, $columnMapping, 'timezone_clock_out'),
+                ];
+
+                \Log::info('Attendance data prepared:', [
+                    'date' => $date,
+                    'status' => $status,
+                    'employee_id' => $employeeId
+                ]);
+
+                // Check if attendance already exists
+                $existing = Attendance::where('employee_id', $employeeId)
+                    ->where('date', $attendanceData['date'])
+                    ->first();
+
+                if ($existing) {
+                    $existing->update($attendanceData);
+                    $importedCount++;
+                    \Log::info('Updated existing attendance record');
+                } else {
+                    Attendance::create($attendanceData);
+                    $importedCount++;
+                    \Log::info('Created new attendance record');
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error processing row ' . $i . ': ' . $e->getMessage());
+                \Log::error('Row data: ' . json_encode($row));
+                $skippedCount++;
+                continue;
+            }
+        }
+
+        // ✅ UPDATE STATUS PERIODE SETELAH IMPORT (MODIFIKASI)
+        if ($importedCount > 0) {
+        $period->update([
+            'attendance_uploaded' => true,
+            'attendance_uploaded_at' => now(),
+            'status' => 'active',
+            'is_active' => true,
+            'kpi_published' => true,
+            // ❌ HAPUS semua field deadline
+            'evaluation_start_date' => null,
+            'evaluation_end_date' => null, 
+            'editing_start_date' => null,
+            'editing_end_date' => null
+        ]);
+
+        // ✅ Copy KPI templates sekali saja
+        $existingKpisCount = \App\Models\Kpi::where('periode_id', $period->id_periode)->count();
+        
+        if ($existingKpisCount === 0) {
+            $kpiPeriodController = new \App\Http\Controllers\Api\KpiPeriodController();
+            $result = $kpiPeriodController->copyTemplatesToPeriod($period->id_periode);
+            
+            if ($result->getData()->success) {
+                \Log::info('KPI templates copied', [
+                    'copied_count' => $result->getData()->copied_count ?? 0
+                ]);
+            }
+        }
     }
+
+        // Refresh periods cache after import
+        $this->refreshPeriodsCache();
+
+        DB::commit();
+
+        \Log::info('=== ATTENDANCE IMPORT COMPLETED ===', [
+            'imported' => $importedCount,
+            'skipped' => $skippedCount
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Imported ' . $importedCount . ' attendance records successfully',
+            'skipped' => $skippedCount,
+            'period' => $periodString,
+            'period_id' => $period->id_periode
+        ], 200);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Attendance import error: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to import attendance data: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
     private function autoLinkAttendancesToPeriods()
 {
@@ -633,4 +673,114 @@ class AttendanceApiController extends Controller
             ], 404);
         }
     }
+
+    public function getEmployeeAttendanceByPeriod($employeeId, $periodId)
+    {
+        try {
+            // Validasi employee exists
+            $employee = Employee::find($employeeId);
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Karyawan tidak ditemukan'
+                ], 404);
+            }
+
+            // Validasi period exists
+            $period = Period::find($periodId);
+            if (!$period) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Periode tidak ditemukan'
+                ], 404);
+            }
+
+            // Get attendance records
+            $attendances = Attendance::where('employee_id', $employeeId)
+                ->where('periode_id', $periodId)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $attendances,
+                'summary' => [
+                    'total_records' => $attendances->count(),
+                    'has_attendance' => $attendances->count() > 0
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching attendance data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+public function getEmployeesWithAttendance($periodId)
+{
+    try {
+        $period = Period::findOrFail($periodId);
+
+        // Ambil employee_id yang memiliki attendance di periode ini dan role Kepala Divisi
+        $employeeIdsWithAttendance = Attendance::where('periode_id', $periodId)
+            ->distinct()
+            ->pluck('employee_id');
+
+        // Jika tidak ada employee dengan attendance, return empty array
+        if ($employeeIdsWithAttendance->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'period' => $period->nama,
+                'total_employees' => 0,
+                'message' => 'Tidak ada Kepala Divisi dengan absensi di periode ini'
+            ]);
+        }
+
+        // Ambil data karyawan lengkap dengan filter Kepala Divisi
+        $employees = Employee::whereIn('id_karyawan', $employeeIdsWithAttendance)
+            ->whereHas('roles', function ($query) {
+                $query->where('nama_jabatan', 'like', '%Kepala Divisi%');
+            })
+            ->with(['roles.division'])
+            ->where('status', 'Aktif')
+            ->get()
+            ->map(function ($employee) {
+                return [
+                    'id_karyawan' => $employee->id_karyawan,
+                    'nama' => $employee->nama,
+                    'status' => $employee->status,
+                    'foto' => $employee->foto,
+                    'roles' => $employee->roles->map(function ($role) {
+                        return [
+                            'id_jabatan' => $role->id_jabatan,
+                            'nama_jabatan' => $role->nama_jabatan,
+                            'division' => $role->division ? [
+                                'id_divisi' => $role->division->id_divisi,
+                                'nama_divisi' => $role->division->nama_divisi
+                            ] : null
+                        ];
+                    }),
+                    'position' => $employee->roles->first() ? $employee->roles->first()->nama_jabatan : '-'
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $employees,
+            'period' => $period->nama,
+            'total_employees' => $employees->count()
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in getEmployeesWithAttendance: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching kepala divisi with attendance: ' . $e->getMessage(),
+            'data' => [] // Pastikan data selalu ada
+        ], 500);
+    }
+}
 }

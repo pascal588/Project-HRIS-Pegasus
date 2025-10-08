@@ -31,11 +31,7 @@ class Period extends Model
 
     protected $casts = [
         'tanggal_mulai' => 'date',
-        'tanggal_selesai' => 'date',
-        'evaluation_start_date' => 'date',
-        'evaluation_end_date' => 'date',
-        'editing_start_date' => 'date',
-        'editing_end_date' => 'date',
+        'tanggal_selesai' => 'date',  
         'attendance_uploaded_at' => 'datetime',
     ];
 

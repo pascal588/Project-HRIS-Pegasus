@@ -38,7 +38,6 @@ class KpiController extends Controller
             'kpis.*.points' => 'required|array|min:1',
             'kpis.*.points.*.nama' => 'required|string|max:255',
             'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
-            // ⚠️ FIX: Questions tidak wajib (karena absensi boleh tanpa questions)
             'kpis.*.points.*.questions' => 'sometimes|array',
             'kpis.*.points.*.questions.*.pertanyaan' => 'required_with:kpis.*.points.*.questions|string|max:1000',
         ]);
@@ -63,25 +62,19 @@ class KpiController extends Controller
             return response()->json(['success' => false, 'message' => 'Validation error', 'errors' => $validator->errors()], 422);
         }
 
-        // ⚠️ FIX: Validasi CUSTOM - Hanya sub-aspek absensi yang boleh tanpa pertanyaan
         $errors = [];
         foreach ($request->kpis as $kpiIndex => $kpiData) {
             foreach ($kpiData['points'] as $pointIndex => $pointData) {
                 $pointName = $pointData['nama'] ?? '';
                 $isAbsensi = stripos($pointName, 'absensi') !== false;
                 $hasQuestions = !empty($pointData['questions']) && count($pointData['questions']) > 0;
-
-                // ⚠️ VALIDASI PENTING: Jika bukan absensi dan tidak ada questions, ERROR
+    
                 if (!$isAbsensi && !$hasQuestions) {
                     $errors["kpis.{$kpiIndex}.points.{$pointIndex}.questions"] = [
                         "Sub-aspek '{$pointName}' harus memiliki minimal 1 pertanyaan"
                     ];
                 }
 
-                // ⚠️ VALIDASI: Jika absensi, tidak perlu ada questions (tapi boleh ada jika ingin)
-                // Tidak ada validasi khusus untuk absensi tanpa questions
-
-                // Validasi setiap pertanyaan (jika ada)
                 if ($hasQuestions) {
                     foreach ($pointData['questions'] as $questionIndex => $questionData) {
                         if (empty($questionData['pertanyaan'] ?? '')) {
@@ -121,7 +114,6 @@ class KpiController extends Controller
         $kpi->nama = $kpiData['nama'];
         $kpi->bobot = $kpiData['bobot'];
 
-        // ⚠️ FIX: Jangan ubah is_global untuk KPI yang sudah ada
         if (!$kpi->exists) {
             $kpi->is_global = $isGlobal;
         }
@@ -138,8 +130,7 @@ class KpiController extends Controller
                 $point->bobot = $pointData['bobot'];
                 $point->save();
                 $existingPointIds[] = $point->id_point;
-
-                // ⚠️ FIX: Deteksi absensi dari NAMA (tanpa simpan di database)
+ 
                 $isAbsensi = stripos($pointData['nama'], 'absensi') !== false ||
                     stripos($pointData['nama'], 'kehadiran') !== false;
 
@@ -156,11 +147,9 @@ class KpiController extends Controller
                         ->whereNotIn('id_question', $existingQuestionIds)
                         ->delete();
                 } else {
-                    // ⚠️ FIX: Untuk absensi, hapus questions yang ada
                     if ($isAbsensi) {
                         KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
                     } else {
-                        // ⚠️ Untuk absensi, boleh tanpa questions - hapus semua questions yang ada
                         KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
                     }
                 }
@@ -199,7 +188,6 @@ class KpiController extends Controller
         return response()->json(['success' => true, 'data' => $kpis]);
     }
 
-    // ================== COPY KPI TO PERIOD ==================
     public function copyTemplatesToPeriod($periodId)
     {
         $period = Period::findOrFail($periodId);
@@ -256,7 +244,7 @@ class KpiController extends Controller
         $kpis = Kpi::where('periode_id', $periodId)->with(['points.questions', 'divisions'])->get();
         return response()->json(['success' => true, 'data' => ['period' => $period, 'kpis' => $kpis]]);
     }
-    // checkpoint
+
     public function listKpiByDivision($divisionId, Request $request)
 {
     $periodeId = $request->get('periode_id');
@@ -1378,112 +1366,112 @@ class KpiController extends Controller
     }
 
     public function publishToPeriod(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'period_id' => 'required|exists:periods,id_periode',
-        'deadline_days' => 'required|integer|min:1|max:60',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation error',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    DB::beginTransaction();
-    try {
-        $period = Period::findOrFail($request->period_id);
-
-        // Validasi: periode harus memiliki absensi yang sudah diupload
-        if (!$period->attendance_uploaded) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tidak bisa mempublish KPI: Absensi untuk periode ini belum diupload'
-            ], 400);
-        }
-
-        // Validasi: periode tidak boleh sudah locked
-        if ($period->status === 'locked') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tidak bisa mempublish KPI: Periode sudah dikunci'
-            ], 400);
-        }
-
-        // Hitung tanggal evaluasi
-        $evaluationStartDate = now();
-        $evaluationEndDate = now()->addDays($request->deadline_days);
-        $editingEndDate = $evaluationEndDate->copy()->addDays(3);
-
-        // Update periode
-        $period->update([
-            'evaluation_start_date' => $evaluationStartDate,
-            'evaluation_end_date' => $evaluationEndDate,
-            'editing_start_date' => $evaluationEndDate->addDay(),
-            'editing_end_date' => $editingEndDate,
-            'status' => 'active', // ⚠️ PASTIKAN status di-set ke 'active'
-            'kpi_published' => true,
-            'kpi_published_at' => now()
+    {
+        $validator = Validator::make($request->all(), [
+            'period_id' => 'required|exists:periods,id_periode',
+            'deadline_days' => 'required|integer|min:1|max:60',
         ]);
 
-        // Copy template KPI ke periode
-        $copiedCount = 0;
-        $templates = Kpi::whereNull('periode_id')->with('points.questions', 'divisions')->get();
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
-        foreach ($templates as $template) {
-            $existingKpi = Kpi::where('periode_id', $period->id_periode)
-                ->where('nama', $template->nama)
-                ->where('is_global', $template->is_global)
-                ->first();
+        DB::beginTransaction();
+        try {
+            $period = Period::findOrFail($request->period_id);
 
-            if (!$existingKpi) {
-                $this->copyKpiToPeriod($template, $period->id_periode);
-                $copiedCount++;
-                
-                // ⚠️ LOG SETIAP KPI YANG DICOPY
-                Log::info("KPI Copied to Period:", [
-                    'template_id' => $template->id_kpi,
-                    'template_name' => $template->nama,
-                    'period_id' => $period->id_periode,
-                    'period_name' => $period->nama
-                ]);
+            // Validasi: periode harus memiliki absensi yang sudah diupload
+            if (!$period->attendance_uploaded) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa mempublish KPI: Absensi untuk periode ini belum diupload'
+                ], 400);
             }
-        }
 
-        DB::commit();
+            // Validasi: periode tidak boleh sudah locked
+            if ($period->status === 'locked') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa mempublish KPI: Periode sudah dikunci'
+                ], 400);
+            }
 
-        // ⚠️ LOG SUKSES PUBLISH
-        Log::info("KPI Successfully Published:", [
-            'period_id' => $period->id_periode,
-            'period_name' => $period->nama,
-            'copied_kpi_count' => $copiedCount,
-            'status' => $period->status
-        ]);
+            // Hitung tanggal evaluasi
+            $evaluationStartDate = now();
+            $evaluationEndDate = now()->addDays($request->deadline_days);
+            $editingEndDate = $evaluationEndDate->copy()->addDays(3);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'KPI berhasil dipublish ke periode ' . $period->nama,
-            'data' => [
-                'period' => $period,
+            // Update periode
+            $period->update([
+                'evaluation_start_date' => $evaluationStartDate,
+                'evaluation_end_date' => $evaluationEndDate,
+                'editing_start_date' => $evaluationEndDate->addDay(),
+                'editing_end_date' => $editingEndDate,
+                'status' => 'active', // ⚠️ PASTIKAN status di-set ke 'active'
+                'kpi_published' => true,
+                'kpi_published_at' => now()
+            ]);
+
+            // Copy template KPI ke periode
+            $copiedCount = 0;
+            $templates = Kpi::whereNull('periode_id')->with('points.questions', 'divisions')->get();
+
+            foreach ($templates as $template) {
+                $existingKpi = Kpi::where('periode_id', $period->id_periode)
+                    ->where('nama', $template->nama)
+                    ->where('is_global', $template->is_global)
+                    ->first();
+
+                if (!$existingKpi) {
+                    $this->copyKpiToPeriod($template, $period->id_periode);
+                    $copiedCount++;
+                    
+                    // ⚠️ LOG SETIAP KPI YANG DICOPY
+                    Log::info("KPI Copied to Period:", [
+                        'template_id' => $template->id_kpi,
+                        'template_name' => $template->nama,
+                        'period_id' => $period->id_periode,
+                        'period_name' => $period->nama
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // ⚠️ LOG SUKSES PUBLISH
+            Log::info("KPI Successfully Published:", [
+                'period_id' => $period->id_periode,
+                'period_name' => $period->nama,
                 'copied_kpi_count' => $copiedCount,
-                'evaluation_period' => [
-                    'start' => $evaluationStartDate->format('d M Y'),
-                    'end' => $evaluationEndDate->format('d M Y'),
-                    'deadline_days' => $request->deadline_days
+                'status' => $period->status
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'KPI berhasil dipublish ke periode ' . $period->nama,
+                'data' => [
+                    'period' => $period,
+                    'copied_kpi_count' => $copiedCount,
+                    'evaluation_period' => [
+                        'start' => $evaluationStartDate->format('d M Y'),
+                        'end' => $evaluationEndDate->format('d M Y'),
+                        'deadline_days' => $request->deadline_days
+                    ]
                 ]
-            ]
-        ]);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Failed to publish KPI: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal mempublish KPI: ' . $e->getMessage()
-        ], 500);
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to publish KPI: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mempublish KPI: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     public function getAvailablePeriodsForPublishing()
     {
@@ -1503,159 +1491,159 @@ class KpiController extends Controller
     }
 
     public function getAllEmployeeKpis(Request $request)
-{
-    try {
-        // Ambil periode TERBARU yang sudah dipublish
-        $latestPeriod = Period::where('kpi_published', true)
-            ->orderBy('tanggal_mulai', 'desc')
-            ->first();
+    {
+        try {
+            // Ambil periode TERBARU yang sudah dipublish
+            $latestPeriod = Period::where('kpi_published', true)
+                ->orderBy('tanggal_mulai', 'desc')
+                ->first();
 
-        if (!$latestPeriod) {
+            if (!$latestPeriod) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'Tidak ada periode dengan KPI yang dipublish'
+                ]);
+            }
+
+            // Ambil SEMUA karyawan
+            $employeeScores = DB::table('kpis_has_employees')
+                ->where('periode_id', $latestPeriod->id_periode)
+                ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+                ->select(
+                    'employees.id_karyawan',
+                    'employees.nama',
+                    'employees.status',
+                    'employees.foto',
+                    DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+                )
+                ->where('employees.status', 'Aktif')
+                ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+                ->orderBy('total_score', 'desc')
+                ->get();
+
+            $formattedData = [];
+
+            foreach ($employeeScores as $emp) {
+                $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+                $division = '-';
+                $position = '-';
+                
+                if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                    $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                    $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+                }
+
+                // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
+                $periodMonth = date('F', strtotime($latestPeriod->tanggal_mulai));
+                $periodYear = date('Y', strtotime($latestPeriod->tanggal_mulai));
+
+                $formattedData[] = [
+                    'id_karyawan' => $emp->id_karyawan,
+                    'nama' => $emp->nama,
+                    'status' => $emp->status,
+                    'score' => floatval($emp->total_score),
+                    'period' => $latestPeriod->nama,
+                    'period_month' => $periodMonth, // Contoh: "June", "July"
+                    'period_month_number' => date('n', strtotime($latestPeriod->tanggal_mulai)), // 1-12
+                    'period_year' => $periodYear,
+                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                    'division' => $division,
+                    'position' => $position
+                ];
+            }
+
             return response()->json([
                 'success' => true,
-                'data' => [],
-                'message' => 'Tidak ada periode dengan KPI yang dipublish'
+                'data' => $formattedData,
+                'debug_info' => [
+                    'period_used' => $latestPeriod->nama,
+                    'period_id' => $latestPeriod->id_periode,
+                    'tanggal_mulai' => $latestPeriod->tanggal_mulai,
+                    'period_month' => date('F', strtotime($latestPeriod->tanggal_mulai)),
+                    'total_employees_returned' => count($formattedData)
+                ]
             ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch KPI data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Ambil SEMUA karyawan
-        $employeeScores = DB::table('kpis_has_employees')
-            ->where('periode_id', $latestPeriod->id_periode)
-            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-            ->select(
-                'employees.id_karyawan',
-                'employees.nama',
-                'employees.status',
-                'employees.foto',
-                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
-            )
-            ->where('employees.status', 'Aktif')
-            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
-            ->orderBy('total_score', 'desc')
-            ->get();
-
-        $formattedData = [];
-
-        foreach ($employeeScores as $emp) {
-            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
-            $division = '-';
-            $position = '-';
-            
-            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
-                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
-                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
-            }
-
-            // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
-            $periodMonth = date('F', strtotime($latestPeriod->tanggal_mulai));
-            $periodYear = date('Y', strtotime($latestPeriod->tanggal_mulai));
-
-            $formattedData[] = [
-                'id_karyawan' => $emp->id_karyawan,
-                'nama' => $emp->nama,
-                'status' => $emp->status,
-                'score' => floatval($emp->total_score),
-                'period' => $latestPeriod->nama,
-                'period_month' => $periodMonth, // Contoh: "June", "July"
-                'period_month_number' => date('n', strtotime($latestPeriod->tanggal_mulai)), // 1-12
-                'period_year' => $periodYear,
-                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                'division' => $division,
-                'position' => $position
-            ];
-        }
-
-        return response()->json([
-            'success' => true,
-            'data' => $formattedData,
-            'debug_info' => [
-                'period_used' => $latestPeriod->nama,
-                'period_id' => $latestPeriod->id_periode,
-                'tanggal_mulai' => $latestPeriod->tanggal_mulai,
-                'period_month' => date('F', strtotime($latestPeriod->tanggal_mulai)),
-                'total_employees_returned' => count($formattedData)
-            ]
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Failed to fetch KPI data: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     public function getEmployeeScoresByPeriod($periodId)
-{
-    try {
-        $period = Period::findOrFail($periodId);
+    {
+        try {
+            $period = Period::findOrFail($periodId);
 
-        $employeeScores = DB::table('kpis_has_employees')
-            ->where('periode_id', $periodId)
-            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-            ->select(
-                'employees.id_karyawan',
-                'employees.nama',
-                'employees.status',
-                'employees.foto',
-                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
-            )
-            ->where('employees.status', 'Aktif')
-            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
-            ->orderBy('total_score', 'desc')
-            ->get();
+            $employeeScores = DB::table('kpis_has_employees')
+                ->where('periode_id', $periodId)
+                ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+                ->select(
+                    'employees.id_karyawan',
+                    'employees.nama',
+                    'employees.status',
+                    'employees.foto',
+                    DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
+                )
+                ->where('employees.status', 'Aktif')
+                ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+                ->orderBy('total_score', 'desc')
+                ->get();
 
-        $formattedData = [];
+            $formattedData = [];
 
-        foreach ($employeeScores as $emp) {
-            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
-            $division = '-';
-            $position = '-';
-            
-            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
-                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
-                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+            foreach ($employeeScores as $emp) {
+                $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+                $division = '-';
+                $position = '-';
+                
+                if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                    $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                    $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
+                }
+
+                // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
+                $periodMonth = date('F', strtotime($period->tanggal_mulai));
+                $periodYear = date('Y', strtotime($period->tanggal_mulai));
+
+                $formattedData[] = [
+                    'id_karyawan' => $emp->id_karyawan,
+                    'nama' => $emp->nama,
+                    'status' => $emp->status,
+                    'score' => floatval($emp->total_score),
+                    'period' => $period->nama,
+                    'period_month' => $periodMonth,
+                    'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
+                    'period_year' => $periodYear,
+                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                    'division' => $division,
+                    'position' => $position
+                ];
             }
 
-            // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
-            $periodMonth = date('F', strtotime($period->tanggal_mulai));
-            $periodYear = date('Y', strtotime($period->tanggal_mulai));
+            return response()->json([
+                'success' => true,
+                'data' => $formattedData,
+                'period_info' => [
+                    'id' => $period->id_periode,
+                    'nama' => $period->nama,
+                    'tanggal_mulai' => $period->tanggal_mulai,
+                    'period_month' => date('F', strtotime($period->tanggal_mulai))
+                ]
+            ]);
 
-            $formattedData[] = [
-                'id_karyawan' => $emp->id_karyawan,
-                'nama' => $emp->nama,
-                'status' => $emp->status,
-                'score' => floatval($emp->total_score),
-                'period' => $period->nama,
-                'period_month' => $periodMonth,
-                'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
-                'period_year' => $periodYear,
-                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                'division' => $division,
-                'position' => $position
-            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch KPI data for period: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => $formattedData,
-            'period_info' => [
-                'id' => $period->id_periode,
-                'nama' => $period->nama,
-                'tanggal_mulai' => $period->tanggal_mulai,
-                'period_month' => date('F', strtotime($period->tanggal_mulai))
-            ]
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Failed to fetch KPI data for period: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
-        ], 500);
     }
-}
 
 public function getPublishedPeriods()
 {

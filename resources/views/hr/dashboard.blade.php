@@ -534,99 +534,98 @@ $(document).ready(function() {
         loadLowPerformingEmployeesAll();
     }
 
-    // FUNGSI BARU: Load 10 karyawan terbaik dengan tampilan sama seperti dashboard penilai
-    function loadTopEmployees() {
-        $.ajax({
-            url: '/api/kpis/all-employee-scores',
-            method: 'GET',
-            success: function(response) {
-                if (response.success && response.data.length > 0) {
-                    console.log('Top employees loaded:', response.data.length, 'items');
-                    renderEmployeeList('#best-employees-list', response.data, 'Karyawan Terbaik');
-                } else {
-                    console.error('Failed to load top employees:', response.message);
-                    renderFallbackBestEmployees();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading top employees:', error);
+// FUNGSI BARU: Load 10 karyawan terbaik (SUDAH DINILAI)
+function loadTopEmployees() {
+    // Pertama, cari periode aktif terbaru
+    $.ajax({
+        url: '/api/periods/active-with-attendance',
+        method: 'GET',
+        success: function(periodResponse) {
+            if (periodResponse.success && periodResponse.data.length > 0) {
+                const latestPeriod = periodResponse.data[0]; // Ambil periode terbaru
+                
+                // Sekarang ambil data karyawan terbaik dari periode tersebut
+                $.ajax({
+                    url: `/api/kpis/employee-scores/${latestPeriod.id_periode}`,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.data.length > 0) {
+                            console.log('Top employees loaded:', response.data.length, 'items');
+                            // Ambil 5 terbaik
+                            const top5 = response.data.slice(0, 5);
+                            renderEmployeeList('#best-employees-list', top5, 'Karyawan Terbaik');
+                        } else {
+                            console.log('No employee scores data:', response.message);
+                            renderFallbackBestEmployees();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error loading employee scores:', error);
+                        renderFallbackBestEmployees();
+                    }
+                });
+            } else {
+                console.log('No active period found');
                 renderFallbackBestEmployees();
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error fetching active period:', error);
+            renderFallbackBestEmployees();
+        }
+    });
+}
 
-    // FUNGSI BARU: Load karyawan perlu perhatian dengan tampilan sama seperti dashboard penilai
-    function loadLowPerformingEmployeesAll() {
-        $.ajax({
-            url: '/api/kpis/low-performing-employees-all',
-            method: 'GET',
-            success: function(response) {
-                if (response.success && response.data.length > 0) {
-                    console.log('Low performing employees loaded:', response.data.length, 'items');
-                    renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
-                } else {
-                    console.error('Failed to load low performing employees:', response.message);
-                    renderFallbackWorstEmployees();
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Error loading low performing employees:', error);
+// FUNGSI BARU: Load karyawan perlu perhatian
+function loadLowPerformingEmployeesAll() {
+    $.ajax({
+        url: '/api/kpis/low-performing-employees-all',
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.data.length > 0) {
+                console.log('Low performing employees loaded:', response.data.length, 'items');
+                // Ambil 5 terendah
+                const worst5 = response.data.slice(0, 5);
+                renderEmployeeList('#worst-employees-list', worst5, 'Perlu Perhatian');
+            } else {
+                console.log('No low performing employees data:', response.message);
                 renderFallbackWorstEmployees();
             }
-        });
-    }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading low performing employees:', error);
+            renderFallbackWorstEmployees();
+        }
+    });
+}
 
-    // FUNGSI FALLBACK untuk karyawan terbaik
-    function renderFallbackBestEmployees() {
-        // Ambil data karyawan dari API employees sebagai fallback
-        $.ajax({
-            url: '/api/employees',
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const bestEmployees = response.data.slice(0, 5).map(emp => ({
-                        ...emp,
-                        score: Math.floor(Math.random() * 20) + 80 // Random score 80-100 untuk demo
-                    }));
-                    renderEmployeeList('#best-employees-list', bestEmployees, 'Karyawan Terbaik');
-                }
-            },
-            error: function() {
-                const fallbackData = [
-                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
-                ];
-                renderEmployeeList('#best-employees-list', fallbackData, 'Karyawan Terbaik');
-            }
-        });
-    }
+// FUNGSI FALLBACK untuk karyawan terbaik
+function renderFallbackBestEmployees() {
+    const fallbackData = [
+        { 
+            nama: 'Menunggu penilaian KPI', 
+            position: 'Data akan muncul setelah penilaian', 
+            division: 'Sistem',
+            score: 0
+        }
+    ];
+    renderEmployeeList('#best-employees-list', fallbackData, 'Karyawan Terbaik');
+}
 
-    // FUNGSI FALLBACK untuk karyawan perlu perhatian
-    function renderFallbackWorstEmployees() {
-        // Ambil data karyawan dari API employees sebagai fallback
-        $.ajax({
-            url: '/api/employees',
-            method: 'GET',
-            success: function(response) {
-                if (response.success) {
-                    const worstEmployees = response.data.slice(-5).map(emp => ({
-                        ...emp,
-                        score: Math.floor(Math.random() * 20) + 30, 
-                        phone: emp.no_telp || '62'
-                    }));
-                    renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
-                }
-            },
-            error: function() {
-                const fallbackData = [
-                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
-                ];
-                renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
-            }
-        });
-    }
+// FUNGSI FALLBACK untuk karyawan perlu perhatian
+function renderFallbackWorstEmployees() {
+    const fallbackData = [
+        { 
+            nama: 'Tidak ada karyawan perlu perhatian', 
+            position: 'Semua performa baik', 
+            division: 'Sistem',
+            score: 0
+        }
+    ];
+    renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
+}
 
-    // FUNGSI RENDER YANG SAMA PERSIS DENGAN DASHBOARD PENILAI
-   // FUNGSI RENDER YANG LEBIH RAPI
+// FUNGSI RENDER YANG LEBIH RAPI
 function renderEmployeeList(selector, employees, title) {
     const listElement = $(selector);
     listElement.empty();
@@ -661,10 +660,28 @@ function renderEmployeeList(selector, employees, title) {
         const scoreColor = hasScore ? getScoreColorClass(employee.score) : 'score-average';
         const scoreText = hasScore ? employee.score.toFixed(1) : 'N/A';
         
-        // Foto employee
-        const photoUrl = employee.foto ? 
-            '/storage/' + employee.foto : 
-            '{{ asset('assets/images/profile_av.png') }}';
+        // ⚠️ PERBAIKAN: Foto employee - gunakan format yang sama untuk semua
+        let photoUrl = '{{ asset('assets/images/profile_av.png') }}';
+        
+        if (employee.foto) {
+            // Cek apakah foto sudah memiliki path lengkap atau relative
+            if (employee.foto.startsWith('http') || employee.foto.startsWith('/storage')) {
+                photoUrl = employee.foto;
+            } else if (employee.foto.startsWith('assets/')) {
+                photoUrl = '{{ asset('') }}' + employee.foto;
+            } else {
+                photoUrl = '/storage/' + employee.foto;
+            }
+        } else if (employee.photo) {
+            // Handle jika properti namanya 'photo' bukan 'foto'
+            if (employee.photo.startsWith('http') || employee.photo.startsWith('/storage')) {
+                photoUrl = employee.photo;
+            } else if (employee.photo.startsWith('assets/')) {
+                photoUrl = '{{ asset('') }}' + employee.photo;
+            } else {
+                photoUrl = '/storage/' + employee.photo;
+            }
+        }
         
         const employeeItem = `
             <div class="employee-item">
@@ -693,6 +710,14 @@ function renderEmployeeList(selector, employees, title) {
                            title="Hubungi via WhatsApp">
                             <i class="icofont-brand-whatsapp"></i>
                         </a>
+                        <a class="btn btn-outline-primary btn-sm" 
+                           href="/kpi/detail/${employee.id_karyawan || employee.id}"
+                           title="Lihat Detail">
+                            <i class="icofont-eye-alt"></i>
+                        </a>
+                    </div>
+                ` : title === 'Karyawan Terbaik' ? `
+                    <div class="employee-actions">
                         <a class="btn btn-outline-primary btn-sm" 
                            href="/kpi/detail/${employee.id_karyawan || employee.id}"
                            title="Lihat Detail">

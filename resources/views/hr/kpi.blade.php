@@ -47,9 +47,6 @@
               <i class="bi bi-bar-chart-fill text-primary me-2"></i>
               Management KPI Template
             </h4>
-            <button id="publishKpiModalBtn" class="btn btn-warning">
-              <i class="bi bi-send-check"></i> Publish semua KPI
-            </button>
           </div>
 
           <div class="card-body">
@@ -135,49 +132,6 @@
               </button>
             </div>
 
-            <!-- Modal -->
-            <div class="modal fade" id="publishKpiModal" tabindex="-1" aria-labelledby="publishKpiModalLabel" aria-hidden="true">
-              <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-
-                  <!-- Header -->
-                  <div class="modal-header">
-                    <h5 class="modal-title" id="publishKpiModalLabel">Publish KPI ke Periode</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-
-                  <!-- Body -->
-                  <div class="modal-body">
-                    <!-- Daftar Periode yang Tersedia -->
-                    <div class="mb-3">
-                      <label class="form-label fw-bold">Pilih Periode</label>
-                      <div id="periodeListContainer">
-                        <div class="text-center">
-                          <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                          </div>
-                          <p>Memuat data periode...</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Atur Deadline -->
-                    <div class="mb-3">
-                      <label for="deadline" class="form-label fw-bold">Atur Deadline Evaluasi (hari)</label>
-                      <input type="number" class="form-control" id="deadline" placeholder="Masukkan jumlah hari" min="1" max="60" value="7">
-                      <small class="text-muted">Jumlah hari untuk periode evaluasi KPI</small>
-                    </div>
-                  </div>
-
-                  <!-- Footer -->
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="button" class="btn btn-primary" id="publishBtn">Publish KPI</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <!-- Content KPI -->
             <div class="card mb-5 shadow-sm">
               <div class="card-header bg-primary text-white">
@@ -246,13 +200,6 @@
     $("#addTopicBtn").off('click').on("click", addAspect);
     $("#saveKPIBtn").off('click').on("click", saveKPI);
 
-    // Modal publish - inisialisasi sekali saja
-    $('#publishKpiModalBtn').off('click').on('click', function() {
-      loadAvailablePeriods();
-      $('#publishKpiModal').modal('show');
-    });
-
-    $('#publishBtn').off('click').on('click', publishKpiToPeriod);
   }
 
   // ==================== MODE & DIVISION HANDLING ====================
@@ -286,6 +233,49 @@
       }
     });
   }
+
+  function loadActivePeriods() {
+    // ✅ AMBIL periode yang sudah ada absensi DAN sudah auto-published KPI
+    fetch('/api/periods?attendance_uploaded=1&kpi_published=1&status=active')
+        .then(res => res.json())
+        .then(response => {
+            if (response.success && response.data.length > 0) {
+                const activePeriod = response.data[0];
+                currentPeriodId = activePeriod.id_periode;
+                currentPeriodData = activePeriod;
+
+                $('#periodInfo').html(`
+                    <div class="alert alert-success">
+                        <strong>Periode Aktif:</strong> ${activePeriod.nama}<br>
+                        <small>${formatDate(activePeriod.tanggal_mulai)} - ${formatDate(activePeriod.tanggal_selesai)}</small>
+                        <br><small><em>KPI tersedia otomatis setelah import absensi</em></small>
+                    </div>
+                `);
+
+                // HAPUS deadline info
+                $('#deadlineInfo').hide();
+
+            } else {
+                $('#periodInfo').html(`
+                    <div class="alert alert-info">
+                        <strong>Menunggu Data Absensi</strong><br>
+                        <small>KPI akan tersedia otomatis setelah absensi di-import</small>
+                    </div>
+                `);
+                
+                currentPeriodId = null;
+                currentPeriodData = null;
+            }
+        })
+        .catch(err => {
+            console.error('Error loading periods:', err);
+            $('#periodInfo').html(`
+                <div class="alert alert-danger">
+                    <strong>Error memuat data periode!</strong>
+                </div>
+            `);
+        });
+}
 
   function changeDivision() {
     currentDivisionId = $("#divisionSelect").val();
@@ -1022,170 +1012,171 @@
 
   function saveKPI() {
     if (!currentMode) {
-      showAlert('warning', 'Peringatan', 'Pilih mode (Global/Divisi) terlebih dahulu.');
-      return;
+        showAlert('warning', 'Peringatan', 'Pilih mode (Global/Divisi) terlebih dahulu.');
+        return;
     }
     if (currentMode === "division" && !currentDivisionId) {
-      showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
-      return;
+        showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
+        return;
     }
 
     const kpiPanes = $("#topicContents .tab-pane");
     if (kpiPanes.length === 0) {
-      showAlert('warning', 'Peringatan', 'Tambahkan minimal 1 aspek KPI!');
-      return;
+        showAlert('warning', 'Peringatan', 'Tambahkan minimal 1 aspek KPI!');
+        return;
     }
 
     const aspects = [];
     let valid = true;
 
     kpiPanes.each(function() {
-      const $pane = $(this);
-      const idKpi = $pane.find(".aspect-id").val() || null;
+        const $pane = $(this);
+        const idKpi = $pane.find(".aspect-id").val() || null;
 
-      // ⚠️ FIX: Ambil nilai is_global dari data yang sudah ada
-      const isGlobalExisting = $pane.find(".aspect-is-global").val() === "true";
+        // ⚠️ FIX: Ambil nilai is_global dari data yang sudah ada
+        const isGlobalExisting = $pane.find(".aspect-is-global").val() === "true";
 
-      // ⚠️ FIX: Untuk KPI baru, gunakan currentMode. Untuk KPI existing, pertahankan nilai aslinya
-      const isGlobal = idKpi ? isGlobalExisting : (currentMode === "global");
+        // ⚠️ FIX: Untuk KPI baru, gunakan currentMode. Untuk KPI existing, pertahankan nilai aslinya
+        const isGlobal = idKpi ? isGlobalExisting : (currentMode === "global");
 
-      const nama = $pane.find(".aspect-name").val().trim();
-      const bobot = Number($pane.find(".aspect-weight").val()) || 0;
+        const nama = $pane.find(".aspect-name").val().trim();
+        const bobot = Number($pane.find(".aspect-weight").val()) || 0;
 
-      // ⚠️ FILTER PENTING: Di mode divisi, hanya kirim KPI divisi (bukan global)
-      if (currentMode === "division" && isGlobal) {
-        console.log('Skipping global KPI in division mode:', nama);
-        return true; // Skip KPI Global
-      }
-
-      if (!nama) {
-        showAlert('warning', 'Peringatan', 'Nama KPI tidak boleh kosong!');
-        valid = false;
-        return false;
-      }
-
-      const points = [];
-      let totalPointWeight = 0;
-
-      $pane.find(".subaspect-card").each(function() {
-        const $sub = $(this);
-        const idPoint = $sub.find(".subaspect-id").val() || null;
-        const subNama = $sub.find(".subaspect-name").val().trim();
-        const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
-
-        if (!subNama) {
-          showAlert('warning', 'Peringatan', 'Nama subaspek tidak boleh kosong!');
-          valid = false;
-          return false;
+        // ⚠️ FILTER PENTING: Di mode divisi, hanya kirim KPI divisi (bukan global)
+        if (currentMode === "division" && isGlobal) {
+            console.log('Skipping global KPI in division mode:', nama);
+            return true; // Skip KPI Global
         }
 
-        totalPointWeight += subBobot;
+        if (!nama) {
+            showAlert('warning', 'Peringatan', 'Nama KPI tidak boleh kosong!');
+            valid = false;
+            return false;
+        }
 
-        const questions = [];
-        $sub.find(".question-row").each(function() {
-          const qid = $(this).data("question-id") || null;
-          const qText = $(this).find(".question-text").val().trim();
-          if (qText) {
-            questions.push({
-              id_question: qid,
-              pertanyaan: qText,
+        const points = [];
+        let totalPointWeight = 0;
+
+        $pane.find(".subaspect-card").each(function() {
+            const $sub = $(this);
+            const idPoint = $sub.find(".subaspect-id").val() || null;
+            const subNama = $sub.find(".subaspect-name").val().trim();
+            const subBobot = Number($sub.find(".subaspect-weight").val()) || 0;
+
+            if (!subNama) {
+                showAlert('warning', 'Peringatan', 'Nama subaspek tidak boleh kosong!');
+                valid = false;
+                return false;
+            }
+
+            totalPointWeight += subBobot;
+
+            const questions = [];
+            $sub.find(".question-row").each(function() {
+                const qid = $(this).data("question-id") || null;
+                const qText = $(this).find(".question-text").val().trim();
+                if (qText) {
+                    questions.push({
+                        id_question: qid,
+                        pertanyaan: qText,
+                    });
+                }
             });
-          }
+
+            const isAbsensiSubaspect = subNama.toLowerCase().includes('absensi');
+
+            // ⚠️ PERBAIKAN: Validasi pertanyaan hanya untuk non-absensi
+            if (questions.length === 0 && !isAbsensiSubaspect) {
+                showAlert('warning', 'Peringatan', `Subaspek "${subNama}" harus memiliki minimal 1 pertanyaan!`);
+                valid = false;
+                return false;
+            }
+
+            points.push({
+                id_point: idPoint,
+                nama: subNama,
+                bobot: subBobot,
+                questions: questions,
+                is_absensi: isAbsensiSubaspect
+            });
         });
 
-        const isAbsensiSubaspect = subNama.toLowerCase().includes('absensi');
+        if (!valid) return false;
 
-        if (questions.length === 0 && !isAbsensiSubaspect) {
-          showAlert('warning', 'Peringatan', 'Subaspek harus memiliki minimal 1 pertanyaan!');
-          valid = false;
-          return false;
+        if (totalPointWeight > 100) {
+            showAlert('warning', 'Peringatan', 'Total bobot subaspek tidak boleh lebih dari 100%');
+            valid = false;
+            return false;
         }
 
-        points.push({
-          id_point: idPoint,
-          nama: subNama,
-          bobot: subBobot,
-          questions: questions,
-          is_absensi: isAbsensiSubaspect
+        aspects.push({
+            id_kpi: idKpi,
+            nama: nama,
+            bobot: bobot,
+            // ⚠️ FIX: Pertahankan status is_global yang original untuk KPI existing
+            is_global: isGlobal,
+            points: points,
         });
-      });
-
-      if (!valid) return false;
-
-      if (totalPointWeight > 100) {
-        showAlert('warning', 'Peringatan', 'Total bobot subaspek tidak boleh lebih dari 100%');
-        valid = false;
-        return false;
-      }
-
-      aspects.push({
-        id_kpi: idKpi,
-        nama: nama,
-        bobot: bobot,
-        // ⚠️ FIX: Pertahankan status is_global yang original untuk KPI existing
-        is_global: isGlobal,
-        points: points,
-      });
     });
 
     if (!valid) return;
 
     // Validasi: Di mode divisi, pastikan ada KPI divisi yang akan disimpan
     if (currentMode === "division" && aspects.length === 0) {
-      showAlert('info', 'Informasi', 'Tidak ada KPI Divisi yang akan disimpan. KPI Global tidak dapat diedit di mode Divisi.');
-      return;
+        showAlert('info', 'Informasi', 'Tidak ada KPI Divisi yang akan disimpan. KPI Global tidak dapat diedit di mode Divisi.');
+        return;
     }
 
     const payload = {
-      is_global: currentMode === "global",
-      division_id: currentMode === "division" ? currentDivisionId : null,
-      kpis: aspects
+        is_global: currentMode === "global",
+        division_id: currentMode === "division" ? currentDivisionId : null,
+        kpis: aspects
     };
 
-    console.log('Payload to save:', payload); // Debug
+    console.log('Payload to save:', payload);
 
     Swal.fire({
-      title: 'Menyimpan KPI',
-      text: 'Sedang menyimpan template KPI...',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading()
-      }
+        title: 'Menyimpan KPI',
+        text: 'Sedang menyimpan template KPI...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading()
+        }
     });
 
     $.ajax({
-      url: "/api/kpis",
-      method: "POST",
-      contentType: "application/json",
-      headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-        'Accept': 'application/json'
-      },
-      data: JSON.stringify(payload),
-      success: function(response) {
-        Swal.close();
-        if (response.success) {
-          showAlert('success', 'Berhasil', response.message || 'Template KPI berhasil disimpan!');
-          loadKpiTemplates(); // Reload data
-        } else {
-          showAlert('error', 'Error', response.message || 'Gagal menyimpan template KPI');
+        url: "/api/kpis",
+        method: "POST",
+        contentType: "application/json",
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'Accept': 'application/json'
+        },
+        data: JSON.stringify(payload),
+        success: function(response) {
+            Swal.close();
+            if (response.success) {
+                showAlert('success', 'Berhasil', response.message || 'Template KPI berhasil disimpan!');
+                loadKpiTemplates(); // Reload data
+            } else {
+                showAlert('error', 'Error', response.message || 'Gagal menyimpan template KPI');
+            }
+        },
+        error: function(xhr) {
+            Swal.close();
+            console.error("Error saving KPI:", xhr);
+            let msg = "Gagal menyimpan template KPI";
+            try {
+                const errResp = xhr.responseJSON;
+                if (errResp && errResp.message) msg = errResp.message;
+                if (errResp && errResp.errors) {
+                    msg += "\n" + Object.values(errResp.errors).flat().join("\n");
+                }
+            } catch (e) {}
+            showAlert('error', 'Error', msg);
         }
-      },
-      error: function(xhr) {
-        Swal.close();
-        console.error("Error saving KPI:", xhr);
-        let msg = "Gagal menyimpan template KPI";
-        try {
-          const errResp = xhr.responseJSON;
-          if (errResp && errResp.message) msg = errResp.message;
-          if (errResp && errResp.errors) {
-            msg += "\n" + Object.values(errResp.errors).flat().join("\n");
-          }
-        } catch (e) {}
-        showAlert('error', 'Error', msg);
-      }
     });
-  }
+}
 
   // ==================== LOAD TOTAL WEIGHT ====================
   function loadTotalWeight() {
@@ -1292,192 +1283,7 @@
     loadDivisions();
     loadKpiTemplates();
 
-    // // Inisialisasi modal publish
-    initializePublishModal();
   });
 
-  function initializePublishModal() {
-    // Event listener untuk tombol publish
-    $('#publishKpiModalBtn').on('click', function() {
-      loadAvailablePeriods();
-      $('#publishKpiModal').modal('show');
-    });
-
-    $('#publishBtn').on('click', publishKpiToPeriod);
-  }
-
-  function loadAvailablePeriods() {
-    $('#periodeListContainer').html(`
-        <div class="text-center">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p>Memuat data periode...</p>
-        </div>
-    `);
-
-    $.ajax({
-      url: '/api/kpis/available-periods-publishing',
-      method: 'GET',
-      success: function(response) {
-        if (response.success) {
-          const periods = response.data;
-          let periodHtml = '';
-
-          if (periods.length > 0) {
-            periods.forEach(period => {
-              const startDate = new Date(period.tanggal_mulai).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              });
-              const endDate = new Date(period.tanggal_selesai).toLocaleDateString('id-ID', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              });
-
-              periodHtml += `
-                            <div class="form-check mb-3 p-3 border rounded">
-                                <input class="form-check-input period-radio" type="radio" 
-                                    name="selectedPeriod" value="${period.id_periode}" 
-                                    id="period${period.id_periode}">
-                                <label class="form-check-label w-100" for="period${period.id_periode}">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <strong class="d-block">${period.nama}</strong>
-                                            <small class="text-muted">${startDate} - ${endDate}</small>
-                                        </div>
-                                        <span class="badge bg-${period.status === 'active' ? 'success' : 'warning'}">
-                                            ${period.status === 'active' ? 'Aktif' : 'Draft'}
-                                        </span>
-                                    </div>
-                                </label>
-                            </div>
-                        `;
-            });
-          } else {
-            periodHtml = `
-                        <div class="alert alert-warning text-center">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Tidak ada periode yang tersedia untuk publish KPI.
-                            <br>
-                            <small>Pastikan sudah mengimport absensi dan periode memiliki status aktif/draft.</small>
-                        </div>
-                    `;
-          }
-
-          $('#periodeListContainer').html(periodHtml);
-        } else {
-          $('#periodeListContainer').html(`
-                    <div class="alert alert-danger">
-                        Gagal memuat data periode: ${response.message || 'Unknown error'}
-                    </div>
-                `);
-        }
-      },
-      error: function(xhr) {
-        console.error('Error loading periods:', xhr);
-        $('#periodeListContainer').html(`
-                <div class="alert alert-danger">
-                    <i class="bi bi-x-circle me-2"></i>
-                    Gagal memuat data periode. Silakan refresh halaman dan coba lagi.
-                </div>
-            `);
-      }
-    });
-  }
-
-  function publishKpiToPeriod() {
-    const selectedPeriod = $('input[name="selectedPeriod"]:checked').val();
-    const deadlineDays = $('#deadline').val();
-
-    // Step 1: Validasi input terlebih dahulu
-    if (!selectedPeriod) {
-      showAlert('warning', 'Peringatan', 'Pilih periode terlebih dahulu!');
-      return;
-    }
-
-    if (!deadlineDays || deadlineDays < 1 || deadlineDays > 60) {
-      showAlert('warning', 'Peringatan', 'Masukkan deadline yang valid (1-60 hari)!');
-      return;
-    }
-
-    // Step 2: Tampilkan konfirmasi
-    showPublishConfirmation(selectedPeriod, deadlineDays);
-  }
-
-  // **Tambahkan ini di sini**
-  $('#publishKpiModal').modal('hide'); // modal hilang sebelum alert
-
-  // Fungsi untuk menampilkan konfirmasi sebelum AJAX
-  function showPublishConfirmation(periodId, deadlineDays) {
-    Swal.fire({
-      title: 'Publish KPI?',
-      html: `KPI akan dipublish ke periode terpilih dengan deadline evaluasi <strong>${deadlineDays} hari</strong>.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Ya, Publish Sekarang!',
-      cancelButtonText: 'Batal',
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        // Step 3: Jalankan publish
-        executePublish(periodId, deadlineDays);
-      }
-    });
-  }
-
-  // Fungsi untuk AJAX publish
-  function executePublish(periodId, deadlineDays) {
-    Swal.fire({
-      title: 'Memproses...',
-      text: 'Sedang mempublish KPI ke periode',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    $.ajax({
-      url: '/api/kpis/publish-to-period',
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      data: JSON.stringify({
-        period_id: periodId,
-        deadline_days: parseInt(deadlineDays)
-      }),
-      success: function(response) {
-        Swal.close();
-        if (response.success) {
-          Swal.fire({
-            title: 'Berhasil!',
-            html: `KPI berhasil dipublish ke periode <strong>${response.data.period.nama}</strong>!`,
-            icon: 'success',
-            confirmButtonText: 'OK'
-          }).then(() => {
-            $('#publishKpiModal').modal('hide');
-            setTimeout(() => window.location.href = '/penilaian', 2000);
-          });
-        } else {
-          showAlert('error', 'Gagal', response.message || 'Terjadi kesalahan saat mempublish KPI');
-        }
-      },
-      error: function(xhr) {
-        Swal.close();
-        let errorMessage = 'Terjadi kesalahan jaringan. Silakan coba lagi.';
-        try {
-          const err = JSON.parse(xhr.responseText);
-          if (err.message) errorMessage = err.message;
-          if (err.errors) errorMessage += '<br>' + Object.values(err.errors).join('<br>');
-        } catch (e) {}
-        Swal.fire('Gagal!', errorMessage, 'error');
-      }
-    });
-  }
 </script>
 @endsection

@@ -82,48 +82,69 @@ class HrController extends Controller
      * @return array
      */
     private function pivotKpiData(Collection $kpiData): array
-    {
-        $pivotedScores = [];
-        $pointsWithWeights = [];
-        $monthlyTotals = [];
-        $allMonths = [];
+{
+    Log::info("=== PIVOT KPI DATA ===");
+    
+    $pivotedScores = [];
+    $pointsWithWeights = [];
+    $monthlyTotals = [];
+    $allMonths = [];
 
-        foreach ($kpiData as $periodData) {
-            $monthName = $periodData['month_name'];
-            $allMonths[] = $monthName;
-            $monthlyTotals[$monthName] = $monthlyTotals[$monthName] ?? 0; // Inisialisasi total bulan
-
-            foreach ($periodData['details'] as $detail) {
-                $pointName = $detail['sub_aspect_name'];
-
-                // Simpan bobot untuk setiap poin KPI
-                $pointsWithWeights[$pointName] = $detail['sub_aspect_weight'];
-
-                // Buat struktur data [Nama Poin][Nama Bulan] = Skor
-                $pivotedScores[$pointName][$monthName] = $detail['sub_aspect_score'];
-
-                // Tambahkan skor ke total bulanan
-                $monthlyTotals[$monthName] += $detail['sub_aspect_score'];
-            }
+    foreach ($kpiData as $periodData) {
+        $monthName = $periodData['month_name'];
+        $allMonths[] = $monthName;
+        
+        // Inisialisasi total bulan
+        if (!isset($monthlyTotals[$monthName])) {
+            $monthlyTotals[$monthName] = 0;
         }
 
-        // Urutkan bulan sesuai kalender
-        $monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        $uniqueMonths = array_unique($allMonths);
-        usort($uniqueMonths, function ($a, $b) use ($monthOrder) {
-            return array_search($a, $monthOrder) - array_search($b, $monthOrder);
-        });
+        foreach ($periodData['details'] as $detail) {
+            $pointName = $detail['sub_aspect_name'];
+            
+            // Simpan bobot untuk setiap poin KPI
+            $pointsWithWeights[$pointName] = $detail['sub_aspect_weight'];
 
-        // Urutkan poin KPI berdasarkan nama
-        ksort($pointsWithWeights);
+            // Inisialisasi array jika belum ada
+            if (!isset($pivotedScores[$pointName])) {
+                $pivotedScores[$pointName] = [];
+            }
 
-        return [
-            'points' => $pointsWithWeights, // Sekarang berisi nama dan bobot
-            'months' => $uniqueMonths,
-            'scores' => $pivotedScores,
-            'totals' => $monthlyTotals,   // Data total skor per bulan
-        ];
+            // Simpan skor untuk bulan ini
+            $pivotedScores[$pointName][$monthName] = $detail['sub_aspect_score'];
+
+            // Tambahkan skor ke total bulanan
+            $monthlyTotals[$monthName] += $detail['sub_aspect_score'];
+        }
     }
+
+    // Urutkan bulan sesuai kalender
+    $monthOrder = ['January', 'February', 'March', 'April', 'May', 'June', 
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+    $uniqueMonths = array_unique($allMonths);
+    usort($uniqueMonths, function ($a, $b) use ($monthOrder) {
+        $indexA = array_search($a, $monthOrder);
+        $indexB = array_search($b, $monthOrder);
+        return ($indexA !== false && $indexB !== false) ? $indexA - $indexB : 0;
+    });
+
+    // Urutkan poin KPI berdasarkan nama
+    ksort($pointsWithWeights);
+
+    Log::info("Pivot result:", [
+        'points_count' => count($pointsWithWeights),
+        'months_count' => count($uniqueMonths),
+        'months' => $uniqueMonths,
+        'totals' => $monthlyTotals
+    ]);
+
+    return [
+        'points' => $pointsWithWeights,
+        'months' => $uniqueMonths,
+        'scores' => $pivotedScores,
+        'totals' => $monthlyTotals,
+    ];
+}
 
     public function getMonthlyKpiData($employeeId)
 {
@@ -174,37 +195,4 @@ class HrController extends Controller
     }
 }
 
-    public function exportMonthlyKpi($employeeId)
-    {
-        Log::info("Memulai proses ekspor KPI bulanan untuk employee_id: {$employeeId}");
-        try {
-            // PERBAIKAN: Hapus 'position' dari with()
-            $employee = Employee::with('division')->find($employeeId);
-            if (!$employee) {
-                return redirect()->back()->with('error', 'Employee not found.');
-            }
-
-            $kpiData = $this->fetchAndProcessKpiData($employeeId);
-
-            if ($kpiData->isEmpty()) {
-                return redirect()->back()->with('error', 'No KPI data to export for this employee.');
-            }
-
-            $pivotedKpiData = $this->pivotKpiData($kpiData);
-            $exportYear = $kpiData->first()['year'] ?? date('Y');
-            $employeeName = str_replace(' ', '_', $employee->nama);
-            $fileName = "Kpi_{$employeeName}_{$exportYear}.xlsx";
-
-            return Excel::download(
-                new MonthlyKpiExport($employee, $pivotedKpiData, $exportYear),
-                $fileName
-            );
-        } catch (Exception $e) {
-            Log::error("Error saat exportMonthlyKpi untuk employee_id: {$employeeId}", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->back()->with('error', 'Gagal mengekspor data. Silakan coba lagi.');
-        }
-    }
 }

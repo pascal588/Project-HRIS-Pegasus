@@ -98,6 +98,18 @@
 
 <!-- Styles -->
 <style>
+    .modal-body {
+    scroll-behavior: smooth;
+}
+
+.modal-content {
+    scroll-behavior: smooth;
+}
+
+.wizard-step {
+    min-height: 400px;
+}
+
     .step-container {
         display: flex;
         justify-content: center;
@@ -262,6 +274,10 @@
         border-radius: 8px;
         margin-bottom: 20px;
     }
+
+      .swal2-container {
+    z-index: 99999 !important;
+  }
 </style>
 @endsection
 
@@ -1051,31 +1067,57 @@
                 </div>
             `;
         }
+function goToStep(stepNumber) {
+    if (stepNumber < 1 || stepNumber > totalSteps) return;
 
-               function goToStep(stepNumber) {
-            if (stepNumber < 1 || stepNumber > totalSteps) return;
+    currentStep = stepNumber;
 
-            currentStep = stepNumber;
+    // Update step indicator
+    document.querySelectorAll('.step-btn').forEach((btn, index) => {
+        if (index + 1 === stepNumber) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 
-            // Update step indicator
-            document.querySelectorAll('.step-btn').forEach((btn, index) => {
-                if (index + 1 === stepNumber) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
-            });
+    // Update content
+    const stepContent = renderStepContent(stepsData[stepNumber - 1]);
+    const stepContainer = wizardContent.querySelector('.step-container');
+    wizardContent.innerHTML = '';
+    wizardContent.appendChild(stepContainer);
+    wizardContent.innerHTML += stepContent;
 
-            // Update content
-            const stepContent = renderStepContent(stepsData[stepNumber - 1]);
-            const stepContainer = wizardContent.querySelector('.step-container');
-            wizardContent.innerHTML = '';
-            wizardContent.appendChild(stepContainer);
-            wizardContent.innerHTML += stepContent;
+    updateWizardButtons();
 
-            updateWizardButtons();
+    // 🔥 AUTO SCROLL KE ATAS - PAKAI SETTIMEOUT BIAR PASTI
+    setTimeout(() => {
+        // Cara 1: Scroll modal body
+        const modalBody = document.querySelector('.modal-body');
+        if (modalBody) {
+            modalBody.scrollTop = 0;
+            console.log('🔥 Scrolled modal-body to top');
         }
 
+        // Cara 2: Scroll modal content (backup)
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
+
+        // Cara 3: Scroll window ke elemen modal
+        const modal = document.getElementById('modalWizard');
+        if (modal) {
+            modal.scrollTop = 0;
+        }
+
+        // Cara 4: Paksa scroll ke header modal
+        const modalHeader = document.querySelector('.modal-header');
+        if (modalHeader) {
+            modalHeader.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+    }, 100); // Delay 100ms biar DOM update dulu
+}
         function updateWizardButtons() {
             prevBtn.style.display = currentStep > 1 ? 'inline-block' : 'none';
             nextBtn.style.display = currentStep < totalSteps ? 'inline-block' : 'none';
@@ -1083,16 +1125,28 @@
         }
 
         function prevStep() {
-            if (currentStep > 1) {
-                goToStep(currentStep - 1);
-            }
-        }
+    if (currentStep > 1) {
+        goToStep(currentStep - 1);
+        
+        // Force scroll to top
+        setTimeout(() => {
+            const modalBody = document.querySelector('.modal-body');
+            if (modalBody) modalBody.scrollTop = 0;
+        }, 50);
+    }
+}
 
         function nextStep() {
-            if (currentStep < totalSteps) {
-                goToStep(currentStep + 1);
-            }
-        }
+    if (currentStep < totalSteps) {
+        goToStep(currentStep + 1);
+        
+        // Force scroll to top
+        setTimeout(() => {
+            const modalBody = document.querySelector('.modal-body');
+            if (modalBody) modalBody.scrollTop = 0;
+        }, 50);
+    }
+}
         
                 function loadSavedAnswers() {
             if (!currentEmployeeId || !currentPeriodId) return;

@@ -49,7 +49,7 @@ Route::prefix('employees')->group(function () {
   Route::get('/Kepala Divisi', [EmployeeApiController::class, 'kepalaDivisi']);
   Route::post('/{employee}/roles', [EmployeeApiController::class, 'updateRoles']);
   Route::get('/by-division/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivision']);
-  Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
+  // Route::get('/by-division-except-head/{divisionId}', [EmployeeApiController::class, 'getEmployeesByDivisionExceptHead']);
 
   // ✅ TAMBAHKAN INI DI SINI:
   Route::get('/jumlahkaryawan-by-month', [EmployeeApiController::class, 'getEmployeeTotalByMonth']);
@@ -121,9 +121,17 @@ Route::prefix('kpis')->group(function () {
   Route::get('/period/{periodId}/scores', [KpiEvaluationController::class, 'getEmployeeScoresByPeriod']);
   Route::get('/available-years', [KpiEvaluationController::class, 'getAvailableYears']);
   Route::get('/year/{year}/scores', [KpiEvaluationController::class, 'getScoresByYear']);
-  Route::get('/active/with-attendance', [PeriodController::class, 'getActivePeriodsWithAttendance']);
-  Route::get('/kpis/top-performers', [KpiEvaluationController::class, 'getTopPerformers']);
-  Route::get('/kpis/low-performing-employees-all', [KpiEvaluationController::class, 'getLowPerformingEmployeesAllDivisions']);
+      Route::get('/active/with-attendance', [PeriodController::class, 'getActivePeriodsWithAttendance']);
+
+      Route::get('/kpi-evaluation/employees/non-head', [KpiEvaluationController::class, 'getNonHeadEmployeesKpis']);
+Route::get('/kpi-evaluation/employees/non-head/scores/{periodId?}', [KpiEvaluationController::class, 'getNonHeadEmployeeScoresByPeriod']);
+Route::get('/kpi-evaluation/employees/non-head/unrated', [KpiEvaluationController::class, 'getUnratedNonHeadEmployees']);
+Route::get('/kpi-evaluation/employees/non-head/unrated/{divisionId}', [KpiEvaluationController::class, 'getUnratedNonHeadEmployees']);
+
+    // Di api.php - PASTIKAN INI ADA
+    Route::get('/export-monthly/{employeeId}/{year?}', [KpiEvaluationController::class, 'exportMonthlyKpi']);
+    Route::get('/test-export/{employeeId}/{year?}', [KpiEvaluationController::class, 'exportMonthlyKpi']);
+    Route::get('/test-export/{employeeId}/{year?}', [KpiEvaluationController::class, 'testExport']);
 });
 
 // ==================== PERIOD ROUTES ====================

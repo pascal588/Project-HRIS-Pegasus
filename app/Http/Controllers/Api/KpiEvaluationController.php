@@ -12,10 +12,13 @@ use App\Models\Employee;
 use App\Models\Attendance;
 use App\Models\Period;
 use App\Models\Division;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+
+use App\Exports\MonthlyKpiExport;
 
 class KpiEvaluationController extends Controller
 {
@@ -573,26 +576,27 @@ class KpiEvaluationController extends Controller
 public function getAllEmployeeKpis(Request $request)
 {
     try {
-        Log::info("=== getAllEmployeeKpis - ONLY UNRATED ===");
+        Log::info("=== getAllEmployeeKpis - ONLY UNRATED in ACTIVE PERIOD ===");
 
-        // Ambil SEMUA periode yang sudah dipublish DAN memiliki absensi
-        $periods = Period::where('kpi_published', true)
+        // ⚠️ PERBAIKAN: Hanya ambil periode AKTIF dengan absensi
+        $activePeriods = Period::where('kpi_published', true)
             ->where('attendance_uploaded', true)
+            ->where('status', 'active') // ⚠️ FILTER HANYA YANG AKTIF
             ->orderBy('tanggal_mulai', 'desc')
             ->get();
 
-        if ($periods->isEmpty()) {
+        if ($activePeriods->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode dengan absensi dan KPI yang dipublish'
+                'message' => 'Tidak ada periode AKTIF dengan absensi dan KPI yang dipublish'
             ]);
         }
 
         $allEmployeeData = [];
 
-        foreach ($periods as $period) {
-            Log::info("Processing period: {$period->nama} (ID: {$period->id_periode})");
+        foreach ($activePeriods as $period) {
+            Log::info("Processing ACTIVE period: {$period->nama} (ID: {$period->id_periode})");
 
             // 1. Ambil semua Kepala Divisi yang AKTIF
             $kepalaDivisiEmployees = DB::table('employees')
@@ -646,16 +650,32 @@ public function getAllEmployeeKpis(Request $request)
                 $periodMonth = date('F', strtotime($period->tanggal_mulai));
                 $periodYear = date('Y', strtotime($period->tanggal_mulai));
 
+                // ✅ PERBAIKAN PATH FOTO
+                $photoUrl = null;
+                if ($emp->foto) {
+                    if (filter_var($emp->foto, FILTER_VALIDATE_URL)) {
+                        $photoUrl = $emp->foto;
+                    } elseif (strpos($emp->foto, 'storage/') === 0) {
+                        $photoUrl = asset($emp->foto);
+                    } elseif (strpos($emp->foto, 'profile-photos/') === 0) {
+                        $photoUrl = asset('storage/' . $emp->foto);
+                    } else {
+                        $photoUrl = asset('storage/' . $emp->foto);
+                    }
+                } else {
+                    $photoUrl = asset('assets/images/profile_av.png');
+                }
+
                 $employeeData = [
                     'id_karyawan' => $emp->id_karyawan,
                     'nama' => $emp->nama,
                     'status' => $emp->status,
-                    'score' => 0, // Default 0 karena belum dinilai
+                    'score' => 0,
                     'period' => $period->nama,
                     'period_month' => $periodMonth,
                     'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
                     'period_year' => $periodYear,
-                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
+                    'photo' => $photoUrl,
                     'division' => $division,
                     'division_id' => $divisionId,
                     'position' => $emp->position,
@@ -663,21 +683,25 @@ public function getAllEmployeeKpis(Request $request)
                 ];
 
                 $allEmployeeData[] = $employeeData;
-                Log::info("✅ Added UNRATED employee:", ['nama' => $emp->nama]);
+                Log::info("✅ Added UNRATED employee in ACTIVE period:", [
+                    'nama' => $emp->nama,
+                    'period' => $period->nama
+                ]);
             }
         }
 
-        Log::info("Final UNRATED employees:", [
-            'total_unrated' => count($allEmployeeData)
+        Log::info("Final UNRATED employees in ACTIVE periods:", [
+            'total_unrated' => count($allEmployeeData),
+            'active_periods_count' => $activePeriods->count()
         ]);
 
         return response()->json([
             'success' => true,
             'data' => $allEmployeeData,
             'debug_info' => [
-                'total_periods' => $periods->count(),
+                'total_active_periods' => $activePeriods->count(),
                 'total_unrated_employees' => count($allEmployeeData),
-                'note' => 'Hanya menampilkan karyawan yang BELUM dinilai'
+                'note' => 'Hanya menampilkan karyawan yang BELUM dinilai di periode AKTIF'
             ]
         ]);
 
@@ -1882,116 +1906,394 @@ private function getMonthNumberFromPeriod($startDate, $endDate)
     }
 }
 
-public function getTopPerformers()
+public function getNonHeadEmployeesKpis(Request $request)
 {
     try {
-        Log::info("=== getTopPerformers - ONLY RATED ===");
+        Log::info("=== getNonHeadEmployeesKpis - NON-HEAD in ACTIVE PERIODS ===");
 
-        // Ambil periode TERBARU yang sudah dipublish DAN memiliki absensi
-        $latestPeriod = Period::where('kpi_published', true)
+        // ⚠️ PERBAIKAN: Hanya periode AKTIF
+        $activePeriods = Period::where('kpi_published', true)
             ->where('attendance_uploaded', true)
+            ->where('status', 'active') // ⚠️ FILTER HANYA YANG AKTIF
             ->orderBy('tanggal_mulai', 'desc')
-            ->first();
+            ->get();
 
-        if (!$latestPeriod) {
+        Log::info("Active periods found: " . $activePeriods->count());
+
+        if ($activePeriods->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'data' => [],
-                'message' => 'Tidak ada periode dengan absensi dan KPI yang dipublish'
+                'message' => 'Tidak ada periode AKTIF dengan absensi dan KPI yang dipublish'
             ]);
         }
 
-        Log::info("Using LATEST period for top performers:", [
-            'period_id' => $latestPeriod->id_periode,
-            'period_name' => $latestPeriod->nama
-        ]);
+        $allEmployeeData = [];
 
-        // Ambil semua Kepala Divisi yang AKTIF dan SUDAH DINILAI
-        $topPerformers = DB::table('kpis_has_employees')
-            ->where('periode_id', $latestPeriod->id_periode)
-            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-            ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
-            ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
-            ->select(
-                'employees.id_karyawan',
-                'employees.nama',
-                'employees.status',
-                'employees.foto',
-                'employees.no_telp as phone',
-                'roles.nama_jabatan as position',
-                'roles.division_id',
-                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
-            )
-            ->where('employees.status', 'Aktif')
-            ->where('roles.nama_jabatan', 'like', '%Kepala Divisi%')
-            ->groupBy(
-                'employees.id_karyawan', 
-                'employees.nama', 
-                'employees.status', 
-                'employees.foto', 
-                'employees.no_telp',
-                'roles.nama_jabatan',
-                'roles.division_id'
-            )
-            ->having('total_score', '>', 0) // Hanya yang sudah dinilai
-            ->orderBy('total_score', 'desc')
-            ->limit(10) // Top 10 terbaik
-            ->get();
+        foreach ($activePeriods as $period) {
+            Log::info("Processing ACTIVE period: {$period->nama} (ID: {$period->id_periode})");
 
-        $formattedData = [];
+            // 1. Ambil semua karyawan yang AKTIF dan BUKAN Kepala Divisi
+            $nonHeadEmployees = DB::table('employees')
+                ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+                ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                ->select(
+                    'employees.id_karyawan',
+                    'employees.nama',
+                    'employees.status',
+                    'employees.foto',
+                    'roles.nama_jabatan as position',
+                    'roles.division_id'
+                )
+                ->where('employees.status', 'Aktif')
+                ->where('roles.nama_jabatan', 'not like', '%Kepala Divisi%')
+                ->get();
 
-        foreach ($topPerformers as $emp) {
-            // Ambil detail divisi
-            $division = '-';
-            $divisionId = $emp->division_id;
-            
-            if ($divisionId) {
-                $divisionData = DB::table('divisions')
-                    ->where('id_divisi', $divisionId)
-                    ->first();
-                $division = $divisionData ? $divisionData->nama_divisi : '-';
+            Log::info("Non-head employees found: " . $nonHeadEmployees->count());
+
+            foreach ($nonHeadEmployees as $emp) {
+                // 2. CEK APAKAH MEMILIKI ABSENSI DI PERIODE INI
+                $hasAttendance = DB::table('attendances')
+                    ->where('employee_id', $emp->id_karyawan)
+                    ->where('periode_id', $period->id_periode)
+                    ->exists();
+
+                if (!$hasAttendance) {
+                    Log::info("No attendance for employee {$emp->id_karyawan} in period {$period->id_periode}");
+                    continue;
+                }
+
+                // 3. ✅ CUMA TAMPILIN YANG BELUM DINILAI
+                $hasKpiScore = DB::table('kpis_has_employees')
+                    ->where('employees_id_karyawan', $emp->id_karyawan)
+                    ->where('periode_id', $period->id_periode)
+                    ->where('nilai_akhir', '>', 0)
+                    ->exists();
+
+                if ($hasKpiScore) {
+                    Log::info("Employee {$emp->id_karyawan} already has KPI score in period {$period->id_periode}");
+                    continue;
+                }
+
+                // Ambil detail divisi
+                $division = '-';
+                $divisionId = $emp->division_id;
+                
+                if ($divisionId) {
+                    $divisionData = DB::table('divisions')
+                        ->where('id_divisi', $divisionId)
+                        ->first();
+                    $division = $divisionData ? $divisionData->nama_divisi : '-';
+                }
+
+                $periodMonth = date('F', strtotime($period->tanggal_mulai));
+                $periodYear = date('Y', strtotime($period->tanggal_mulai));
+
+                // ✅ PERBAIKAN PATH FOTO
+                $fotoPath = $emp->foto;
+                if (!$fotoPath || $fotoPath === '' || $fotoPath === 'null') {
+                    $fotoPath = 'assets/images/profile_av.png';
+                } else {
+                    // Handle foto path yang proper
+                    if (filter_var($fotoPath, FILTER_VALIDATE_URL)) {
+                        // Already a full URL
+                    } elseif (strpos($fotoPath, 'storage/') === 0) {
+                        $fotoPath = asset($fotoPath);
+                    } elseif (strpos($fotoPath, 'profile-photos/') === 0) {
+                        $fotoPath = asset('storage/' . $fotoPath);
+                    } else {
+                        $fotoPath = asset('storage/' . $fotoPath);
+                    }
+                }
+
+                $employeeData = [
+                    'id_karyawan' => $emp->id_karyawan,
+                    'nama' => $emp->nama,
+                    'status' => $emp->status,
+                    'score' => 0,
+                    'period' => $period->nama,
+                    'period_month' => $periodMonth,
+                    'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
+                    'period_year' => $periodYear,
+                    'photo' => $fotoPath,
+                    'division' => $division,
+                    'division_id' => $divisionId,
+                    'position' => $emp->position,
+                    'period_id' => $period->id_periode,
+                    'employee_type' => 'non_head'
+                ];
+
+                $allEmployeeData[] = $employeeData;
+                Log::info("✅ Added UNRATED NON-HEAD employee:", [
+                    'nama' => $emp->nama,
+                    'period' => $period->nama
+                ]);
             }
-
-            $formattedData[] = [
-                'id_karyawan' => $emp->id_karyawan,
-                'nama' => $emp->nama,
-                'status' => $emp->status,
-                'score' => floatval($emp->total_score),
-                'period' => $latestPeriod->nama,
-                'period_month' => date('F', strtotime($latestPeriod->tanggal_mulai)),
-                'period_month_number' => date('n', strtotime($latestPeriod->tanggal_mulai)),
-                'period_year' => date('Y', strtotime($latestPeriod->tanggal_mulai)),
-                'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                'division' => $division,
-                'division_id' => $divisionId,
-                'position' => $emp->position,
-                'phone' => $emp->phone,
-                'period_id' => $latestPeriod->id_periode
-            ];
         }
 
-        Log::info("Top performers found:", [
-            'total_top_performers' => count($formattedData),
-            'period_used' => $latestPeriod->nama
+        Log::info("Final UNRATED NON-HEAD employees in ACTIVE periods:", [
+            'total_unrated_non_head' => count($allEmployeeData),
+            'active_periods_processed' => $activePeriods->count()
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => $formattedData,
-            'period_info' => [
-                'id' => $latestPeriod->id_periode,
-                'nama' => $latestPeriod->nama,
-                'tanggal_mulai' => $latestPeriod->tanggal_mulai
+            'data' => $allEmployeeData,
+            'debug_info' => [
+                'total_active_periods' => $activePeriods->count(),
+                'total_unrated_non_head_employees' => count($allEmployeeData),
+                'note' => 'Hanya menampilkan karyawan NON-Kepala Divisi yang BELUM dinilai di periode AKTIF'
             ]
         ]);
 
     } catch (\Exception $e) {
-        Log::error('Failed to fetch top performers: ' . $e->getMessage());
+        Log::error('Failed to fetch UNRATED NON-HEAD KPI data: ' . $e->getMessage());
+        Log::error('Error trace: ' . $e->getTraceAsString());
+        
         return response()->json([
             'success' => false,
-            'message' => 'Failed to fetch top performers: ' . $e->getMessage()
+            'message' => 'Failed to fetch NON-HEAD KPI data: ' . $e->getMessage(),
+            'error_details' => $e->getTraceAsString() // Untuk debugging
         ], 500);
     }
 }
 
+public function exportMonthlyKpi($employeeId, $year = null)
+{
+    try {
+        \Log::info("=== EXPORT MONTHLY KPI - WITH SUB ASPEK ===");
+
+        $employee = Employee::with(['roles.division'])->find($employeeId);
+        if (!$employee) {
+            return response()->json(['error' => 'Employee not found'], 404);
+        }
+
+        $exportYear = $year ?: date('Y');
+
+        // Ambil semua periode yang sudah dipublish untuk tahun tersebut
+        $periods = Period::where('kpi_published', true)
+            ->whereYear('tanggal_mulai', $exportYear)
+            ->orderBy('tanggal_mulai', 'asc')
+            ->get();
+
+        \Log::info("Periods found:", ['count' => $periods->count()]);
+
+        if ($periods->isEmpty()) {
+            return response("
+                <script>
+                    alert('Tidak ada data KPI untuk tahun {$exportYear}');
+                    window.history.back();
+                </script>
+            ");
+        }
+
+        // Kumpulkan data KPI + SUB ASPEK untuk semua periode
+        $exportData = [];
+        $monthlyTotals = [];
+        $allSubAspekNames = [];
+
+        foreach ($periods as $period) {
+            $monthName = \Carbon\Carbon::parse($period->tanggal_mulai)->format('F Y');
+            $monthKey = \Carbon\Carbon::parse($period->tanggal_mulai)->format('Y-m');
+            
+            // Ambil data KPI untuk periode ini - DENGAN SUB ASPEK
+            $kpiData = $this->getKpiDataWithSubAspek($employeeId, $period->id_periode);
+            
+            $monthTotal = 0;
+
+            foreach ($kpiData as $subAspek) {
+                $subAspekName = $subAspek['sub_aspek_name'];
+                $score = $subAspek['score'];
+                $aspekUtama = $subAspek['aspek_utama'];
+                $bobot = $subAspek['bobot'];
+                
+                // Simpan semua nama sub aspek
+                $fullName = "{$aspekUtama} - {$subAspekName}";
+                if (!in_array($fullName, $allSubAspekNames)) {
+                    $allSubAspekNames[] = $fullName;
+                }
+                
+                // Simpan data per sub aspek per bulan
+                if (!isset($exportData[$fullName])) {
+                    $exportData[$fullName] = [
+                        'aspek_utama' => $aspekUtama,
+                        'sub_aspek_name' => $subAspekName,
+                        'full_name' => $fullName,
+                        'bobot' => $bobot,
+                        'scores' => []
+                    ];
+                }
+                
+                $exportData[$fullName]['scores'][$monthKey] = [
+                    'score' => $score,
+                    'month_name' => $monthName
+                ];
+                
+                $monthTotal += $score;
+            }
+
+            $monthlyTotals[$monthKey] = [
+                'total' => $monthTotal,
+                'month_name' => $monthName
+            ];
+        }
+
+        \Log::info("Export data with sub-aspek processed:", [
+            'sub_aspek_count' => count($exportData),
+            'months_count' => count($monthlyTotals)
+        ]);
+
+        if (empty($exportData)) {
+            return response("
+                <script>
+                    alert('Tidak ada data KPI yang ditemukan untuk karyawan ini');
+                    window.history.back();
+                </script>
+            ");
+        }
+
+        // Format data untuk export
+        $pivotedData = $this->formatExportDataWithSubAspek($exportData, $monthlyTotals, $allSubAspekNames);
+
+        // Generate filename
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $employee->nama);
+        $fileName = "KPI_Detail_{$safeName}_{$exportYear}.xlsx";
+
+        return Excel::download(
+            new MonthlyKpiExport($employee, $pivotedData, $exportYear),
+            $fileName
+        );
+
+    } catch (\Exception $e) {
+        \Log::error("EXPORT ERROR: " . $e->getMessage());
+        \Log::error("Stack trace: " . $e->getTraceAsString());
+        
+        return response("
+            <script>
+                alert('Error saat mengekspor data: " . addslashes($e->getMessage()) . "');
+                window.history.back();
+            </script>
+        ");
+    }
+}
+
+private function getKpiDataWithSubAspek($employeeId, $periodId)
+{
+    $kpiData = [];
+    
+    // Ambil semua KPI untuk employee di periode ini
+    $kpis = Kpi::where('periode_id', $periodId)
+        ->with(['points.questions'])
+        ->get();
+
+    foreach ($kpis as $kpi) {
+        $aspekUtama = $kpi->nama;
+        
+        // Ambil kpis_has_employees ID
+        $kpisHasEmployeeId = DB::table('kpis_has_employees')
+            ->where('kpis_id_kpi', $kpi->id_kpi)
+            ->where('employees_id_karyawan', $employeeId)
+            ->where('periode_id', $periodId)
+            ->value('id');
+
+        // Loop melalui setiap point (sub aspek)
+        foreach ($kpi->points as $point) {
+            $subAspekName = $point->nama;
+            $pointScore = 0;
+            $isAbsensi = stripos($point->nama, 'absensi') !== false;
+
+            if ($isAbsensi && $kpisHasEmployeeId) {
+                // Untuk absensi, ambil dari nilai_absensi
+                $pointRecord = DB::table('kpi_points_has_employee')
+                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                    ->where('kpi_point_id', $point->id_point)
+                    ->first();
+
+                $pointScore = $pointRecord->nilai_absensi ?? 0;
+            } else {
+                // Untuk non-absensi, hitung dari questions
+                $pointTotal = 0;
+                $answeredQuestions = 0;
+
+                foreach ($point->questions as $question) {
+                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $question->id_question)
+                        ->where('periode_id', $periodId)
+                        ->first();
+
+                    if ($answer && $answer->nilai !== null) {
+                        $questionScore = (($answer->nilai - 1) / 3) * 100; // Konversi 1-4 ke 0-100
+                        $pointTotal += $questionScore;
+                        $answeredQuestions++;
+                    }
+                }
+
+                $pointScore = $answeredQuestions > 0 ? ($pointTotal / $answeredQuestions) : 0;
+            }
+
+            $kpiData[] = [
+                'aspek_utama' => $aspekUtama,
+                'sub_aspek_name' => $subAspekName,
+                'score' => $pointScore,
+                'bobot' => floatval($point->bobot) ?? 0
+            ];
+        }
+    }
+
+    return $kpiData;
+}
+
+private function formatExportDataWithSubAspek($exportData, $monthlyTotals, $allSubAspekNames)
+{
+    // Urutkan bulan
+    $sortedMonths = array_keys($monthlyTotals);
+    usort($sortedMonths, function($a, $b) {
+        return strtotime($a) - strtotime($b);
+    });
+
+    // Format nama bulan untuk display
+    $formattedMonths = [];
+    foreach ($sortedMonths as $monthKey) {
+        $formattedMonths[$monthKey] = $monthlyTotals[$monthKey]['month_name'];
+    }
+
+    // Siapkan data scores
+    $scores = [];
+    foreach ($allSubAspekNames as $fullName) {
+        if (isset($exportData[$fullName])) {
+            $subAspekData = $exportData[$fullName];
+            $scores[$fullName] = [];
+            
+            foreach ($sortedMonths as $monthKey) {
+                $score = $subAspekData['scores'][$monthKey]['score'] ?? 0;
+                $scores[$fullName][$monthKey] = $score;
+            }
+        }
+    }
+
+    // Siapkan data totals
+    $totals = [];
+    foreach ($sortedMonths as $monthKey) {
+        $totals[$monthKey] = $monthlyTotals[$monthKey]['total'] ?? 0;
+    }
+
+    // Siapkan grouping by aspek utama
+    $groupedData = [];
+    foreach ($exportData as $fullName => $data) {
+        $aspekUtama = $data['aspek_utama'];
+        if (!isset($groupedData[$aspekUtama])) {
+            $groupedData[$aspekUtama] = [];
+        }
+        $groupedData[$aspekUtama][] = $fullName;
+    }
+
+    return [
+        'points' => $exportData, // Semua data sub aspek
+        'months' => $formattedMonths,
+        'scores' => $scores,
+        'totals' => $totals,
+        'sorted_months' => $sortedMonths,
+        'grouped_data' => $groupedData // Untuk grouping di Excel
+    ];
+}
 }

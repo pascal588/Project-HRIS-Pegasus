@@ -400,181 +400,330 @@
 
 <script>
   // ===================================================================================
-  // KODE YANG SUDAH DIPERBAIKI DENGAN DEBUGGING
-  // ===================================================================================
+// FIXED VERSION - DENGAN NULL CHECKING
+// ===================================================================================
 
-  let currentEmployeeId = {{ $employeeId ?? 'null'}};
-  let kpiData = null;
-  let availablePeriods = [];
-  let kpiTrendChart = null;
+let currentEmployeeId = {{ $employeeId ?? 'null'}};
+let kpiData = null;
+let availablePeriods = [];
+let kpiTrendChart = null;
+let currentYear = new Date().getFullYear();
 
-  // Fungsi helper status
-  function getKpiStatus(score) {
+// Fungsi helper status
+function getKpiStatus(score) {
     const numeric = parseFloat(score) || 0;
     if (numeric >= 90) return 'Sangat Baik';
     if (numeric >= 80) return 'Baik';
     if (numeric >= 70) return 'Cukup';
     if (numeric >= 50) return 'Kurang';
     return 'Sangat Kurang';
-  }
+}
 
-  function getKpiStatusClass(status) {
+function getKpiStatusClass(status) {
     const map = {
-      'Sangat Baik': 'badge-excellent',
-      'Baik': 'badge-good',
-      'Cukup': 'badge-average',
-      'Kurang': 'badge-poor',
-      'Sangat Kurang': 'badge-poor'
+        'Sangat Baik': 'badge-excellent',
+        'Baik': 'badge-good',
+        'Cukup': 'badge-average',
+        'Kurang': 'badge-poor',
+        'Sangat Kurang': 'badge-poor'
     };
     return map[status] || 'badge-average';
-  }
+}
 
-  // --- BAGIAN 1: FUNGSI DETAIL KPI (BAGIAN ATAS) ---
-  async function loadAvailablePeriods() {
-    try {
-      console.log('Memulai loadAvailablePeriods...');
-      const response = await fetch('/api/periods?kpi_published=true');
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Data periods:', data);
-
-      if (!data.success) throw new Error(data.message);
-
-      availablePeriods = data.data;
-      console.log('Available periods:', availablePeriods);
-
-      populateMonthDropdown(availablePeriods);
-
-      if (availablePeriods.length > 0) {
-        selectPeriod(availablePeriods[0]);
-      } else {
-        document.getElementById('kpiDetailBody').innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada data KPI yang tersedia.</td></tr>';
-      }
-    } catch (error) {
-      console.error('Error loading periods:', error);
-      document.getElementById('monthList').innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat bulan: ' + error.message + '</h6></li>';
+function getChartElement() {
+    const chart = document.getElementById('kpiTrendChart');
+    if (!chart) {
+        console.error('❌ Element chart tidak ditemukan: #kpiTrendChart');
+        console.log('🔍 Mencari element yang tersedia...');
+        
+        // Debug: Log semua element dengan ID mengandung 'chart'
+        const allElements = document.querySelectorAll('[id*="chart"]');
+        console.log('Element chart yang tersedia:', allElements);
+        
+        return null;
     }
-  }
+    return chart;
+}
 
-  function populateMonthDropdown(periods) {
+function getChartContainer() {
+    const chart = getChartElement();
+    if (!chart) return null;
+    
+    const container = chart.parentElement;
+    if (!container) {
+        console.error('❌ Container chart tidak ditemukan');
+        return null;
+    }
+    return container;
+}
+
+// --- BAGIAN 1: LOAD DROPDOWN TAHUN ---
+async function loadAvailableYears() {
+    try {
+        console.log('🔄 Memuat dropdown tahun...');
+        const response = await fetch('/api/kpis/available-years');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('📅 Data tahun dari API:', data);
+
+        if (data.success && data.data && data.data.length > 0) {
+            populateYearDropdown(data.data);
+        } else {
+            generateFallbackYears();
+        }
+    } catch (error) {
+        console.error('❌ Error loading years:', error);
+        generateFallbackYears();
+    }
+}
+
+function generateFallbackYears() {
+    const years = [];
+    const currentYear = new Date().getFullYear();
+    for (let year = 2023; year <= currentYear + 1; year++) {
+        years.push(year);
+    }
+    populateYearDropdown(years);
+}
+
+function populateYearDropdown(years) {
+    const yearList = document.getElementById('yearList');
+    if (!yearList) {
+        console.error('❌ Element #yearList tidak ditemukan');
+        return;
+    }
+    
+    const sortedYears = [...years].sort((a, b) => b - a);
+    
+    let dropdownHTML = '';
+    sortedYears.forEach(year => {
+        dropdownHTML += `
+            <li>
+                <a class="dropdown-item year-item" href="#" data-tahun="${year}">
+                    ${year}
+                </a>
+            </li>
+        `;
+    });
+    
+    yearList.innerHTML = dropdownHTML;
+
+    // Set tahun default ke yang terbaru
+    if (sortedYears.length > 0) {
+        const latestYear = sortedYears[0];
+        currentYear = latestYear;
+        const currentYearElement = document.getElementById('currentYear');
+        if (currentYearElement) {
+            currentYearElement.textContent = latestYear;
+        }
+        console.log('✅ Tahun default:', latestYear);
+        
+        // Load data untuk tahun default
+        loadYearlyData(currentYear);
+    }
+}
+
+// --- BAGIAN 2: LOAD PERIODE BULANAN ---
+async function loadAvailablePeriods() {
+    try {
+        console.log('🔄 Memulai loadAvailablePeriods...');
+        const response = await fetch('/api/periods?kpi_published=true');
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('📅 Data periods:', data);
+
+        if (!data.success) throw new Error(data.message);
+
+        availablePeriods = data.data;
+        console.log('✅ Available periods:', availablePeriods);
+
+        populateMonthDropdown(availablePeriods);
+
+        if (availablePeriods.length > 0) {
+            selectPeriod(availablePeriods[0]);
+        } else {
+            const kpiDetailBody = document.getElementById('kpiDetailBody');
+            if (kpiDetailBody) {
+                kpiDetailBody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada data KPI yang tersedia.</td></tr>';
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading periods:', error);
+        const monthList = document.getElementById('monthList');
+        if (monthList) {
+            monthList.innerHTML = '<li><h6 class="dropdown-header text-danger">Gagal memuat bulan: ' + error.message + '</h6></li>';
+        }
+    }
+}
+
+function populateMonthDropdown(periods) {
     const monthList = document.getElementById('monthList');
+    if (!monthList) {
+        console.error('❌ Element #monthList tidak ditemukan');
+        return;
+    }
+
     if (periods.length === 0) {
-      monthList.innerHTML = '<li><h6 class="dropdown-header">Tidak ada data</h6></li>';
-      return;
+        monthList.innerHTML = '<li><h6 class="dropdown-header">Tidak ada data</h6></li>';
+        return;
     }
 
     const sortedMonths = periods.map(period => ({
-      month: new Date(period.tanggal_mulai).toLocaleDateString('id-ID', {
-        month: 'long'
-      }),
-      year: new Date(period.tanggal_mulai).getFullYear(),
-      periodId: period.id_periode,
-      periodData: period
+        month: new Date(period.tanggal_mulai).toLocaleDateString('id-ID', {
+            month: 'long'
+        }),
+        year: new Date(period.tanggal_mulai).getFullYear(),
+        periodId: period.id_periode,
+        periodData: period
     })).sort((a, b) => new Date(b.periodData.tanggal_mulai) - new Date(a.periodData.tanggal_mulai));
 
-    monthList.innerHTML = sortedMonths.map(m => `<li><a class="dropdown-item month-item" href="#" data-period-id="${m.periodId}">${m.month} ${m.year}</a></li>`).join('');
+    monthList.innerHTML = sortedMonths.map(m => 
+        `<li><a class="dropdown-item month-item" href="#" data-period-id="${m.periodId}">${m.month} ${m.year}</a></li>`
+    ).join('');
 
     document.querySelectorAll('.month-item').forEach(item => {
-      item.addEventListener('click', function(e) {
-        e.preventDefault();
-        const periodId = this.getAttribute('data-period-id');
-        const selectedPeriod = periods.find(p => p.id_periode == periodId);
-        if (selectedPeriod) selectPeriod(selectedPeriod);
-      });
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const periodId = this.getAttribute('data-period-id');
+            const selectedPeriod = periods.find(p => p.id_periode == periodId);
+            if (selectedPeriod) selectPeriod(selectedPeriod);
+        });
     });
-  }
+}
 
-  function selectPeriod(period) {
+function selectPeriod(period) {
     const startDate = new Date(period.tanggal_mulai);
     const monthName = startDate.toLocaleDateString('id-ID', {
-      month: 'long'
+        month: 'long'
     });
     const year = startDate.getFullYear();
-    document.getElementById('currentMonth').textContent = `${monthName} ${year}`;
+    
+    const currentMonthElement = document.getElementById('currentMonth');
+    if (currentMonthElement) {
+        currentMonthElement.textContent = `${monthName} ${year}`;
+    }
+    
     const startFormatted = startDate.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
     });
     const endFormatted = new Date(period.tanggal_selesai).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
     });
-    document.getElementById('periodRange').textContent = `${startFormatted} - ${endFormatted}`;
-    loadKpiDetail(currentEmployeeId, period.id_periode);
-  }
-
-  async function loadKpiDetail(employeeId, periodId) {
-    try {
-      console.log(`Memuat detail KPI untuk employee ${employeeId}, period ${periodId}`);
-      const url = `/api/kpis/employee/${employeeId}/detail/${periodId}`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Data KPI detail:', data);
-
-      if (data.success) {
-        kpiData = data.data;
-        updateEmployeeInfo(kpiData.employee);
-        updateKpiSummary(kpiData.kpi_summary);
-        updateKpiDetails(kpiData.kpi_details);
-      } else {
-        throw new Error(data.message);
-      }
-    } catch (error) {
-      console.error('Error loading KPI detail:', error);
-      document.getElementById('kpiDetailBody').innerHTML = `<tr><td colspan="6" class="text-center text-danger">Gagal memuat detail KPI: ${error.message}</td></tr>`;
+    
+    const periodRangeElement = document.getElementById('periodRange');
+    if (periodRangeElement) {
+        periodRangeElement.textContent = `${startFormatted} - ${endFormatted}`;
     }
-  }
+    
+    loadKpiDetail(currentEmployeeId, period.id_periode);
+}
 
-  function updateEmployeeInfo(employee) {
-    document.getElementById('employeeName').textContent = employee.nama || '-';
-    document.getElementById('employeeId').textContent = employee.id_karyawan || '-';
-    document.getElementById('employeeDivision').textContent = employee.division || '-';
-    document.getElementById('employeePosition').textContent = employee.position || '-';
-  }
+// --- BAGIAN 3: LOAD DETAIL KPI ---
+async function loadKpiDetail(employeeId, periodId) {
+    try {
+        console.log(`📊 Memuat detail KPI untuk employee ${employeeId}, period ${periodId}`);
+        const url = `/api/kpis/employee/${employeeId}/detail/${periodId}`;
+        const response = await fetch(url);
 
-  function updateKpiSummary(summary) {
-    document.getElementById('totalScore').textContent = (parseFloat(summary.total_score) || 0).toFixed(2);
-    document.getElementById('averageScore').textContent = (parseFloat(summary.average_score) || 0).toFixed(2);
-    document.getElementById('performanceScore').textContent = (parseFloat(summary.average_score) || 0).toFixed(1);
-    document.getElementById('performanceStatus').textContent = `(${summary.performance_status || '-'})`;
-    document.getElementById('performanceText').textContent = `(${summary.performance_status || '-'})`;
-    document.getElementById('ranking').textContent = summary.ranking || '-';
-    document.getElementById('rankingText').textContent = `(Dari ${summary.total_employees} Karyawan)`;
-  }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-  function updateKpiDetails(details) {
+        const data = await response.json();
+        console.log('✅ Data KPI detail:', data);
+
+        if (data.success) {
+            kpiData = data.data;
+            updateEmployeeInfo(kpiData.employee);
+            updateKpiSummary(kpiData.kpi_summary);
+            updateKpiDetails(kpiData.kpi_details);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('❌ Error loading KPI detail:', error);
+        const kpiDetailBody = document.getElementById('kpiDetailBody');
+        if (kpiDetailBody) {
+            kpiDetailBody.innerHTML = 
+                `<tr><td colspan="6" class="text-center text-danger">Gagal memuat detail KPI: ${error.message}</td></tr>`;
+        }
+    }
+}
+
+function updateEmployeeInfo(employee) {
+    const elements = {
+        employeeName: document.getElementById('employeeName'),
+        employeeId: document.getElementById('employeeId'),
+        employeeDivision: document.getElementById('employeeDivision'),
+        employeePosition: document.getElementById('employeePosition')
+    };
+
+    Object.keys(elements).forEach(key => {
+        if (elements[key]) {
+            elements[key].textContent = employee[key.replace('employee', '').toLowerCase()] || '-';
+        }
+    });
+}
+
+function updateKpiSummary(summary) {
+    const elements = {
+        totalScore: document.getElementById('totalScore'),
+        averageScore: document.getElementById('averageScore'),
+        performanceScore: document.getElementById('performanceScore'),
+        performanceStatus: document.getElementById('performanceStatus'),
+        performanceText: document.getElementById('performanceText'),
+        ranking: document.getElementById('ranking'),
+        rankingText: document.getElementById('rankingText')
+    };
+
+    if (elements.totalScore) elements.totalScore.textContent = (parseFloat(summary.total_score) || 0).toFixed(2);
+    if (elements.averageScore) elements.averageScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(2);
+    if (elements.performanceScore) elements.performanceScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(1);
+    if (elements.performanceStatus) elements.performanceStatus.textContent = `(${summary.performance_status || '-'})`;
+    if (elements.performanceText) elements.performanceText.textContent = `(${summary.performance_status || '-'})`;
+    if (elements.ranking) elements.ranking.textContent = summary.ranking || '-';
+    if (elements.rankingText) elements.rankingText.textContent = `(Dari ${summary.total_employees} Karyawan)`;
+}
+
+function updateKpiDetails(details) {
     const tbody = document.getElementById('kpiDetailBody');
     const tfoot = document.getElementById('kpiDetailFooter');
+    
+    if (!tbody) {
+        console.error('❌ Element #kpiDetailBody tidak ditemukan');
+        return;
+    }
+
     tbody.innerHTML = '';
 
     if (!details || details.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
-      tfoot.innerHTML = '';
-      return;
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
+        return;
     }
 
-    let totalBobot = 0,
-      totalKontribusi = 0,
-      totalNilai = 0;
+    let totalBobot = 0, totalKontribusi = 0, totalNilai = 0;
 
     details.forEach(item => {
-      const nilai = parseFloat(item.score) || 0;
-      const bobot = parseFloat(item.bobot) || 0;
-      const kontribusi = bobot > 0 ? (nilai / bobot) * 100 : 0;
-      const status = getKpiStatus(kontribusi);
-      const statusClass = getKpiStatusClass(status);
-      tbody.innerHTML += `
+        const nilai = parseFloat(item.score) || 0;
+        const bobot = parseFloat(item.bobot) || 0;
+        const kontribusi = bobot > 0 ? (nilai / bobot) * 100 : 0;
+        const status = getKpiStatus(kontribusi);
+        const statusClass = getKpiStatusClass(status);
+        
+        tbody.innerHTML += `
             <tr>
                 <td>${item.aspek_kpi}</td>
                 <td>${bobot.toFixed(1)}%</td>
@@ -583,429 +732,503 @@
                 <td><span class="kpi-badge ${statusClass}">${status}</span></td>
                 <td>
                     <div class="progress kpi-progress">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${kontribusi}%" aria-valuenow="${kontribusi}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${kontribusi}%" 
+                             aria-valuenow="${kontribusi}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="progress-percentage">${kontribusi.toFixed(1)}%</div>
                 </td>
             </tr>`;
-      totalBobot += bobot;
-      totalKontribusi += kontribusi;
-      totalNilai += nilai;
+        
+        totalBobot += bobot;
+        totalKontribusi += kontribusi;
+        totalNilai += nilai;
     });
 
     const kontribusiTotal = details.length > 0 ? (totalKontribusi / details.length) : 0;
     const overallStatus = getKpiStatus(kontribusiTotal);
     const overallStatusClass = getKpiStatusClass(overallStatus);
-    tfoot.innerHTML = `
-        <tr class="table-active">
-            <th>Total</th>
-            <th>${totalBobot.toFixed(1)}%</th>
-            <th>${totalNilai.toFixed(2)}</th>
-            <th>${kontribusiTotal.toFixed(2)}%</th>
-            <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
-            <th>...</th>
-        </tr>`;
-  }
+    
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr class="table-active">
+                <th>Total</th>
+                <th>${totalBobot.toFixed(1)}%</th>
+                <th>${totalNilai.toFixed(2)}</th>
+                <th>${kontribusiTotal.toFixed(2)}%</th>
+                <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
+                <th>...</th>
+            </tr>`;
+    }
+}
 
-  // --- BAGIAN BARU: FUNGSI UNTUK CHART TREN KPI (LINE CHART MINIMALIS) ---
-  async function loadAndRenderKpiTrendChart(employeeId, year) {
+async function loadAndRenderKpiTrendChart(employeeId, year) {
     try {
-      console.log(`Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
-      const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Data untuk chart:', result);
-
-      if (!result || !result.kpi_data || result.kpi_data.length === 0) {
-        const chartContainer = document.getElementById('kpiTrendChart').parentElement;
-        chartContainer.innerHTML = '<div class="text-center p-5"><p>Tidak ada data KPI untuk tahun ' + year + '</p></div>';
-        return;
-      }
-
-      const monthlyData = result.kpi_data;
-      console.log('Monthly data untuk chart:', monthlyData);
-
-      // Urutkan data berdasarkan bulan
-      const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
-
-      monthlyData.sort((a, b) => {
-        return monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name);
-      });
-
-      // Siapkan data untuk chart
-      const labels = monthlyData.map(item => item.month_name);
-      const scores = monthlyData.map(item => parseFloat(item.total_score) || 0);
-
-      // Target line (80)
-      const targetData = Array(labels.length).fill(80);
-
-      // Hancurkan chart sebelumnya jika ada
-      if (kpiTrendChart) {
-        kpiTrendChart.destroy();
-      }
-
-      // Buat gradient untuk area chart
-      const ctx = document.getElementById('kpiTrendChart').getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-      gradient.addColorStop(0, 'rgba(74, 144, 226, 0.3)');
-      gradient.addColorStop(0.7, 'rgba(74, 144, 226, 0.1)');
-      gradient.addColorStop(1, 'rgba(74, 144, 226, 0.01)');
-
-      // Buat chart baru dengan desain minimalis
-      kpiTrendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-              label: 'Nilai KPI',
-              data: scores,
-              borderColor: '#4a90e2',
-              backgroundColor: gradient,
-              borderWidth: 4,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#4a90e2',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 3,
-              pointRadius: 6,
-              pointHoverRadius: 10,
-              pointHoverBackgroundColor: '#357abd',
-              pointHoverBorderColor: '#ffffff',
-              pointHoverBorderWidth: 4
-            },
-            {
-              label: 'Target Minimum',
-              data: targetData,
-              borderColor: '#ff6b6b',
-              borderWidth: 2,
-              borderDash: [6, 4],
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 0
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'top',
-              labels: {
-                color: '#2d3748',
-                font: {
-                  size: 12,
-                  weight: '600'
-                },
-                padding: 20,
-                usePointStyle: true,
-                pointStyle: 'circle'
-              }
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(45, 55, 72, 0.95)',
-              titleColor: '#f7fafc',
-              bodyColor: '#f7fafc',
-              borderColor: '#4a90e2',
-              borderWidth: 1,
-              cornerRadius: 8,
-              padding: 12,
-              displayColors: true,
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) {
-                    label += ': ';
-                  }
-                  const value = context.parsed.y;
-                  label += value.toFixed(2);
-
-                  if (context.datasetIndex === 0) {
-                    const status = value >= 80 ? '✅' : value >= 70 ? '⚠️' : '❌';
-                    label += ` ${status}`;
-                  }
-                  return label;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: false,
-              min: 60,
-              max: 100,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.06)',
-                drawBorder: false
-              },
-              ticks: {
-                color: '#718096',
-                font: {
-                  size: 11,
-                  weight: '500'
-                },
-                callback: function(value) {
-                  return value + '';
-                }
-              },
-              title: {
-                display: true,
-                text: 'Nilai KPI',
-                color: '#4a5568',
-                font: {
-                  size: 13,
-                  weight: '600'
-                }
-              }
-            },
-            x: {
-              grid: {
-                display: false,
-                drawBorder: false
-              },
-              ticks: {
-                color: '#718096',
-                font: {
-                  size: 11,
-                  weight: '500'
-                }
-              },
-              title: {
-                display: true,
-                text: 'Periode Bulanan - ' + year,
-                color: '#4a5568',
-                font: {
-                  size: 13,
-                  weight: '600'
-                }
-              }
-            }
-          },
-          interaction: {
-            intersect: false,
-            mode: 'nearest'
-          },
-          elements: {
-            line: {
-              tension: 0.4
-            }
-          }
+        console.log(`📈 Memuat chart tren KPI untuk employee ${employeeId}, tahun ${year}`);
+        
+        // Tunggu sebentar untuk memastikan DOM siap
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Cek element chart
+        const chartElement = getChartElement();
+        if (!chartElement) {
+            console.error('❌ Tidak bisa memuat chart: element tidak ditemukan, mencoba create...');
+            createChartElementIfMissing();
+            return;
         }
-      });
+
+        // Lanjutkan dengan logic chart yang ada...
+        const monthlyScores = await getMonthlyScoresFromPeriods(employeeId, year);
+        
+        if (monthlyScores.length === 0) {
+            showNoDataChart(year);
+            return;
+        }
+
+        createChartFromScores(monthlyScores, year);
 
     } catch (error) {
-      console.error('Gagal memuat chart tren KPI:', error);
-      const chartContainer = document.getElementById('kpiTrendChart').parentElement;
-      chartContainer.innerHTML = '<div class="text-center text-danger p-5"><p>Terjadi kesalahan saat memuat chart: ' + error.message + '</p></div>';
+        console.error('❌ Gagal memuat chart tren KPI:', error);
+        showNoDataChart(year);
     }
-  }
+}
 
+function createChartElementIfMissing() {
+    const chartContainer = document.querySelector('.chart-container');
+    if (chartContainer && !document.getElementById('kpiTrendChart')) {
+        console.log('🛠️ Creating missing chart element...');
+        chartContainer.innerHTML = '<canvas id="kpiTrendChart"></canvas>';
+    }
+}
 
-  // --- BAGIAN 2: FUNGSI UNTUK TABEL REKAP BULANAN ---
-  async function loadAndRenderMonthlyRecap(employeeId, year) {
+// Fungsi ambil data bulanan dari periods
+async function getMonthlyScoresFromPeriods(employeeId, year) {
+    console.log(`📊 Mengambil data bulanan dari periods untuk tahun ${year}`);
+    
+    const monthlyScores = [];
+    const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    // Filter periods berdasarkan tahun
+    const yearlyPeriods = availablePeriods.filter(period => {
+        const periodYear = new Date(period.tanggal_mulai).getFullYear();
+        return periodYear === year;
+    });
+
+    console.log(`📅 Periods untuk tahun ${year}:`, yearlyPeriods);
+
+    if (yearlyPeriods.length === 0) {
+        console.log('📭 Tidak ada periods untuk tahun ini');
+        return monthlyScores;
+    }
+
+    // Urutkan periods berdasarkan bulan
+    yearlyPeriods.sort((a, b) => new Date(a.tanggal_mulai) - new Date(b.tanggal_mulai));
+
+    // Ambil data KPI untuk setiap period
+    for (const period of yearlyPeriods) {
+        try {
+            const response = await fetch(`/api/kpis/employee/${employeeId}/detail/${period.id_periode}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const monthName = new Date(period.tanggal_mulai).toLocaleDateString('en-US', { month: 'long' });
+                const monthShort = new Date(period.tanggal_mulai).toLocaleDateString('id-ID', { month: 'short' });
+                const totalScore = data.data.kpi_summary.total_score;
+                
+                monthlyScores.push({
+                    month_name: monthName,
+                    month_short: monthShort,
+                    total_score: totalScore,
+                    period_name: period.nama,
+                    period_date: period.tanggal_mulai
+                });
+                
+                console.log(`✅ Data untuk ${monthName}: ${totalScore}`);
+            }
+        } catch (error) {
+            console.log(`❌ Gagal load period ${period.id_periode}:`, error.message);
+        }
+    }
+
+    // Urutkan berdasarkan bulan
+    monthlyScores.sort((a, b) => monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name));
+    
+    console.log('📈 Data monthly scores:', monthlyScores);
+    return monthlyScores;
+}
+
+// Fungsi buat chart dari scores
+function createChartFromScores(monthlyScores, year) {
+    console.log('🎨 Membuat chart dari data real:', monthlyScores);
+
+    const chartElement = getChartElement();
+    if (!chartElement) {
+        console.error('❌ Tidak bisa membuat chart: element tidak ditemukan');
+        return;
+    }
+
+    // Siapkan data untuk chart
+    const labels = monthlyScores.map(item => item.month_short);
+    const scores = monthlyScores.map(item => parseFloat(item.total_score) || 0);
+
+    console.log('🏷️ Labels:', labels);
+    console.log('📊 Scores:', scores);
+
+    // Hancurkan chart sebelumnya jika ada
+    if (kpiTrendChart) {
+        kpiTrendChart.destroy();
+    }
+
+    // Buat chart
+    const ctx = chartElement.getContext('2d');
+    
+    kpiTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nilai KPI',
+                data: scores,
+                borderColor: '#4a90e2',
+                backgroundColor: 'rgba(74, 144, 226, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#4a90e2',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            },
+            {
+                label: 'Target (80)',
+                data: Array(labels.length).fill(80),
+                borderColor: '#ff6b6b',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                fill: false,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: `Perkembangan Nilai KPI - ${year}`,
+                    font: {
+                        size: 16
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Nilai KPI'
+                    },
+                    ticks: {
+                        stepSize: 10
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Bulan'
+                    }
+                }
+            }
+        }
+    });
+
+    console.log('✅ Chart berhasil dibuat dengan data real');
+}
+
+// Fungsi tampilkan chart "no data"
+function showNoDataChart(year) {
+    console.log('📭 Tidak ada data untuk chart, menampilkan pesan');
+
+    const container = getChartContainer();
+    if (!container) {
+        console.error('❌ Tidak bisa menampilkan pesan no data: container tidak ditemukan');
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="text-center p-5">
+            <i class="icofont-chart-line fs-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">Perkembangan Nilai KPI</h5>
+            <p class="text-muted">Tidak ada data KPI untuk tahun ${year}</p>
+            <small class="text-muted">Data akan muncul setelah penilaian KPI dilakukan</small>
+        </div>
+    `;
+}
+
+// --- BAGIAN 5: TABEL REKAP BULANAN - DENGAN NULL CHECKING ---
+async function loadAndRenderMonthlyRecap(employeeId, year) {
     const loader = document.getElementById('monthlyRecapLoader');
     const container = document.getElementById('monthlyRecapContainer');
     const thead = document.getElementById('monthlyKpiThead');
     const tbody = document.getElementById('monthlyKpiTbody');
     const tfoot = document.getElementById('monthlyKpiTfoot');
 
+    if (!loader || !container || !thead || !tbody) {
+        console.error('❌ Element tabel tidak ditemukan');
+        return;
+    }
+
     loader.style.display = 'block';
     container.style.display = 'none';
-    thead.innerHTML = '';
-    tbody.innerHTML = '';
-    tfoot.innerHTML = '';
 
     try {
-      console.log(`Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
-      const response = await fetch(`/api/report/kpi/monthly-data/${employeeId}?year=${year}`);
+        console.log(`📋 Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
+        
+        // GUNAKAN DATA DARI PERIODS
+        const monthlyScores = await getMonthlyScoresFromPeriods(employeeId, year);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('Data untuk rekap bulanan:', result);
-
-      if (!result || !result.kpi_data || result.kpi_data.length === 0) {
-        loader.innerHTML = '<p class="text-center p-5">Tidak ada data rekap KPI untuk ditampilkan pada tahun yang dipilih.</p>';
-        return;
-      }
-
-      const monthlyData = result.kpi_data;
-      const aspectHeaders = [...new Set(monthlyData.flatMap(m => m.details.map(d => d.aspect_name)))].sort();
-      const pivotedData = monthlyData.map(month => {
-        const row = {
-          month: month.month_name,
-          year: month.year,
-          total: month.total_score,
-          status: getKpiStatus(month.total_score),
-          scores: {}
-        };
-        for (const detail of month.details) {
-          row.scores[detail.aspect_name] = (row.scores[detail.aspect_name] || 0) + detail.sub_aspect_score;
+        if (monthlyScores.length === 0) {
+            showNoDataTable(year);
+            return;
         }
-        return row;
-      });
 
-      // Urutkan data berdasarkan bulan
-      const monthOrder = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-      ];
+        // Buat tabel
+        thead.innerHTML = `
+            <tr>
+                <th>Bulan</th>
+                <th>Periode</th>
+                <th>Total Nilai KPI</th>
+                <th>Status</th>
+            </tr>
+        `;
 
-      pivotedData.sort((a, b) => {
-        return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
-      });
+        let bodyHtml = '';
+        let totalNilai = 0;
 
-      let headerHtml = '<tr><th>Bulan</th>';
-      aspectHeaders.forEach(h => headerHtml += `<th>${h}</th>`);
-      headerHtml += '<th>Total KPI</th><th>Status</th></tr>';
-      thead.innerHTML = headerHtml;
+        monthlyScores.forEach(item => {
+            const totalScore = parseFloat(item.total_score) || 0;
+            const status = getKpiStatus(totalScore);
+            const statusClass = getKpiStatusClass(status);
+            
+            bodyHtml += `
+                <tr>
+                    <td class="fw-bold">${item.month_name}</td>
+                    <td>${item.period_name}</td>
+                    <td class="monthly-score">${totalScore.toFixed(2)}</td>
+                    <td class="text-center"><span class="kpi-badge ${statusClass}">${status}</span></td>
+                </tr>
+            `;
+            
+            totalNilai += totalScore;
+        });
 
-      let bodyHtml = '';
-      pivotedData.forEach(row => {
-        bodyHtml += `<tr><td class="text-nowrap">${row.month}</td>`;
-        aspectHeaders.forEach(h => bodyHtml += `<td class="monthly-score">${(row.scores[h] || 0).toFixed(2)}</td>`);
-        bodyHtml += `<td class="monthly-total">${row.total.toFixed(2)}</td>`;
-        const statusClass = getKpiStatusClass(row.status);
-        bodyHtml += `<td class="text-center"><span class="kpi-badge ${statusClass}">${row.status}</span></td></tr>`;
-      });
-      tbody.innerHTML = bodyHtml;
+        tbody.innerHTML = bodyHtml;
 
-      const averages = {
-        total: 0
-      };
-      aspectHeaders.forEach(h => averages[h] = 0);
-      pivotedData.forEach(row => {
-        aspectHeaders.forEach(h => averages[h] += (row.scores[h] || 0));
-        averages.total += row.total;
-      });
+        // Footer dengan rata-rata
+        const rataRata = totalNilai / monthlyScores.length;
+        const rataRataStatus = getKpiStatus(rataRata);
+        const rataRataStatusClass = getKpiStatusClass(rataRataStatus);
+        
+        if (tfoot) {
+            tfoot.innerHTML = `
+                <tr class="table-active">
+                    <th colspan="2" class="text-end">Rata-rata Tahun ${year}:</th>
+                    <th class="monthly-total">${rataRata.toFixed(2)}</th>
+                    <th class="text-center"><span class="kpi-badge ${rataRataStatusClass}">${rataRataStatus}</span></th>
+                </tr>
+            `;
+        }
 
-      const dataCount = pivotedData.length;
-      if (dataCount > 0) {
-        let footerHtml = '<tr class="table-active"><th>Rata-rata</th>';
-        aspectHeaders.forEach(h => footerHtml += `<th class="monthly-score">${(averages[h] / dataCount).toFixed(2)}</th>`);
-        const avgTotal = averages.total / dataCount;
-        const avgStatus = getKpiStatus(avgTotal);
-        const avgStatusClass = getKpiStatusClass(avgStatus);
-        footerHtml += `<th class="monthly-total">${avgTotal.toFixed(2)}</th>`;
-        footerHtml += `<th class="text-center"><span class="kpi-badge ${avgStatusClass}">${avgStatus}</span></th></tr>`;
-        tfoot.innerHTML = footerHtml;
-      }
-
-      loader.style.display = 'none';
-      container.style.display = 'block';
+        loader.style.display = 'none';
+        container.style.display = 'block';
+        console.log('✅ Tabel rekap berhasil dibuat');
 
     } catch (error) {
-      console.error('Gagal memuat rekap bulanan:', error);
-      loader.innerHTML = `<p class="text-center text-danger p-5">Terjadi kesalahan: ${error.message}</p>`;
+        console.error('❌ Gagal memuat rekap bulanan:', error);
+        showNoDataTable(year);
     }
-  }
+}
 
-  // --- FUNGSI UNTUK MEMUAT SEMUA DATA BERDASARKAN TAHUN ---
-  function loadYearlyData(year) {
+// Fungsi tampilkan tabel "no data"
+function showNoDataTable(year) {
+    const loader = document.getElementById('monthlyRecapLoader');
+    const container = document.getElementById('monthlyRecapContainer');
+    
+    if (!loader) {
+        console.error('❌ Element loader tidak ditemukan');
+        return;
+    }
+
+    loader.innerHTML = `
+        <div class="text-center p-5">
+            <i class="icofont-table fs-1 text-muted"></i>
+            <h5 class="mt-3 text-muted">Rekapan KPI Bulanan</h5>
+            <p class="text-muted">Tidak ada data KPI untuk tahun ${year}</p>
+            <small class="text-muted">Data akan muncul setelah penilaian KPI dilakukan</small>
+        </div>
+    `;
+    loader.style.display = 'block';
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+// --- BAGIAN 6: FUNGSI UTAMA ---
+function loadYearlyData(year) {
     if (!currentEmployeeId) {
-      console.error('currentEmployeeId tidak tersedia');
-      return;
+        console.error('❌ currentEmployeeId tidak tersedia');
+        return;
     }
 
-    console.log(`Memuat data untuk tahun: ${year}`);
-
-    // Update teks dropdown tahun
-    document.querySelector('#tahunDropdown').textContent = `Tahun: ${year}`;
+    console.log(`🎯 Memuat data untuk tahun: ${year}`);
+    currentYear = year;
 
     // Muat chart tren KPI
     loadAndRenderKpiTrendChart(currentEmployeeId, year);
 
     // Muat tabel rekap bulanan
     loadAndRenderMonthlyRecap(currentEmployeeId, year);
-  }
+}
 
-  // --- INISIALISASI HALAMAN ---
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded, currentEmployeeId:', currentEmployeeId);
+// --- BAGIAN 7: INISIALISASI HALAMAN ---
+window.addEventListener('load', function() {
+    console.log('🚀 Window Fully Loaded, currentEmployeeId:', currentEmployeeId);
+    
+    // Cek element chart
+    const chartElement = getChartElement();
+    if (!chartElement) {
+        console.error('❌ Chart element masih tidak ditemukan setelah load');
+        return;
+    }
+
+    // Cek semua element penting
+    const requiredElements = [
+        'yearList', 'monthList', 'kpiTrendChart', 'monthlyRecapLoader', 
+        'monthlyRecapContainer', 'kpiDetailBody'
+    ];
+
+    requiredElements.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`❌ Element #${id} tidak ditemukan di DOM`);
+        }
+    });
 
     if (currentEmployeeId) {
-      // Muat data periode untuk dropdown bulan
-      loadAvailablePeriods();
+        // 1. Load dropdown tahun DULU
+        loadAvailableYears();
+        
+        // 2. Load dropdown bulan
+        loadAvailablePeriods();
 
-      const currentYear = new Date().getFullYear();
-      console.log('Tahun saat ini:', currentYear);
-
-      // Muat data untuk tahun saat ini (chart dan tabel)
-      loadYearlyData(currentYear);
-
-      // Event listener untuk dropdown tahun
-      document.querySelectorAll('#tahunDropdown + .dropdown-menu a').forEach(item => {
-        item.addEventListener('click', function(e) {
-          e.preventDefault();
-          const selectedYear = this.getAttribute('data-tahun');
-          console.log('Tahun dipilih:', selectedYear);
-          loadYearlyData(selectedYear);
+        // 3. Event listener untuk dropdown tahun
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('year-item')) {
+                e.preventDefault();
+                const selectedYear = e.target.getAttribute('data-tahun');
+                console.log('📅 Tahun dipilih:', selectedYear);
+                const currentYearElement = document.getElementById('currentYear');
+                if (currentYearElement) {
+                    currentYearElement.textContent = selectedYear;
+                }
+                loadYearlyData(parseInt(selectedYear));
+            }
         });
-      });
 
-      // Tombol export
-      document.getElementById('exportMonthlyBtn').addEventListener('click', async function() {
+// Ganti bagian export button di detail-kpi.blade.php
+const exportBtn = document.getElementById('exportMonthlyBtn');
+if (exportBtn) {
+    exportBtn.addEventListener('click', function() {
         if (!currentEmployeeId) {
-          alert('ID Karyawan tidak valid!');
-          return;
+            alert('❌ ID Karyawan tidak valid!');
+            return;
         }
 
         const button = this;
-        const exportUrl = `/api/report/kpi/monthly-export/${currentEmployeeId}`;
-
-        button.textContent = 'Mengekspor...';
+        const originalText = button.textContent;
+        button.textContent = '⏳ Mengekspor...';
         button.disabled = true;
 
         try {
-          const response = await fetch(exportUrl);
-
-          if (!response.ok) {
-            throw new Error(`Gagal mengunduh file. Status: ${response.statusText}`);
-          }
-
-          const disposition = response.headers.get('content-disposition');
-          let fileName = 'laporan-kpi.xlsx';
-          if (disposition && disposition.indexOf('attachment') !== -1) {
-            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-            const matches = filenameRegex.exec(disposition);
-            if (matches != null && matches[1]) {
-              fileName = matches[1].replace(/['"]/g, '');
-            }
-          }
-
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          a.remove();
-
+            console.log(`📤 Memulai export untuk employee: ${currentEmployeeId}, tahun: ${currentYear}`);
+            
+            // GUNAKAN ENDPOINT YANG BARU
+            const exportUrl = `/api/kpis/export-monthly/${currentEmployeeId}/${currentYear}`;
+            
+            console.log('🔗 Export URL:', exportUrl);
+            
+            // Buat elemen <a> sementara untuk download
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.target = '_blank';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('✅ Export berhasil diproses!');
+            
         } catch (error) {
-          console.error('Terjadi kesalahan saat mengekspor:', error);
-          alert('Gagal mengekspor data. Silakan coba lagi.');
+            console.error('❌ Gagal mengekspor:', error);
+            alert('Gagal mengekspor: ' + error.message);
         } finally {
-          button.textContent = 'Export Excel';
-          button.disabled = false;
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            }, 3000);
         }
-      });
+    });
+}
+
+// Helper function untuk extract filename dari response header
+function getFilenameFromResponse(response) {
+    const contentDisposition = response.headers.get('content-disposition');
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+            return filenameMatch[1];
+        }
+    }
+    return null;
+}
 
     } else {
-      console.error('currentEmployeeId tidak ditemukan');
-      document.body.innerHTML = '<div class="alert alert-danger">ID Karyawan tidak ditemukan.</div>';
+        console.error('❌ currentEmployeeId tidak ditemukan');
+        const body = document.body;
+        if (body) {
+            body.innerHTML = '<div class="alert alert-danger">ID Karyawan tidak ditemukan.</div>';
+        }
     }
-  });
+});
+
+// Error handling global
+window.addEventListener('error', function(e) {
+    console.error('💥 Global Error:', e.error);
+    console.error('💥 Error details:', e.message, e.filename, e.lineno);
+});
+
+console.log('✅ JavaScript detail-kpi.js loaded successfully!');
 </script>
 @endsection

@@ -534,19 +534,20 @@ $(document).ready(function() {
         loadLowPerformingEmployeesAll();
     }
 
-// FUNGSI BARU: Load 10 karyawan terbaik (SUDAH DINILAI)
+    // FUNGSI: Load karyawan terbaik (SUDAH DINILAI)
 function loadTopEmployees() {
-    // Pertama, cari periode aktif terbaru
+    // Langsung pake method getEmployeeScoresByPeriod dengan periode tertentu
+    // Atau ambil dari periode terbaru yang ada di cache/localStorage
     $.ajax({
-        url: '/api/periods/active-with-attendance',
+        url: '/api/kpis/published-periods',
         method: 'GET',
         success: function(periodResponse) {
             if (periodResponse.success && periodResponse.data.length > 0) {
-                const latestPeriod = periodResponse.data[0]; // Ambil periode terbaru
+                const latestPeriod = periodResponse.data[0]; // Periode terbaru
                 
-                // Sekarang ambil data karyawan terbaik dari periode tersebut
+                // Ambil scores dari periode terbaru
                 $.ajax({
-                    url: `/api/kpis/employee-scores/${latestPeriod.id_periode}`,
+                    url: `/api/kpis/period/${latestPeriod.id_periode}/scores`,
                     method: 'GET',
                     success: function(response) {
                         if (response.success && response.data.length > 0) {
@@ -555,7 +556,7 @@ function loadTopEmployees() {
                             const top5 = response.data.slice(0, 5);
                             renderEmployeeList('#best-employees-list', top5, 'Karyawan Terbaik');
                         } else {
-                            console.log('No employee scores data:', response.message);
+                            console.log('No employee scores data');
                             renderFallbackBestEmployees();
                         }
                     },
@@ -565,65 +566,86 @@ function loadTopEmployees() {
                     }
                 });
             } else {
-                console.log('No active period found');
+                console.log('No published periods found');
                 renderFallbackBestEmployees();
             }
         },
         error: function(xhr, status, error) {
-            console.error('Error fetching active period:', error);
+            console.error('Error fetching periods:', error);
             renderFallbackBestEmployees();
         }
     });
 }
 
-// FUNGSI BARU: Load karyawan perlu perhatian
-function loadLowPerformingEmployeesAll() {
-    $.ajax({
-        url: '/api/kpis/low-performing-employees-all',
-        method: 'GET',
-        success: function(response) {
-            if (response.success && response.data.length > 0) {
-                console.log('Low performing employees loaded:', response.data.length, 'items');
-                // Ambil 5 terendah
-                const worst5 = response.data.slice(0, 5);
-                renderEmployeeList('#worst-employees-list', worst5, 'Perlu Perhatian');
-            } else {
-                console.log('No low performing employees data:', response.message);
+    // FUNGSI BARU: Load karyawan perlu perhatian dengan tampilan sama seperti dashboard penilai
+    function loadLowPerformingEmployeesAll() {
+        $.ajax({
+            url: '/api/kpis/low-performing-employees-all',
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data.length > 0) {
+                    console.log('Low performing employees loaded:', response.data.length, 'items');
+                    renderEmployeeList('#worst-employees-list', response.data, 'Perlu Perhatian');
+                } else {
+                    console.error('Failed to load low performing employees:', response.message);
+                    renderFallbackWorstEmployees();
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading low performing employees:', error);
                 renderFallbackWorstEmployees();
             }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error loading low performing employees:', error);
-            renderFallbackWorstEmployees();
-        }
-    });
-}
+        });
+    }
 
-// FUNGSI FALLBACK untuk karyawan terbaik
-function renderFallbackBestEmployees() {
-    const fallbackData = [
-        { 
-            nama: 'Menunggu penilaian KPI', 
-            position: 'Data akan muncul setelah penilaian', 
-            division: 'Sistem',
-            score: 0
-        }
-    ];
-    renderEmployeeList('#best-employees-list', fallbackData, 'Karyawan Terbaik');
-}
+    // FUNGSI FALLBACK untuk karyawan terbaik
+    function renderFallbackBestEmployees() {
+        // Ambil data karyawan dari API employees sebagai fallback
+        $.ajax({
+            url: '/api/employees',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    // const bestEmployees = response.data.slice(0, 5).map(emp => ({
+                    //     ...emp,
+                    //     score: Math.floor(Math.random() * 20) + 80 // Random score 80-100 untuk demo
+                    // }));
+                    renderEmployeeList('#best-employees-list', bestEmployees, 'Karyawan Terbaik');
+                }
+            },
+            error: function() {
+                const fallbackData = [
+                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
+                ];
+                renderEmployeeList('#best-employees-list', fallbackData, 'Karyawan Terbaik');
+            }
+        });
+    }
 
-// FUNGSI FALLBACK untuk karyawan perlu perhatian
-function renderFallbackWorstEmployees() {
-    const fallbackData = [
-        { 
-            nama: 'Tidak ada karyawan perlu perhatian', 
-            position: 'Semua performa baik', 
-            division: 'Sistem',
-            score: 0
-        }
-    ];
-    renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
-}
+    // FUNGSI FALLBACK untuk karyawan perlu perhatian
+    function renderFallbackWorstEmployees() {
+        // Ambil data karyawan dari API employees sebagai fallback
+        $.ajax({
+            url: '/api/employees',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    // const worstEmployees = response.data.slice(-5).map(emp => ({
+                    //     ...emp,
+                    //     score: Math.floor(Math.random() * 20) + 30, 
+                    //     phone: emp.no_telp || '62'
+                    // }));
+                    renderEmployeeList('#worst-employees-list', worstEmployees, 'Perlu Perhatian');
+                }
+            },
+            error: function() {
+                const fallbackData = [
+                    { nama: 'Data tidak tersedia', position: 'Silakan coba lagi', division: '-' }
+                ];
+                renderEmployeeList('#worst-employees-list', fallbackData, 'Perlu Perhatian');
+            }
+        });
+    }
 
 // FUNGSI RENDER YANG LEBIH RAPI
 function renderEmployeeList(selector, employees, title) {

@@ -686,5 +686,26 @@ class PeriodController extends Controller
             ], 500);
         }
     }
+
+    // Di PeriodController.php - tambahkan method ini
+
+public function getActivePeriodsWithAttendance()
+{
+    try {
+        $periods = Period::where('attendance_uploaded', true)
+            ->where('status', 'active')
+            ->orderBy('tanggal_mulai', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $periods
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching periods: ' . $e->getMessage()
+        ], 500);
+    }
 }
-    // Tambahkan method ini ke model Period (app/Models/Period.php)
+}

@@ -23,7 +23,7 @@ return new class extends Migration
             // Indexes
             $table->index('is_global');
             $table->index('periode_id');
-            $table->index(['periode_id', 'is_global']);
+            $table->index(['periode_id', 'is_global']); 
         });
     }
 

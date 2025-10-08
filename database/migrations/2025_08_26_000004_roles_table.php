@@ -18,6 +18,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('division_id')->references('id_divisi')->on('divisions')->onDelete('cascade');
+            $table->index(['division_id']);
+            $table->index(['nama_jabatan']);
         });
     }
 

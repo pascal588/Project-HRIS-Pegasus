@@ -89,8 +89,8 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-diagram-3-fill text-success fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Divisi</small>
-                        <div id="infoDivision" class="fw-semibold">-</div>
+                        <div>Divisi</div>
+                        <div id="infoDivision" class="fw-bold fs-6">-</div>
                       </div>
                     </div>
                   </div>
@@ -98,8 +98,8 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-percent text-warning fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Total Bobot</small>
-                        <div id="infoTotalWeight" class="fw-semibold">0%</div>
+                        <div>Total Bobot</div>
+                        <div id="infoTotalWeight" class="fw-bold fs-6">0%</div>
                       </div>
                     </div>
                   </div>
@@ -107,8 +107,8 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-graph-up text-danger fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Maksimal Bobot</small>
-                        <div class="fw-semibold">100%</div>
+                        <div>Maksimal Bobot</div>
+                        <div class="fw-bold fs-6">100%</div>
                       </div>
                     </div>
                   </div>
@@ -116,8 +116,8 @@
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-list-ol text-primary fs-4 me-3"></i>
                       <div>
-                        <small class="text-muted">Jumlah Aspek</small>
-                        <div id="infoTopicCount" class="fw-semibold">0</div>
+                        <div>Jumlah Aspek</div>
+                        <div id="infoTopicCount" class="fw-bold fs-6">0</div>
                       </div>
                     </div>
                   </div>
@@ -355,77 +355,77 @@
 
   function addAspect() {
     if (currentMode === "division" && !currentDivisionId) {
-        showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
-        return;
+      showAlert('warning', 'Peringatan', 'Pilih divisi terlebih dahulu!');
+      return;
     }
 
     // ⚠️ FIX: Hanya buat aspek "Disiplin" otomatis di mode Global
     if (currentMode === "global") {
-        // Cek apakah sudah ada aspek "Disiplin" di mode Global
-        const existingDisiplin = $("#topicContents .tab-pane").find('.aspect-name')
-            .filter((_, el) => el.value.toLowerCase().includes('disiplin'));
-        
-        if (existingDisiplin.length > 0) {
-            // Jika sudah ada Disiplin, buat aspek biasa
-            const aspect = {
-                uid: uid("aspect"),
-                id: null,
-                nama: "",
-                bobot: 0,
-                is_global: true,
-                points: [],
-            };
-            renderAspect(aspect, true);
-            setActiveTab(aspect.uid);
-            updateInfo();
-            return;
-        } else {
-            // Jika belum ada Disiplin di Global, buat Disiplin dengan sub-aspek absensi
-            const aspect = {
-                uid: uid("aspect"),
-                id: null,
-                nama: "Disiplin",
-                bobot: 30, // Default bobot untuk Disiplin
-                is_global: true,
-                points: [],
-            };
+      // Cek apakah sudah ada aspek "Disiplin" di mode Global
+      const existingDisiplin = $("#topicContents .tab-pane").find('.aspect-name')
+        .filter((_, el) => el.value.toLowerCase().includes('disiplin'));
 
-            renderAspect(aspect, true);
-            setActiveTab(aspect.uid);
-            updateInfo();
-            return;
-        }
-    }
-
-    // ⚠️ FIX: Untuk mode divisi, selalu buat aspek biasa (bukan Disiplin)
-    if (currentMode === "division") {
+      if (existingDisiplin.length > 0) {
+        // Jika sudah ada Disiplin, buat aspek biasa
         const aspect = {
-            uid: uid("aspect"),
-            id: null,
-            nama: "",
-            bobot: 0,
-            is_global: false,
-            points: [],
+          uid: uid("aspect"),
+          id: null,
+          nama: "",
+          bobot: 0,
+          is_global: true,
+          points: [],
         };
         renderAspect(aspect, true);
         setActiveTab(aspect.uid);
         updateInfo();
         return;
+      } else {
+        // Jika belum ada Disiplin di Global, buat Disiplin dengan sub-aspek absensi
+        const aspect = {
+          uid: uid("aspect"),
+          id: null,
+          nama: "Disiplin",
+          bobot: 30, // Default bobot untuk Disiplin
+          is_global: true,
+          points: [],
+        };
+
+        renderAspect(aspect, true);
+        setActiveTab(aspect.uid);
+        updateInfo();
+        return;
+      }
     }
 
-    // Fallback untuk mode lainnya
-    const aspect = {
+    // ⚠️ FIX: Untuk mode divisi, selalu buat aspek biasa (bukan Disiplin)
+    if (currentMode === "division") {
+      const aspect = {
         uid: uid("aspect"),
         id: null,
         nama: "",
         bobot: 0,
-        is_global: currentMode === "global",
+        is_global: false,
         points: [],
+      };
+      renderAspect(aspect, true);
+      setActiveTab(aspect.uid);
+      updateInfo();
+      return;
+    }
+
+    // Fallback untuk mode lainnya
+    const aspect = {
+      uid: uid("aspect"),
+      id: null,
+      nama: "",
+      bobot: 0,
+      is_global: currentMode === "global",
+      points: [],
     };
     renderAspect(aspect, true);
     setActiveTab(aspect.uid);
     updateInfo();
-}
+  }
 
   function renderAspect(aspectObj, newlyCreated = false) {
     const aspectUid = aspectObj.uid;
@@ -539,40 +539,40 @@
 
     // ✅ AUTO-CREATE SUB-ASPEK ABSENSI JIKA DISIPLIN GLOBAL BARU
     if (isDisiplinGlobal && newlyCreated && points.length === 0) {
-        addAbsensiSubaspect(aspectUid);
+      addAbsensiSubaspect(aspectUid);
     }
 
     if (points.length === 0 && !isReadOnly && !isDisiplinGlobal) addSubaspect(aspectUid);
     if (newlyCreated || $("#topicTabs .nav-link").length === 1) setActiveTab(aspectUid);
     updateInfo();
-}
+  }
 
-function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
+  function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
     const sub = {
-        uid: uid("sub"),
-        id: "",
-        nama: "Penilaian Absensi",
-        bobot: defaultBobot,
-        questions: [],
+      uid: uid("sub"),
+      id: "",
+      nama: "Penilaian Absensi",
+      bobot: defaultBobot,
+      questions: [],
     };
-    
+
     const html = subaspectTemplate(aspectUid, sub);
     $(`#subaspects-${aspectUid}`).append(html);
-    
+
     // ✅ TAMBAH INFO BAHWA INI SUB-ASPEK ABSENSI
     const subCard = $(`#sub-${sub.uid}`);
     subCard.addClass('border-warning');
     subCard.find('.subaspect-name').attr('readonly', true).addClass('fw-bold text-warning');
     subCard.find('.subaspect-weight').removeAttr('readonly');
-    
+
     // ✅ HAPUS TOMBOL HAPUS UNTUK ABSENSI
     subCard.find('button[onclick*="confirmRemoveSubaspect"]').remove();
-    
+
     // ✅ TAMBAH BADGE ABSENSI
     subCard.find('.form-label').append('<span class="badge bg-warning ms-2">Auto-calculate</span>');
-    
+
     updateInfo();
-}
+  }
 
   function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
     const suid = saObj.uid || uid("sub");
@@ -582,18 +582,18 @@ function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
     const questions = saObj.questions || [];
 
     // ✅ DETEKSI JIKA INI SUB-ASPEK ABSENSI
-    const isAbsensi = sname.toLowerCase().includes('absensi') || 
-                     sname.toLowerCase().includes('kehadiran') ||
-                     sname.toLowerCase().includes('penilaian absensi');
-    
+    const isAbsensi = sname.toLowerCase().includes('absensi') ||
+      sname.toLowerCase().includes('kehadiran') ||
+      sname.toLowerCase().includes('penilaian absensi');
+
     // Subaspek menjadi read-only jika termasuk dalam KPI Global di mode Divisi
     const isReadOnly = currentMode === "division" && isGlobalAspect;
 
     let qHtml = "";
-    
+
     // ✅ JIKA ABSENSI, TAMPILKAN INFORMASI KHUSUS
     if (isAbsensi) {
-        qHtml = `
+      qHtml = `
         <div class="alert alert-info mt-2">
             <i class="bi bi-info-circle me-2"></i>
             <strong>Sub-aspek Absensi</strong><br>
@@ -601,8 +601,8 @@ function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
         </div>
         `;
     } else {
-        // Tampilkan pertanyaan normal untuk sub-aspek lainnya
-        questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
+      // Tampilkan pertanyaan normal untuk sub-aspek lainnya
+      questions.forEach((q) => (qHtml += questionInputTemplate(suid, q, isReadOnly)));
     }
 
     return `
@@ -643,7 +643,7 @@ function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
   ` : ''}
 </div>
 `;
-}
+  }
 
   function questionInputTemplate(suid, q = {}, isReadOnly = false) {
     const qid = q.id || "";
@@ -838,142 +838,145 @@ function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
     const subCard = $(`#sub-${subUid}`);
     const idPoint = subCard.find(".subaspect-id").val();
 
-    console.log('Deleting subaspect:', { subUid, idPoint }); // Debug log
+    console.log('Deleting subaspect:', {
+      subUid,
+      idPoint
+    }); // Debug log
 
     if (idPoint) {
-        Swal.fire({
-            title: 'Hapus Subaspek?',
-            text: "Subaspek dan semua pertanyaan di dalamnya akan dihapus dari server",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // ✅ PERBAIKAN: Gunakan endpoint yang benar dengan headers
-                $.ajax({
-                    url: `/api/kpis/point/${idPoint}`,
-                    method: "DELETE",
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    success: function(resp) {
-                        if (resp.success) {
-                            subCard.remove();
-                            showAlert('success', 'Berhasil', resp.message || 'Subaspek dihapus');
-                            updateInfo();
-                        } else {
-                            showAlert('error', 'Error', resp.message || 'Gagal menghapus subaspek');
-                        }
-                    },
-                    error: function(xhr) {
-                        console.error("Error deleting subaspect:", xhr);
-                        
-                        let errorMsg = 'Gagal menghapus subaspek';
-                        try {
-                            const err = xhr.responseJSON;
-                            if (err && err.message) {
-                                errorMsg = err.message;
-                            }
-                            if (err && err.errors) {
-                                errorMsg = Object.values(err.errors).flat().join(', ');
-                            }
-                        } catch (e) {
-                            errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
-                        }
-                        
-                        showAlert('error', 'Error', errorMsg);
-                    }
-                });
-            }
-        });
-    } else {
-        // Untuk subaspek yang belum disimpan (baru dibuat di frontend)
-        Swal.fire({
-            title: 'Hapus Subaspek?',
-            text: "Subaspek ini akan dihapus dari form",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
+      Swal.fire({
+        title: 'Hapus Subaspek?',
+        text: "Subaspek dan semua pertanyaan di dalamnya akan dihapus dari server",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // ✅ PERBAIKAN: Gunakan endpoint yang benar dengan headers
+          $.ajax({
+            url: `/api/kpis/point/${idPoint}`,
+            method: "DELETE",
+            headers: {
+              'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            success: function(resp) {
+              if (resp.success) {
                 subCard.remove();
+                showAlert('success', 'Berhasil', resp.message || 'Subaspek dihapus');
                 updateInfo();
-            }
-        });
-    }
-}
+              } else {
+                showAlert('error', 'Error', resp.message || 'Gagal menghapus subaspek');
+              }
+            },
+            error: function(xhr) {
+              console.error("Error deleting subaspect:", xhr);
 
-function confirmRemoveQuestionInSub(btn, subUid) {
+              let errorMsg = 'Gagal menghapus subaspek';
+              try {
+                const err = xhr.responseJSON;
+                if (err && err.message) {
+                  errorMsg = err.message;
+                }
+                if (err && err.errors) {
+                  errorMsg = Object.values(err.errors).flat().join(', ');
+                }
+              } catch (e) {
+                errorMsg = `HTTP ${xhr.status}: ${xhr.statusText}`;
+              }
+
+              showAlert('error', 'Error', errorMsg);
+            }
+          });
+        }
+      });
+    } else {
+      // Untuk subaspek yang belum disimpan (baru dibuat di frontend)
+      Swal.fire({
+        title: 'Hapus Subaspek?',
+        text: "Subaspek ini akan dihapus dari form",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          subCard.remove();
+          updateInfo();
+        }
+      });
+    }
+  }
+
+  function confirmRemoveQuestionInSub(btn, subUid) {
     const row = $(btn).closest(".question-row");
     const qid = row.data("question-id") || null;
 
     if (qid) {
-        Swal.fire({
-            title: 'Hapus Pertanyaan?',
-            text: "Pertanyaan ini akan dihapus dari server",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // ✅ PERBAIKAN: Gunakan endpoint yang benar
-                $.ajax({
-                    url: `/api/kpis/question/${qid}`, // ✅ Route yang sudah diperbaiki
-                    method: "DELETE",
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function(resp) {
-                        if (resp.success) {
-                            row.remove();
-                            showAlert('success', 'Berhasil', resp.message || 'Pertanyaan dihapus');
-                            updateInfo();
-                        } else {
-                            showAlert('error', 'Error', resp.message || 'Gagal menghapus pertanyaan');
-                        }
-                    },
-                    error: function(xhr) {
-                        console.error("Error deleting question:", xhr);
-                        let errorMsg = 'Gagal menghapus pertanyaan';
-                        try {
-                            const err = xhr.responseJSON;
-                            if (err && err.message) errorMsg = err.message;
-                        } catch (e) {}
-                        showAlert('error', 'Error', errorMsg);
-                    }
-                });
-            }
-        });
-    } else {
-        // Untuk pertanyaan yang belum disimpan (baru dibuat di frontend)
-        Swal.fire({
-            title: 'Hapus Pertanyaan?',
-            text: "Pertanyaan ini akan dihapus dari form",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
+      Swal.fire({
+        title: 'Hapus Pertanyaan?',
+        text: "Pertanyaan ini akan dihapus dari server",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // ✅ PERBAIKAN: Gunakan endpoint yang benar
+          $.ajax({
+            url: `/api/kpis/question/${qid}`, // ✅ Route yang sudah diperbaiki
+            method: "DELETE",
+            headers: {
+              'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(resp) {
+              if (resp.success) {
                 row.remove();
+                showAlert('success', 'Berhasil', resp.message || 'Pertanyaan dihapus');
                 updateInfo();
+              } else {
+                showAlert('error', 'Error', resp.message || 'Gagal menghapus pertanyaan');
+              }
+            },
+            error: function(xhr) {
+              console.error("Error deleting question:", xhr);
+              let errorMsg = 'Gagal menghapus pertanyaan';
+              try {
+                const err = xhr.responseJSON;
+                if (err && err.message) errorMsg = err.message;
+              } catch (e) {}
+              showAlert('error', 'Error', errorMsg);
             }
-        });
+          });
+        }
+      });
+    } else {
+      // Untuk pertanyaan yang belum disimpan (baru dibuat di frontend)
+      Swal.fire({
+        title: 'Hapus Pertanyaan?',
+        text: "Pertanyaan ini akan dihapus dari form",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batal'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          row.remove();
+          updateInfo();
+        }
+      });
     }
-}
+  }
 
   // ==================== UI UTILITIES ====================
   function removeAspectFromUI(aspectUid) {

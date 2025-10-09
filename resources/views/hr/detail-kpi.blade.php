@@ -662,6 +662,7 @@ async function loadKpiDetail(employeeId, periodId) {
     }
 }
 
+// ⚠️ FUNGSI YANG DIPERBAIKI: Update KPI Details dengan rumus baru
 function updateKpiDetailsWithSubAspek(details) {
     const tbody = document.getElementById('kpiDetailBody');
     const tfoot = document.getElementById('kpiDetailFooter');
@@ -679,112 +680,141 @@ function updateKpiDetailsWithSubAspek(details) {
         return;
     }
 
-    console.log('📊 Raw KPI details:', details);
+    console.log('📊 Raw KPI details dengan rumus baru:', details);
 
-    let totalBobot = 0;
-    let totalKontribusi = 0;
-    let totalNilaiTertimbang = 0;
+    let totalBobotAllAspek = 0;
+    let totalKontribusiAllAspek = 0;
     let currentAspek = '';
     let aspekCount = 0;
 
-    details.forEach((item, index) => {
-        const isTotalAspek = item.is_total_aspek || false;
-        const isSubAspek = !isTotalAspek;
-        
-        // ⚠️ PERBAIKAN: Gunakan 'kontribusi' jika ada, jika tidak hitung dari score dan bobot
-        const nilai = parseFloat(item.score) || 0;
-        const bobot = parseFloat(item.bobot) || 0;
-        const kontribusi = item.kontribusi !== undefined ? parseFloat(item.kontribusi) : (nilai * bobot) / 100;
-        const status = getKpiStatus(nilai); // Status berdasarkan nilai, bukan kontribusi
-        const statusClass = getKpiStatusClass(status);
-
-        // ⚠️ FIX: Pastikan aspek_kpi tidak undefined
+    // Kelompokkan data berdasarkan aspek
+    const aspekGroups = {};
+    details.forEach(item => {
         const aspekName = item.aspek_kpi || 'Aspek Lain';
-        const subAspekName = item.sub_aspek_name || 'Sub Aspek';
+        if (!aspekGroups[aspekName]) {
+            aspekGroups[aspekName] = [];
+        }
+        aspekGroups[aspekName].push(item);
+    });
 
-        // Jika aspek berubah, tambahkan row untuk aspek baru
-        if (currentAspek !== aspekName) {
-            currentAspek = aspekName;
-            aspekCount++;
+    // Render setiap aspek
+    Object.keys(aspekGroups).forEach(aspekName => {
+        const aspekItems = aspekGroups[aspekName];
+        const totalAspek = aspekItems.find(item => item.is_total_aspek);
+        const subAspeks = aspekItems.filter(item => !item.is_total_aspek);
+        
+        aspekCount++;
+        
+        // Header Aspek
+        if (aspekCount > 1) {
+            tbody.innerHTML += `<tr style="height: 10px; background-color: transparent;"><td colspan="6"></td></tr>`;
+        }
+        
+        tbody.innerHTML += `
+            <tr class="table-primary fw-bold">
+                <td colspan="6">${aspekCount}. ${aspekName}</td>
+            </tr>
+        `;
+
+        // Sub-aspek
+        let totalKontribusiAspek = 0;
+        let totalBobotAspek = 0;
+
+        subAspeks.forEach(subAspek => {
+            // ⚠️ PERBAIKAN: Ambil nilai sesuai rumus baru
+            const nilai = parseFloat(subAspek.score) || 0; // Nilai mentah (0-10 untuk normal, 0-100 untuk absensi)
+            const bobot = parseFloat(subAspek.bobot) || 0;
+            const kontribusi = parseFloat(subAspek.kontribusi) || 0; // Sudah dikali bobot
             
-            // Row untuk HEADER ASPEK (hanya jika bukan item pertama)
-            if (index > 0) {
-                tbody.innerHTML += `
-                    <tr style="height: 10px; background-color: transparent;">
-                        <td colspan="6"></td>
-                    </tr>
-                `;
+            // Tentukan status berdasarkan nilai mentah (konversi ke 0-100 jika perlu)
+            let nilaiUntukStatus = nilai;
+            if (nilai <= 10) {
+                nilaiUntukStatus = nilai * 10; // Konversi 0-10 ke 0-100
             }
             
+            const status = getKpiStatus(nilaiUntukStatus);
+            const statusClass = getKpiStatusClass(status);
+            const progressValue = Math.min(nilaiUntukStatus, 100);
+
             tbody.innerHTML += `
-                <tr class="table-primary fw-bold">
-                    <td colspan="6">${aspekCount}. ${currentAspek}</td>
+                <tr>
+                    <td class="ps-4">${subAspek.sub_aspek_name}</td>
+                    <td>${bobot.toFixed(1)}%</td>
+                    <td>${nilai.toFixed(2)}</td>
+                    <td>${kontribusi.toFixed(2)}</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        <div class="progress kpi-progress">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressValue}%" 
+                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
+                    </td>
                 </tr>
             `;
-        }
 
-        // Row untuk SUB ASPEK atau TOTAL ASPEK
-        const rowClass = isTotalAspek ? 'table-warning fw-semibold' : '';
-        const indentClass = isSubAspek ? 'ps-4' : '';
-        const displayName = isTotalAspek ? `<strong>TOTAL ${currentAspek}</strong>` : subAspekName;
-        
-        // Format bobot hanya untuk sub-aspek (bukan total)
-        const displayBobot = isTotalAspek ? '' : bobot.toFixed(1) + '%';
-        
-        // Untuk progress bar, gunakan nilai (0-100) bukan kontribusi
-        const progressValue = Math.min(nilai, 100); // Maksimal 100%
-        
-        // ⚠️ PERBAIKAN: Tampilkan kontribusi untuk semua row
-        tbody.innerHTML += `
-            <tr class="${rowClass}">
-                <td class="${indentClass}">${displayName}</td>
-                <td>${displayBobot}</td>
-                <td>${nilai.toFixed(2)}</td>
-                <td>${kontribusi.toFixed(2)}%</td>
-                <td><span class="kpi-badge ${statusClass}">${status}</span></td>
-                <td>
-                    <div class="progress kpi-progress">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressValue}%" 
-                             aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
-                </td>
-            </tr>`;
-        
-        // Hanya hitung untuk TOTAL ASPEK di footer
-        if (isTotalAspek) {
-            totalBobot += bobot;
-            totalKontribusi += kontribusi;
-            totalNilaiTertimbang += nilai;
-            console.log(`📈 Total Aspek: ${aspekName}`, { 
-                bobot: bobot, 
-                nilai: nilai, 
-                kontribusi: kontribusi,
-                rumus: `Kontribusi = ${kontribusi}`
+            totalKontribusiAspek += kontribusi;
+            totalBobotAspek += bobot;
+        });
+
+        // Total Aspek
+        if (totalAspek) {
+            // ⚠️ PERBAIKAN: Ambil nilai total aspek
+            const totalNilai = parseFloat(totalAspek.score) || 0; // Sudah ×10
+            const totalBobot = parseFloat(totalAspek.bobot) || 0;
+            const totalKontribusi = parseFloat(totalAspek.kontribusi) || 0; // Kontribusi asli
+            
+            const status = getKpiStatus(totalNilai);
+            const statusClass = getKpiStatusClass(status);
+            const progressValue = Math.min(totalNilai, 100);
+
+            tbody.innerHTML += `
+                <tr class="table-warning fw-semibold">
+                    <td><strong>TOTAL ${aspekName}</strong></td>
+                    <td>${totalBobot.toFixed(1)}%</td>
+                    <td>${totalNilai.toFixed(2)}</td>
+                    <td>${totalKontribusi.toFixed(2)}</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        <div class="progress kpi-progress">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: ${progressValue}%" 
+                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
+                    </td>
+                </tr>
+            `;
+
+            console.log(`🔍 Verification for ${aspekName}:`, {
+                'calculated_kontribusi': totalKontribusiAspek.toFixed(2),
+                'displayed_kontribusi': totalKontribusi.toFixed(2),
+                'total_nilai_displayed': totalNilai.toFixed(2)
             });
+
+            totalBobotAllAspek += totalBobot;
+            totalKontribusiAllAspek += totalKontribusi;
         }
     });
 
-    // ⚠️ PERBAIKAN: Hitung total keseluruhan
-    const totalNilaiAkhir = totalKontribusi; // Total kontribusi = nilai akhir
-    const totalPersentase = totalBobot > 0 ? (totalNilaiAkhir / totalBobot) * 100 : 0;
+    // TOTAL KESELURUHAN
+    // ⚠️ PERBAIKAN: Total nilai akhir = total kontribusi semua aspek × 10
+    const totalNilaiAkhir = totalKontribusiAllAspek * 10;
     const overallStatus = getKpiStatus(totalNilaiAkhir);
     const overallStatusClass = getKpiStatusClass(overallStatus);
     
-    console.log('🎯 Final Calculation:', { 
-        totalBobot: totalBobot, 
-        totalKontribusi: totalKontribusi,
-        totalNilaiAkhir: totalNilaiAkhir,
-        totalPersentase: totalPersentase 
+    console.log('🎯 Final Overall Calculation:', { 
+        totalBobotAllAspek: totalBobotAllAspek.toFixed(2),
+        totalKontribusiAllAspek: totalKontribusiAllAspek.toFixed(2),
+        totalNilaiAkhir: totalNilaiAkhir.toFixed(2)
     });
 
     if (tfoot) {
         tfoot.innerHTML = `
             <tr class="table-active fw-bold">
                 <th>TOTAL KESELURUHAN</th>
-                <th>${totalBobot.toFixed(1)}%</th>
+                <th>${totalBobotAllAspek.toFixed(1)}%</th>
                 <th>${totalNilaiAkhir.toFixed(2)}</th>
-                <th>${totalPersentase.toFixed(2)}%</th>
+                <th>${totalKontribusiAllAspek.toFixed(2)}</th>
                 <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
                 <th>
                     <div class="progress kpi-progress">
@@ -796,6 +826,33 @@ function updateKpiDetailsWithSubAspek(details) {
             </tr>`;
     }
 }
+
+// Tambahkan fungsi helper untuk rumus
+function explainFormula() {
+    console.log(`
+    📝 RUMUS PERHITUNGAN KPI BARU:
+    
+    1. SUB-ASPEK NORMAL:
+       Nilai = (rata-rata jawaban × 2.5) × (bobot / 100)
+       Contoh: Rata-rata 3.2 × 2.5 = 8.0 × (20% / 100) = 1.6
+    
+    2. SUB-ASPEK ABSENSI:
+       Nilai = (nilai_absensi × bobot) / 100
+       Contoh: 85 × 20% = 17.0
+    
+    3. ASPEK UTAMA:
+       Nilai = jumlah semua sub-aspek dalam aspek tersebut
+    
+    4. TOTAL AKHIR:
+       Nilai = (jumlah semua aspek utama) × 10
+       Contoh: (1.6 + 17.0) = 18.6 × 10 = 186.0
+    `);
+}
+
+// Panggil fungsi penjelasan saat load
+window.addEventListener('load', function() {
+    explainFormula();
+});
 
 function updateEmployeeInfo(employee) {
     const elements = {
@@ -823,13 +880,22 @@ function updateKpiSummary(summary) {
         rankingText: document.getElementById('rankingText')
     };
 
-    if (elements.totalScore) elements.totalScore.textContent = (parseFloat(summary.total_score) || 0).toFixed(2);
-    if (elements.averageScore) elements.averageScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(2);
-    if (elements.performanceScore) elements.performanceScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(1);
+    // ⚠️ PERBAIKAN: Gunakan total_score sebagai nilai utama
+    const totalScore = parseFloat(summary.total_score) || 0;
+    
+    if (elements.totalScore) elements.totalScore.textContent = totalScore.toFixed(2);
+    if (elements.averageScore) elements.averageScore.textContent = totalScore.toFixed(2); // Sama dengan total
+    if (elements.performanceScore) elements.performanceScore.textContent = totalScore.toFixed(1);
     if (elements.performanceStatus) elements.performanceStatus.textContent = `(${summary.performance_status || '-'})`;
     if (elements.performanceText) elements.performanceText.textContent = `(${summary.performance_status || '-'})`;
     if (elements.ranking) elements.ranking.textContent = summary.ranking || '-';
     if (elements.rankingText) elements.rankingText.textContent = `(Dari ${summary.total_employees} Karyawan)`;
+
+    console.log('🎯 Summary KPI (SAMA DENGAN LIST):', {
+        total_score: totalScore,
+        performance_status: summary.performance_status,
+        ranking: summary.ranking
+    });
 }
 
 function updateKpiDetails(details) {

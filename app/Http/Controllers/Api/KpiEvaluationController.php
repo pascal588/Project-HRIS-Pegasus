@@ -22,104 +22,6 @@ use App\Exports\MonthlyKpiExport;
 
 class KpiEvaluationController extends Controller
 {
-        // ================== KPI EVALUATION & SCORING ==================
-    public function storeEmployeeScore(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'id_karyawan' => 'required|exists:employees,id_karyawan',
-            'periode_id' => 'required|exists:periods,id_periode',
-            'hasil' => 'required|array|min:1',
-            'hasil.*.id_aspek' => 'required|exists:kpis,id_kpi',
-            'hasil.*.jawaban' => 'required|array|min:1',
-            'hasil.*.jawaban.*.id' => 'required', // Hapus exists validation sementara untuk debugging
-            'hasil.*.jawaban.*.jawaban' => 'required|integer|min:1|max:4',
-            'attendance_scores' => 'sometimes|array',
-            'attendance_scores.*.point_id' => 'required|exists:kpi_points,id_point',
-            'attendance_scores.*.score' => 'required|numeric|min:0|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        // ⚠️ TAMBAH: Log data yang diterima
-        Log::info("=== STORE EMPLOYEE SCORE REQUEST ===");
-        Log::info("Employee ID: " . $request->id_karyawan);
-        Log::info("Period ID: " . $request->periode_id);
-        Log::info("Attendance Scores: " . json_encode($request->attendance_scores));
-        Log::info("Hasil: " . json_encode($request->hasil));
-
-        $tahun = $period->tahun ?? date('Y');
-        $bulan = $period->bulan ?? date('m');
-        $employeeId = $request->id_karyawan;
-        $periodeId = $request->periode_id;
-
-        DB::beginTransaction();
-        try {
-            $savedCount = 0;
-
-            Log::info("=== START KPI SCORE SAVE ===");
-            Log::info("Employee ID: $employeeId, Periode ID: $periodeId");
-
-            // 1️⃣ SIMPAN NILAI ABSENSI OTOMATIS (JIKA ADA)
-            if (isset($request->attendance_scores)) {
-                foreach ($request->attendance_scores as $attendanceScore) {
-                    $saved = $this->saveAttendanceScore(
-                        $employeeId,
-                        $periodeId,
-                        $attendanceScore['point_id'],
-                        $attendanceScore['score']
-                    );
-
-                    if ($saved) {
-                        Log::info("Attendance score saved successfully", $attendanceScore);
-                        $savedCount++;
-                    }
-                }
-            }
-
-            // 2️⃣ SIMPAN JAWABAN PERTANYAAN NORMAL
-            foreach ($request->hasil as $aspekIndex => $aspek) {
-                foreach ($aspek['jawaban'] as $jawaban) {
-                    $saved = KpiQuestionHasEmployee::updateOrCreate(
-                        [
-                            'employees_id_karyawan' => $employeeId,
-                            'kpi_question_id_question' => $jawaban['id'],
-                            'periode_id' => $periodeId
-                        ],
-                        ['nilai' => $jawaban['jawaban'], 'updated_at' => now()]
-                    );
-
-                    if ($saved) $savedCount++;
-                }
-            }
-
-            // 3️⃣ HITUNG NILAI AKHIR UNTUK SEMUA ASPEK (TERMASUK ABSENSI)
-            $this->calculateAllFinalScores($employeeId, $periodeId);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Jawaban dan nilai akhir KPI berhasil disimpan!',
-                'saved_count' => $savedCount,
-                'attendance_scores_saved' => isset($request->attendance_scores) ? count($request->attendance_scores) : 0
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to save scores: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal menyimpan nilai: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
     public function getEmployeeKpiForPeriod($employeeId, $periodId)
 {
         if (!$periodId) {
@@ -466,182 +368,7 @@ class KpiEvaluationController extends Controller
         }
     }
 
-public function getAttendanceCalculationData($employeeId, $periodeId)
-{
-    try {
-        $employee = Employee::findOrFail($employeeId);
-        $period = Period::findOrFail($periodeId);
 
-        // ⚠️ DEBUG: Cek data absensi yang diambil
-        $attendances = Attendance::where('employee_id', $employeeId)
-            ->where('periode_id', $periodeId)
-            ->get();
-
-        Log::info("📊 ATTENDANCE DATA DEBUG:", [
-            'employee_id' => $employeeId,
-            'period_id' => $periodeId,
-            'total_attendance_records' => $attendances->count(),
-            'attendance_samples' => $attendances->take(5)->map(function($att) {
-                return [
-                    'date' => $att->tanggal,
-                    'status' => $att->status,
-                    'late' => $att->late
-                ];
-            })
-        ]);
-
-        $workDays = $attendances->where('status', '!=', 'Non-working day (NW)');
-        $totalWorkDays = $workDays->count();
-
-        // Hitung summary
-        $hadir = $workDays->where('status', 'Present at workday (PW)')->count();
-        $sakit = $workDays->where('status', 'Sick (S)')->count();
-        $izin = $workDays->where('status', 'Permission (I)')->count();
-        $mangkir = $workDays->where('status', 'Absent (A)')->count();
-        $terlambat = $workDays->where('late', '>', 0)->count();
-
-        // ⚠️ PERBAIKAN: DEFINE $config SEBELUM DIPAKAI!
-        $config = $this->getAttendanceConfigFromKpiTemplate($employeeId, $periodeId);
-
-        Log::info("🎯 ATTENDANCE CALCULATION:", [
-            'hadir' => $hadir,
-            'sakit' => $sakit,
-            'izin' => $izin,
-            'mangkir' => $mangkir,
-            'terlambat' => $terlambat,
-            'total_work_days' => $totalWorkDays,
-            'config_used' => $config
-        ]);
-
-        // Hitung berdasarkan konfigurasi
-        $kehadiranPoints = $hadir * $config['hadir_multiplier'];
-        $sakitPoints = $sakit * $config['sakit_multiplier'];
-        $izinPoints = $izin * $config['izin_multiplier'];
-        $mangkirPoints = $mangkir * $config['mangkir_multiplier'];
-        $subTotal = $kehadiranPoints + $sakitPoints + $izinPoints + $mangkirPoints;
-
-        $terlambatPoints = $terlambat * $config['terlambat_multiplier'];
-        $totalPointsX = $subTotal + $terlambatPoints;
-
-        $maxPointsY = $totalWorkDays * $config['workday_multiplier'];
-
-        $attendancePercent = $maxPointsY > 0 ? ($totalPointsX / $maxPointsY) * 100 : 0;
-
-        // Konversi ke skala 0-100
-        if ($attendancePercent >= 100) $score = 100;
-        elseif ($attendancePercent >= 90) $score = 80;
-        elseif ($attendancePercent >= 80) $score = 60;
-        elseif ($attendancePercent >= 65) $score = 40;
-        elseif ($attendancePercent >= 50) $score = 20;
-        else $score = 0;
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'employee' => [
-                    'id' => $employee->id_karyawan,
-                    'nama' => $employee->nama
-                ],
-                'period' => $period->nama,
-                'attendance_data' => [
-                    'hadir' => $hadir,
-                    'sakit' => $sakit,
-                    'izin' => $izin,
-                    'mangkir' => $mangkir,
-                    'terlambat' => $terlambat,
-                    'total_days' => $attendances->count(),
-                    'total_work_days' => $totalWorkDays,
-                    'libur' => $attendances->where('status', 'Non-working day (NW)')->count()
-                ],
-                'calculation' => [
-                    'kehadiran_points' => $kehadiranPoints,
-                    'sakit_points' => $sakitPoints,
-                    'izin_points' => $izinPoints,
-                    'mangkir_points' => $mangkirPoints,
-                    'sub_total' => $subTotal,
-                    'terlambat_points' => $terlambatPoints,
-                    'total_points_x' => $totalPointsX,
-                    'max_points_y' => $maxPointsY,
-                    'attendance_percent' => round($attendancePercent, 2),
-                    'final_score' => $score
-                ],
-                'config' => $config
-            ]
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Error calculating attendance data: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Error calculating attendance data: ' . $e->getMessage()
-        ], 500);
-    }
-}
-
-/**
- * Ambil konfigurasi absensi dari KPI template
- */
-private function getAttendanceConfigFromKpiTemplate($employeeId, $periodeId)
-{
-    try {
-        $employee = Employee::with(['roles.division'])->find($employeeId);
-        $divisionId = $employee->roles->first()->division_id ?? null;
-
-        // Cari di KPI Aktif (dengan periode_id)
-        $kpis = Kpi::where('periode_id', $periodeId)
-            ->where(function ($query) use ($divisionId) {
-                $query->where('is_global', true);
-                if ($divisionId) {
-                    $query->orWhereHas('divisions', function ($q) use ($divisionId) {
-                        $q->where('divisions.id_divisi', $divisionId);
-                    });
-                }
-            })
-            ->with(['points'])
-            ->get();
-
-        // Cari point absensi dengan config
-        foreach ($kpis as $kpi) {
-            foreach ($kpi->points as $point) {
-                $isAbsensi = stripos($point->nama, 'absensi') !== false || 
-                            stripos($point->nama, 'kehadiran') !== false;
-                
-                if ($isAbsensi && !empty($point->attendance_config)) {
-                    $config = json_decode($point->attendance_config, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        Log::info("✅ USING ATTENDANCE CONFIG FROM KPI:", [
-                            'point_id' => $point->id_point,
-                            'point_name' => $point->nama,
-                            'config' => $config
-                        ]);
-                        return $config;
-                    }
-                }
-            }
-        }
-
-        // Fallback ke default
-        Log::warning("❌ NO ATTENDANCE CONFIG FOUND, USING DEFAULT");
-        return [
-            'hadir_multiplier' => 3,
-            'sakit_multiplier' => 0,
-            'izin_multiplier' => 0,
-            'mangkir_multiplier' => -3,
-            'terlambat_multiplier' => -2,
-            'workday_multiplier' => 2
-        ];
-
-    } catch (\Exception $e) {
-        Log::error('Error getting attendance config: ' . $e->getMessage());
-        return [
-            'hadir_multiplier' => 3,
-            'sakit_multiplier' => 0,
-            'izin_multiplier' => 0,
-            'mangkir_multiplier' => -3,
-            'terlambat_multiplier' => -2,
-            'workday_multiplier' => 2
-        ];
-    }
-}
 
 /**
  * Ambil konfigurasi multiplier dari point absensi
@@ -682,10 +409,9 @@ public function getAllEmployeeKpis(Request $request)
     try {
         Log::info("=== getAllEmployeeKpis - ONLY UNRATED in ACTIVE PERIOD ===");
 
-        // ⚠️ PERBAIKAN: Hanya ambil periode AKTIF dengan absensi
         $activePeriods = Period::where('kpi_published', true)
             ->where('attendance_uploaded', true)
-            ->where('status', 'active') // ⚠️ FILTER HANYA YANG AKTIF
+            ->where('status', 'active')
             ->orderBy('tanggal_mulai', 'desc')
             ->get();
 
@@ -702,7 +428,7 @@ public function getAllEmployeeKpis(Request $request)
         foreach ($activePeriods as $period) {
             Log::info("Processing ACTIVE period: {$period->nama} (ID: {$period->id_periode})");
 
-            // 1. Ambil semua Kepala Divisi yang AKTIF
+            // Ambil semua Kepala Divisi
             $kepalaDivisiEmployees = DB::table('employees')
                 ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
                 ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
@@ -719,25 +445,27 @@ public function getAllEmployeeKpis(Request $request)
                 ->get();
 
             foreach ($kepalaDivisiEmployees as $emp) {
-                // 2. CEK APAKAH MEMILIKI ABSENSI DI PERIODE INI
+                // Cek apakah memiliki absensi di periode ini
                 $hasAttendance = DB::table('attendances')
                     ->where('employee_id', $emp->id_karyawan)
                     ->where('periode_id', $period->id_periode)
                     ->exists();
 
                 if (!$hasAttendance) {
-                    continue; // Skip kalo ga ada absensi
+                    continue;
                 }
 
-                // 3. ✅ CUMA TAMPILIN YANG BELUM DINILAI
-                $hasKpiScore = DB::table('kpis_has_employees')
+                // ⚠️ HITUNG TOTAL SCORE LANGSUNG: SUM(nilai_akhir) × 10
+                $totalScore = DB::table('kpis_has_employees')
                     ->where('employees_id_karyawan', $emp->id_karyawan)
                     ->where('periode_id', $period->id_periode)
-                    ->where('nilai_akhir', '>', 0)
-                    ->exists();
+                    ->sum('nilai_akhir');
 
-                if ($hasKpiScore) {
-                    continue; // Skip kalo udah dinilai
+                $finalScore = $totalScore * 10; // ⚠️ INI PERKALIAN ×10
+
+                // ✅ CUMA TAMPILIN YANG BELUM DINILAI (score = 0)
+                if ($finalScore > 0) {
+                    continue;
                 }
 
                 // Ambil detail divisi
@@ -755,26 +483,13 @@ public function getAllEmployeeKpis(Request $request)
                 $periodYear = date('Y', strtotime($period->tanggal_mulai));
 
                 // ✅ PERBAIKAN PATH FOTO
-                $photoUrl = null;
-                if ($emp->foto) {
-                    if (filter_var($emp->foto, FILTER_VALIDATE_URL)) {
-                        $photoUrl = $emp->foto;
-                    } elseif (strpos($emp->foto, 'storage/') === 0) {
-                        $photoUrl = asset($emp->foto);
-                    } elseif (strpos($emp->foto, 'profile-photos/') === 0) {
-                        $photoUrl = asset('storage/' . $emp->foto);
-                    } else {
-                        $photoUrl = asset('storage/' . $emp->foto);
-                    }
-                } else {
-                    $photoUrl = asset('assets/images/profile_av.png');
-                }
+                $photoUrl = $emp->foto ? asset('storage/' . $emp->foto) : asset('assets/images/profile_av.png');
 
                 $employeeData = [
                     'id_karyawan' => $emp->id_karyawan,
                     'nama' => $emp->nama,
                     'status' => $emp->status,
-                    'score' => 0,
+                    'score' => $finalScore, // ⚠️ SUDAH ×10
                     'period' => $period->nama,
                     'period_month' => $periodMonth,
                     'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
@@ -787,16 +502,17 @@ public function getAllEmployeeKpis(Request $request)
                 ];
 
                 $allEmployeeData[] = $employeeData;
-                Log::info("✅ Added UNRATED employee in ACTIVE period:", [
+                Log::info("✅ Added UNRATED employee:", [
                     'nama' => $emp->nama,
-                    'period' => $period->nama
+                    'period' => $period->nama,
+                    'score' => $finalScore
                 ]);
             }
         }
 
-        Log::info("Final UNRATED employees in ACTIVE periods:", [
+        Log::info("Final UNRATED employees:", [
             'total_unrated' => count($allEmployeeData),
-            'active_periods_count' => $activePeriods->count()
+            'active_periods' => $activePeriods->count()
         ]);
 
         return response()->json([
@@ -805,7 +521,7 @@ public function getAllEmployeeKpis(Request $request)
             'debug_info' => [
                 'total_active_periods' => $activePeriods->count(),
                 'total_unrated_employees' => count($allEmployeeData),
-                'note' => 'Hanya menampilkan karyawan yang BELUM dinilai di periode AKTIF'
+                'note' => 'Score = SUM(nilai_akhir) × 10, hanya menampilkan yang score = 0'
             ]
         ]);
 
@@ -818,76 +534,77 @@ public function getAllEmployeeKpis(Request $request)
     }
 }
     
-    public function getEmployeeScoresByPeriod($periodId)
-    {
-        try {
-            $period = Period::findOrFail($periodId);
+public function getEmployeeScoresByPeriod($periodId)
+{
+    try {
+        $period = Period::findOrFail($periodId);
 
-            $employeeScores = DB::table('kpis_has_employees')
-                ->where('periode_id', $periodId)
-                ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
-                ->select(
-                    'employees.id_karyawan',
-                    'employees.nama',
-                    'employees.status',
-                    'employees.foto',
-                    DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
-                )
-                ->where('employees.status', 'Aktif')
-                ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
-                ->orderBy('total_score', 'desc')
-                ->get();
+        // ⚠️ HITUNG LANGSUNG: SUM(nilai_akhir) × 10
+        $employeeScores = DB::table('kpis_has_employees')
+            ->where('periode_id', $periodId)
+            ->join('employees', 'kpis_has_employees.employees_id_karyawan', '=', 'employees.id_karyawan')
+            ->select(
+                'employees.id_karyawan',
+                'employees.nama',
+                'employees.status',
+                'employees.foto',
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) * 10 as total_score') // ⚠️ ×10 DI SINI
+            )
+            ->where('employees.status', 'Aktif')
+            ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
+            ->orderBy('total_score', 'desc')
+            ->get();
 
-            $formattedData = [];
+        $formattedData = [];
 
-            foreach ($employeeScores as $emp) {
-                $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
-                $division = '-';
-                $position = '-';
-                
-                if ($employeeDetails && $employeeDetails->roles->count() > 0) {
-                    $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
-                    $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
-                }
-
-                // ⚠️ PERBAIKAN: Ambil bulan dari tanggal_mulai periode
-                $periodMonth = date('F', strtotime($period->tanggal_mulai));
-                $periodYear = date('Y', strtotime($period->tanggal_mulai));
-
-                $formattedData[] = [
-                    'id_karyawan' => $emp->id_karyawan,
-                    'nama' => $emp->nama,
-                    'status' => $emp->status,
-                    'score' => floatval($emp->total_score),
-                    'period' => $period->nama,
-                    'period_month' => $periodMonth,
-                    'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
-                    'period_year' => $periodYear,
-                    'photo' => $emp->foto ?? 'assets/images/profile_av.png',
-                    'division' => $division,
-                    'position' => $position
-                ];
+        foreach ($employeeScores as $emp) {
+            $employeeDetails = Employee::with(['roles.division'])->find($emp->id_karyawan);
+            $division = '-';
+            $position = '-';
+            
+            if ($employeeDetails && $employeeDetails->roles->count() > 0) {
+                $division = $employeeDetails->roles[0]->division->nama_divisi ?? '-';
+                $position = $employeeDetails->roles[0]->nama_jabatan ?? '-';
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => $formattedData,
-                'period_info' => [
-                    'id' => $period->id_periode,
-                    'nama' => $period->nama,
-                    'tanggal_mulai' => $period->tanggal_mulai,
-                    'period_month' => date('F', strtotime($period->tanggal_mulai))
-                ]
-            ]);
+            $periodMonth = date('F', strtotime($period->tanggal_mulai));
+            $periodYear = date('Y', strtotime($period->tanggal_selesai));
 
-        } catch (\Exception $e) {
-            Log::error('Failed to fetch KPI data for period: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
-            ], 500);
+            $formattedData[] = [
+                'id_karyawan' => $emp->id_karyawan,
+                'nama' => $emp->nama,
+                'status' => $emp->status,
+                'score' => floatval($emp->total_score), // ⚠️ INI SUDAH ×10
+                'period' => $period->nama,
+                'period_month' => $periodMonth,
+                'period_month_number' => date('n', strtotime($period->tanggal_mulai)),
+                'period_year' => $periodYear,
+                'photo' => $emp->foto ? asset('storage/' . $emp->foto) : asset('assets/images/profile_av.png'),
+                'division' => $division,
+                'position' => $position,
+                'period_id' => $periodId
+            ];
         }
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedData,
+            'period_info' => [
+                'id' => $period->id_periode,
+                'nama' => $period->nama,
+                'tanggal_mulai' => $period->tanggal_mulai,
+                'period_month' => date('F', strtotime($period->tanggal_mulai))
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Failed to fetch KPI data for period: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch KPI data: ' . $e->getMessage()
+        ], 500);
     }
+}
     
 public function getEmployeeKpiDetail($employeeId, $periodId = null)
 {
@@ -915,19 +632,16 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
 
         $period = Period::findOrFail($periodId);
 
-        // ⚠️ PERBAIKAN: AMBIL TOTAL SCORE DARI SUMBER YANG SAMA DENGAN LIST
-        $totalScore = DB::table('kpis_has_employees')
-            ->where('employees_id_karyawan', $employeeId)
-            ->where('periode_id', $periodId)
-            ->sum('nilai_akhir');
+        // ⚠️ PERBAIKAN: HITUNG TOTAL SCORE DENGAN RUMUS BARU
+        $totalScore = $this->calculateTotalScoreWithNewFormula($employeeId, $periodId);
 
-        // ⚠️ PERBAIKAN: Ambil detail KPI dengan nilai REAL dari database
-        $kpiDetails = $this->getKpiDetailsFromDatabase($employeeId, $periodId);
+        // ⚠️ PERBAIKAN: Ambil detail KPI dengan rumus baru
+        $kpiDetails = $this->getKpiDetailsWithNewFormula($employeeId, $periodId);
 
-        // Hitung ranking - SAMA DENGAN LIST
+        // Hitung ranking
         $allEmployeeScores = DB::table('kpis_has_employees')
             ->where('periode_id', $periodId)
-            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) as total_score'))
+            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) * 10 as total_score')) // ⚠️ ×10
             ->groupBy('employees_id_karyawan')
             ->orderBy('total_score', 'desc')
             ->get();
@@ -951,9 +665,9 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
                 ],
                 'period' => $period,
                 'kpi_summary' => [
-                    'total_score' => round($totalScore, 2), // ⚠️ PAKAI INI, SAMA DENGAN LIST
-                    'average_score' => round($totalScore, 2), // Untuk konsistensi
-                    'average_contribution' => round($totalScore, 2), // Untuk konsistensi
+                    'total_score' => round($totalScore, 2),
+                    'average_score' => round($totalScore, 2),
+                    'average_contribution' => round($totalScore, 2),
                     'performance_status' => $this->getStatusByContribution($totalScore),
                     'ranking' => $ranking,
                     'total_employees' => $totalEmployees
@@ -971,11 +685,95 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
     }
 }
 
-private function getKpiDetailsFromDatabase($employeeId, $periodId)
+// ⚠️ METHOD BARU: Hitung total score dengan rumus baru
+private function calculateTotalScoreWithNewFormula($employeeId, $periodId)
+{
+    try {
+        $employee = Employee::with(['roles.division'])->find($employeeId);
+        $divisionId = $employee->roles->first()->division_id ?? null;
+
+        $kpis = Kpi::where('periode_id', $periodId)
+            ->where(function ($query) use ($divisionId) {
+                $query->where('is_global', true);
+                if ($divisionId) {
+                    $query->orWhereHas('divisions', function ($q) use ($divisionId) {
+                        $q->where('divisions.id_divisi', $divisionId);
+                    });
+                }
+            })
+            ->with(['points.questions'])
+            ->get();
+
+        $totalAllKpis = 0;
+
+        foreach ($kpis as $kpi) {
+            $totalAspekScore = 0;
+
+            foreach ($kpi->points as $point) {
+                $pointScore = 0;
+                $isAbsensi = stripos($point->nama, 'absensi') !== false;
+
+                if ($isAbsensi) {
+                    // RUMUS ABSENSI: (nilai_absensi × bobot) / 100
+                    $kpisHasEmployeeId = DB::table('kpis_has_employees')
+                        ->where('kpis_id_kpi', $kpi->id_kpi)
+                        ->where('employees_id_karyawan', $employeeId)
+                        ->where('periode_id', $periodId)
+                        ->value('id');
+
+                    if ($kpisHasEmployeeId) {
+                        $pointRecord = DB::table('kpi_points_has_employee')
+                            ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                            ->where('kpi_point_id', $point->id_point)
+                            ->first();
+
+                        if ($pointRecord) {
+                            $pointScore = ($pointRecord->nilai_absensi * floatval($point->bobot)) / 100;
+                        }
+                    }
+                } else {
+                    // RUMUS NORMAL: (rata-rata × 2.5) × (bobot / 100)
+                    $pointTotal = 0;
+                    $answeredQuestions = 0;
+
+                    foreach ($point->questions as $q) {
+                        $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                            ->where('kpi_question_id_question', $q->id_question)
+                            ->where('periode_id', $periodId)
+                            ->first();
+
+                        if ($score && $score->nilai !== null) {
+                            $pointTotal += $score->nilai;
+                            $answeredQuestions++;
+                        }
+                    }
+
+                    if ($answeredQuestions > 0) {
+                        $avgQuestionScore = $pointTotal / $answeredQuestions;
+                        $pointScore = ($avgQuestionScore * 2.5) * (floatval($point->bobot) / 100);
+                    }
+                }
+
+                $totalAspekScore += $pointScore;
+            }
+
+            $totalAllKpis += $totalAspekScore;
+        }
+
+        // ⚠️ RUMUS FINAL: Total semua aspek × 10
+        return $totalAllKpis * 10;
+
+    } catch (\Exception $e) {
+        Log::error('Error calculating total score: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// ⚠️ METHOD BARU: Get KPI details dengan rumus baru
+private function getKpiDetailsWithNewFormula($employeeId, $periodId)
 {
     $kpiData = [];
     
-    // Ambil KPI berdasarkan divisi employee - LOGIC YANG SAMA DENGAN LIST
     $employee = Employee::with(['roles.division'])->find($employeeId);
     $divisionId = $employee->roles->first()->division_id ?? null;
 
@@ -993,26 +791,9 @@ private function getKpiDetailsFromDatabase($employeeId, $periodId)
 
     foreach ($kpis as $kpi) {
         $aspekUtama = $kpi->nama;
-        $kpiBobot = floatval($kpi->bobot);
-        
-        // ⚠️ AMBIL NILAI AKHIR DARI DATABASE - SUMBER YANG SAMA DENGAN LIST
-        $kpiFinalScore = DB::table('kpis_has_employees')
-            ->where('kpis_id_kpi', $kpi->id_kpi)
-            ->where('employees_id_karyawan', $employeeId)
-            ->where('periode_id', $periodId)
-            ->value('nilai_akhir');
+        $totalAspekScore = 0;
 
-        // Total Aspek Utama - PAKAI NILAI DATABASE YANG REAL
-        $kpiData[] = [
-            'aspek_kpi' => $aspekUtama,
-            'sub_aspek_name' => 'TOTAL ASPEK',
-            'score' => floatval($kpiFinalScore) ?? 0,
-            'bobot' => $kpiBobot,
-            'kontribusi' => floatval($kpiFinalScore) ?? 0,
-            'is_total_aspek' => true
-        ];
-
-        // Untuk sub-aspek, ambil nilai REAL dari database
+        // DETAIL SUB-ASPEK
         $kpisHasEmployeeId = DB::table('kpis_has_employees')
             ->where('kpis_id_kpi', $kpi->id_kpi)
             ->where('employees_id_karyawan', $employeeId)
@@ -1021,19 +802,27 @@ private function getKpiDetailsFromDatabase($employeeId, $periodId)
 
         foreach ($kpi->points as $point) {
             $pointScore = 0;
-            $isAbsensi = stripos($point->nama, 'absensi') !== false 
-                      || stripos($point->nama, 'kehadiran') !== false;
+            $isAbsensi = stripos($point->nama, 'absensi') !== false;
 
-            // ⚠️ AMBIL NILAI REAL DARI DATABASE
             if ($isAbsensi && $kpisHasEmployeeId) {
-                // Untuk absensi - ambil dari nilai_absensi
                 $pointRecord = DB::table('kpi_points_has_employee')
                     ->where('kpis_has_employee_id', $kpisHasEmployeeId)
                     ->where('kpi_point_id', $point->id_point)
                     ->first();
-                $pointScore = $pointRecord->nilai_absensi ?? 0;
+                
+                // RUMUS ABSENSI: (nilai_absensi × bobot) / 100
+                $pointScore = ($pointRecord->nilai_absensi * floatval($point->bobot)) / 100;
+                
+                $kpiData[] = [
+                    'aspek_kpi' => $aspekUtama,
+                    'sub_aspek_name' => $point->nama,
+                    'score' => $pointRecord->nilai_absensi ?? 0, // Nilai mentah
+                    'bobot' => floatval($point->bobot),
+                    'kontribusi' => $pointScore, // Kontribusi setelah dikali bobot
+                    'is_total_aspek' => false
+                ];
             } else {
-                // Untuk non-absensi - hitung dari jawaban
+                // RUMUS NORMAL: (rata-rata × 2.5) × (bobot / 100)
                 $pointTotal = 0;
                 $answeredQuestions = 0;
 
@@ -1044,30 +833,48 @@ private function getKpiDetailsFromDatabase($employeeId, $periodId)
                         ->first();
 
                     if ($answer && $answer->nilai !== null) {
-                        // Konversi 1-4 ke 0-100 (SAMA DENGAN PERHITUNGAN ASLI)
-                        $questionScore = (($answer->nilai - 1) / 3) * 100;
-                        $pointTotal += $questionScore;
+                        $pointTotal += $answer->nilai;
                         $answeredQuestions++;
                     }
                 }
-                $pointScore = $answeredQuestions > 0 ? ($pointTotal / $answeredQuestions) : 0;
+
+                $rawScore = 0;
+                $pointScore = 0;
+
+                if ($answeredQuestions > 0) {
+                    $avgQuestionScore = $pointTotal / $answeredQuestions;
+                    $rawScore = $avgQuestionScore * 2.5; // Konversi ke 0-10
+                    $pointScore = $rawScore * (floatval($point->bobot) / 100);
+                }
+
+                $kpiData[] = [
+                    'aspek_kpi' => $aspekUtama,
+                    'sub_aspek_name' => $point->nama,
+                    'score' => $rawScore, // Nilai mentah (0-10)
+                    'bobot' => floatval($point->bobot),
+                    'kontribusi' => $pointScore, // Kontribusi setelah dikali bobot
+                    'is_total_aspek' => false
+                ];
             }
 
-            $pointBobot = floatval($point->bobot) ?? 0;
-            
-            $kpiData[] = [
-                'aspek_kpi' => $aspekUtama,
-                'sub_aspek_name' => $point->nama,
-                'score' => $pointScore, // NILAI REAL
-                'bobot' => $pointBobot,
-                'kontribusi' => ($pointScore * $pointBobot) / 100, // Kontribusi
-                'is_total_aspek' => false
-            ];
+            $totalAspekScore += $pointScore;
         }
+
+        // TOTAL ASPEK UTAMA
+        $kpiData[] = [
+            'aspek_kpi' => $aspekUtama,
+            'sub_aspek_name' => 'TOTAL ASPEK',
+            'score' => $totalAspekScore * 10, // Nilai aspek × 10
+            'bobot' => floatval($kpi->bobot),
+            'kontribusi' => $totalAspekScore, // Kontribusi asli
+            'is_total_aspek' => true
+        ];
     }
 
     return $kpiData;
 }
+
+
 
     public function getUnratedEmployees($divisionId)
     {
@@ -1562,406 +1369,8 @@ private function getKpiDetailsFromDatabase($employeeId, $periodId)
     return $monthlyData;
 }
     
-    // Private methods
-    private function calculateAttendanceScore($employeeId, $periodeId, $pointBobot, $attendanceConfig = null)
-    {
-        try {
-            // Ambil data absensi
-            $attendances = Attendance::where('employee_id', $employeeId)
-                ->where('periode_id', $periodeId)
-                ->get();
 
-            // Hitung berdasarkan jenis absensi
-            $hadir = $attendances->where('status', 'Present at workday (PW)')->count();
-            $sakit = $attendances->where('status', 'Sick (S)')->count();
-            $izin = $attendances->where('status', 'Permission (I)')->count();
-            $mangkir = $attendances->where('status', 'Absent (A)')->count();
-            $terlambat = $attendances->where('late', '>', 0)->count();
 
-            // Total hari kerja dalam periode
-            $totalDays = $attendances->count();
-
-            // ⚠️ RUMUS DINAMIS - DITERIMA DARI FRONTEND
-            $config = $attendanceConfig ?? [
-                'hadir_multiplier' => 3,
-                'sakit_multiplier' => 0,
-                'izin_multiplier' => 0,
-                'mangkir_multiplier' => -3,
-                'terlambat_multiplier' => -2,
-                'workday_multiplier' => 2
-            ];
-
-            // Hitung total point (x)
-            $totalPoints = ($hadir * $config['hadir_multiplier']) +
-                ($sakit * $config['sakit_multiplier']) +
-                ($izin * $config['izin_multiplier']) +
-                ($mangkir * $config['mangkir_multiplier']) +
-                ($terlambat * $config['terlambat_multiplier']);
-
-            // Hitung total point maksimal (y)
-            $maxPoints = $totalDays * $config['workday_multiplier'];
-
-            // Hitung persentase kehadiran
-            $attendancePercent = $maxPoints > 0 ? ($totalPoints / $maxPoints) * 100 : 0;
-
-            // ⚠️ KONVERSI KE SKALA 0-100 (sesuai rumus Excel)
-            if ($attendancePercent >= 100) {
-                $score = 10;
-            } elseif ($attendancePercent >= 90) {
-                $score = 8;
-            } elseif ($attendancePercent >= 80) {
-                $score = 6;
-            } elseif ($attendancePercent >= 65) {
-                $score = 4;
-            } elseif ($attendancePercent >= 50) {
-                $score = 2;
-            } else {
-                $score = 0;
-            }
-
-            return $score;
-        } catch (\Exception $e) {
-            Log::error('Error calculating attendance score: ' . $e->getMessage());
-            return 0;
-        }
-    }
-    private function saveAttendanceScore($employeeId, $periodeId, $pointId, $finalScore)
-    {
-        try {
-            Log::info("=== START SAVE ATTENDANCE SCORE ===", [
-                'employee_id' => $employeeId,
-                'periode_id' => $periodeId,
-                'point_id' => $pointId,
-                'final_score' => $finalScore
-            ]);
-
-            $point = KpiPoint::find($pointId);
-            if (!$point) {
-                Log::error("KPI Point not found: {$pointId}");
-                return false;
-            }
-
-            $kpiId = $point->kpis_id_kpi;
-            $originalBobot = $point->bobot; // Simpan bobot asli
-
-            Log::info("Found KPI Point:", [
-                'point_name' => $point->nama,
-                'kpi_id' => $kpiId,
-                'point_bobot' => $originalBobot
-            ]);
-
-            // Cari atau buat record kpis_has_employees
-            $kpisHasEmployeeId = DB::table('kpis_has_employees')
-                ->where('kpis_id_kpi', $kpiId)
-                ->where('employees_id_karyawan', $employeeId)
-                ->where('periode_id', $periodeId)
-                ->value('id');
-
-            if (!$kpisHasEmployeeId) {
-                $kpisHasEmployeeId = DB::table('kpis_has_employees')->insertGetId([
-                    'kpis_id_kpi' => $kpiId,
-                    'employees_id_karyawan' => $employeeId,
-                    'periode_id' => $periodeId,
-                    'tahun' => date('Y'),
-                    'bulan' => date('m'),
-                    'nilai_akhir' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            // ⚠️ PERBAIKAN: Simpan nilai absensi di kolom nilai_absensi, bobot tetap asli
-            $existingRecord = DB::table('kpi_points_has_employee')
-                ->where('kpis_has_employee_id', $kpisHasEmployeeId)
-                ->where('kpi_point_id', $pointId)
-                ->first();
-
-            if ($existingRecord) {
-                $updated = DB::table('kpi_points_has_employee')
-                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
-                    ->where('kpi_point_id', $pointId)
-                    ->update([
-                        'bobot' => $originalBobot, // ✅ Bobot asli
-                        'nilai_absensi' => $finalScore, // ✅ Nilai absensi di kolom baru
-                        'updated_at' => now(),
-                    ]);
-
-                Log::info("Updated kpi_points_has_employee:", [
-                    'updated' => $updated,
-                    'kpis_has_employee_id' => $kpisHasEmployeeId,
-                    'point_id' => $pointId,
-                    'bobot' => $originalBobot,
-                    'nilai_absensi' => $finalScore
-                ]);
-            } else {
-                $inserted = DB::table('kpi_points_has_employee')->insert([
-                    'kpis_has_employee_id' => $kpisHasEmployeeId,
-                    'kpi_point_id' => $pointId,
-                    'bobot' => $originalBobot, // ✅ Bobot asli
-                    'nilai_absensi' => $finalScore, // ✅ Nilai absensi di kolom baru
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                Log::info("Inserted kpi_points_has_employee:", [
-                    'inserted' => $inserted,
-                    'kpis_has_employee_id' => $kpisHasEmployeeId,
-                    'point_id' => $pointId,
-                    'bobot' => $originalBobot,
-                    'nilai_absensi' => $finalScore
-                ]);
-            }
-
-            // Hitung ulang nilai akhir KPI
-            $this->calculateSingleKpiFinalScore($kpiId, $employeeId, $periodeId);
-
-            Log::info("Attendance score saved in 'nilai_absensi' column, bobot preserved");
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Failed to save attendance score: ' . $e->getMessage());
-            return false;
-        }
-    }
-    
-private function calculateSingleKpiFinalScore($kpiId, $employeeId, $periodeId)
-{
-    try {
-        $kpi = Kpi::with(['points.questions'])->find($kpiId);
-        if (!$kpi) return 0;
-
-        $totalAspekScore = 0;
-
-        foreach ($kpi->points as $point) {
-            $pointScore = 0;
-            $isAbsensi = stripos($point->nama, 'absensi') !== false;
-
-            if ($isAbsensi) {
-                // Ambil nilai_absensi (0-100)
-                $kpisHasEmployeeId = DB::table('kpis_has_employees')
-                    ->where('kpis_id_kpi', $kpiId)
-                    ->where('employees_id_karyawan', $employeeId)
-                    ->where('periode_id', $periodeId)
-                    ->value('id');
-
-                if ($kpisHasEmployeeId) {
-                    $pointRecord = DB::table('kpi_points_has_employee')
-                        ->where('kpis_has_employee_id', $kpisHasEmployeeId)
-                        ->where('kpi_point_id', $point->id_point)
-                        ->first();
-
-                    $pointScore = $pointRecord->nilai_absensi ?? 0;
-                }
-            } else {
-                // Untuk non-absensi
-                $pointTotal = 0;
-                $answeredQuestions = 0;
-
-                foreach ($point->questions as $q) {
-                    $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
-                        ->where('kpi_question_id_question', $q->id_question)
-                        ->where('periode_id', $periodeId)
-                        ->first();
-
-                    if ($score && $score->nilai !== null) {
-                        // Konversi 1-4 ke 0-100
-                        $questionScore = (($score->nilai - 1) / 3) * 100;
-                        $pointTotal += $questionScore;
-                        $answeredQuestions++;
-                    }
-                }
-
-                $pointScore = $answeredQuestions > 0 ? ($pointTotal / $answeredQuestions) : 0;
-            }
-
-            $pointBobot = floatval($point->bobot) ?? 0;
-
-            // ⚠️ RUMUS YANG BENAR: Kontribusi = (Nilai Point × Bobot Point) / 100
-            $pointContribution = ($pointScore * $pointBobot) / 100;
-            $totalAspekScore += $pointContribution;
-
-            Log::info("Point calculation:", [
-                'point_name' => $point->nama,
-                'point_score' => $pointScore,
-                'point_bobot' => $pointBobot,
-                'contribution' => $pointContribution,
-                'formula' => "({$pointScore} × {$pointBobot}) / 100 = {$pointContribution}"
-            ]);
-        }
-
-        // ⚠️ PERBAIKAN: Nilai akhir KPI = total kontribusi semua point
-        $finalAspekScore = $totalAspekScore;
-
-        // Update database
-        DB::table('kpis_has_employees')
-            ->where('kpis_id_kpi', $kpiId)
-            ->where('employees_id_karyawan', $employeeId)
-            ->where('periode_id', $periodeId)
-            ->update(['nilai_akhir' => $finalAspekScore]);
-
-        Log::info("Final KPI Score for {$kpi->nama}:", [
-            'total_contribution' => $finalAspekScore,
-            'formula' => 'Σ(Point Score × Point Bobot) / 100'
-        ]);
-
-        return $finalAspekScore;
-    } catch (\Exception $e) {
-        Log::error('Error calculating KPI score: ' . $e->getMessage());
-        return 0;
-    }
-}
-
-    private function calculateAllFinalScores($employeeId, $periodeId)
-    {
-        try {
-            Log::info("=== CALCULATE ALL FINAL SCORES ===", [
-                'employee_id' => $employeeId,
-                'periode_id' => $periodeId
-            ]);
-
-            $employee = Employee::with(['roles.division'])->find($employeeId);
-            $divisionId = null;
-
-            if ($employee->roles && count($employee->roles) > 0) {
-                $divisionId = $employee->roles[0]->division_id ?? null;
-            }
-
-            Log::info("Employee division:", ['division_id' => $divisionId]);
-
-            $kpis = Kpi::where('periode_id', $periodeId)
-                ->where(function ($query) use ($divisionId) {
-                    $query->where('is_global', true);
-
-                    if ($divisionId) {
-                        $query->orWhereHas('divisions', function ($q) use ($divisionId) {
-                            $q->where('divisions.id_divisi', $divisionId);
-                        });
-                    }
-                })
-                ->with(['points.questions'])
-                ->get();
-
-            Log::info("KPI to calculate:", [
-                'total_kpis' => $kpis->count(),
-                'kpi_names' => $kpis->pluck('nama')
-            ]);
-
-            foreach ($kpis as $kpi) {
-                Log::info("🔍 Calculating KPI: {$kpi->nama} (ID: {$kpi->id_kpi})");
-
-                $totalAspekScore = 0;
-                $totalBobotPoint = 0;
-
-                foreach ($kpi->points as $point) {
-                    $pointScore = 0;
-                    $isAbsensi = stripos($point->nama, 'absensi') !== false;
-
-                    Log::info("  📊 Point: {$point->nama} (Absensi: {$isAbsensi})");
-
-                    if ($isAbsensi) {
-                        // Ambil dari nilai_absensi (skala 0-100)
-                        $kpisHasEmployeeId = DB::table('kpis_has_employees')
-                            ->where('kpis_id_kpi', $kpi->id_kpi)
-                            ->where('employees_id_karyawan', $employeeId)
-                            ->where('periode_id', $periodeId)
-                            ->value('id');
-
-                        Log::info("  📍 KPI Has Employee ID: {$kpisHasEmployeeId}");
-
-                        if ($kpisHasEmployeeId) {
-                            $pointRecord = DB::table('kpi_points_has_employee')
-                                ->where('kpis_has_employee_id', $kpisHasEmployeeId)
-                                ->where('kpi_point_id', $point->id_point)
-                                ->first();
-
-                            if ($pointRecord) {
-                                $pointScore = ($pointRecord->nilai_absensi ?? 0) / 10; // Konversi ke 0-10
-                                Log::info("  ✅ Absensi score from DB: {$pointRecord->nilai_absensi} → {$pointScore}/10");
-                            } else {
-                                Log::warning("  ❌ No absensi record found for point: {$point->id_point}");
-                            }
-                        }
-                    } else {
-                        // Untuk non-absensi, hitung dari jawaban questions
-                        $pointTotal = 0;
-                        $answeredQuestions = 0;
-
-                        foreach ($point->questions as $q) {
-                            $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
-                                ->where('kpi_question_id_question', $q->id_question)
-                                ->where('periode_id', $periodeId)
-                                ->first();
-
-                            if ($score && $score->nilai !== null) {
-                                $pointTotal += $score->nilai;
-                                $answeredQuestions++;
-                                Log::info("  ✅ Question answered: {$q->id_question} = {$score->nilai}");
-                            } else {
-                                Log::warning("  ❌ Question not answered: {$q->id_question}");
-                            }
-                        }
-
-                        if ($answeredQuestions > 0) {
-                            $avgQuestionScore = $pointTotal / $answeredQuestions;
-                            $pointScore = $avgQuestionScore * 2.5; // Konversi ke 0-10
-                            Log::info("  📈 Point score calculated: {$pointTotal}/{$answeredQuestions} = {$avgQuestionScore} → {$pointScore}/10");
-                        } else {
-                            Log::warning("  ❌ No questions answered for point: {$point->nama}");
-                        }
-                    }
-
-                    $pointBobot = floatval($point->bobot) ?? 0;
-                    $pointContribution = ($pointScore * $pointBobot) / 100;
-                    $totalAspekScore += $pointContribution;
-                    $totalBobotPoint += $pointBobot;
-
-                    Log::info("  🧮 Point contribution: {$pointScore} × {$pointBobot}% = {$pointContribution}");
-                }
-
-                // ⚠️ PERBAIKAN: Kalikan dengan 10 untuk konversi ke skala 0-100
-                $finalAspekScore = $totalBobotPoint > 0 ? ($totalAspekScore * 10) : 0;
-
-                Log::info("🎯 FINAL KPI SCORE for '{$kpi->nama}': {$totalAspekScore} × 10 = {$finalAspekScore}");
-
-                // Update atau create record di kpis_has_employees
-                $existingRecord = DB::table('kpis_has_employees')
-                    ->where('kpis_id_kpi', $kpi->id_kpi)
-                    ->where('employees_id_karyawan', $employeeId)
-                    ->where('periode_id', $periodeId)
-                    ->first();
-
-                if ($existingRecord) {
-                    DB::table('kpis_has_employees')
-                        ->where('kpis_id_kpi', $kpi->id_kpi)
-                        ->where('employees_id_karyawan', $employeeId)
-                        ->where('periode_id', $periodeId)
-                        ->update([
-                            'nilai_akhir' => $finalAspekScore, // Sekarang dalam skala 0-100
-                            'updated_at' => now()
-                        ]);
-                    Log::info("  ✅ Updated existing record");
-                } else {
-                    DB::table('kpis_has_employees')->insert([
-                        'kpis_id_kpi' => $kpi->id_kpi,
-                        'employees_id_karyawan' => $employeeId,
-                        'periode_id' => $periodeId,
-                        'tahun' => date('Y'),
-                        'bulan' => date('m'),
-                        'nilai_akhir' => $finalAspekScore, // Sekarang dalam skala 0-100
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    Log::info("  ✅ Created new record");
-                }
-            }
-
-            Log::info("✅ ALL FINAL SCORES CALCULATED");
-            return true;
-        } catch (\Exception $e) {
-            Log::error('❌ Error calculating final scores: ' . $e->getMessage());
-            return false;
-        }
-    }
     private function getEmployeeKpiDetails($employeeId, $periodId)
     {
         try {
@@ -2007,41 +1416,7 @@ private function calculateSingleKpiFinalScore($kpiId, $employeeId, $periodeId)
             return [];
         }
     }
-    private function getStatusByContribution($contribution)
-    {
-        $numericContribution = floatval($contribution);
-
-        if ($numericContribution >= 90) return 'Sangat Baik';
-        if ($numericContribution >= 80) return 'Baik'; 
-        if ($numericContribution >= 70) return 'Cukup';
-        if ($numericContribution >= 50) return 'Kurang';
-        return 'Sangat Kurang';
-    }
-
-    // STANDARDISASI UNTUK SEMUA METHOD
-    private function getScoreStatus($score)
-    {
-        $numericScore = floatval($score);
-        
-        if ($numericScore >= 90) return 'Sangat Baik';
-        if ($numericScore >= 80) return 'Baik';
-        if ($numericScore >= 70) return 'Cukup'; 
-        if ($numericScore >= 50) return 'Kurang';
-        return 'Sangat Kurang';
-    }
-
-    // STANDARDISASI UNTUK GRADE HURUF
-    private function getLetterGrade($score)
-    {
-        $numericScore = floatval($score);
-        
-        if ($numericScore >= 90) return 'A';
-        if ($numericScore >= 80) return 'B';
-        if ($numericScore >= 70) return 'C';
-        if ($numericScore >= 50) return 'D';
-        return 'E';
-    }   
-
+  
     private function getMonthFromPeriod($startDate, $endDate)
 {
     try {
@@ -2413,138 +1788,7 @@ private function verifyExportWithTable($employeeId, $year, $monthlyTotals)
     }
 }
 
-private function getKpiDataByDivision($employeeId, $periodId, $employeeDivisionId)
-{
-    $kpiData = [];
-    
-    // Ambil KPI berdasarkan divisi - PAKAI LOGIC YANG SAMA DENGAN TABEL
-    $kpis = Kpi::where('periode_id', $periodId)
-        ->where(function ($query) use ($employeeDivisionId) {
-            if ($employeeDivisionId) {
-                $query->whereHas('divisions', function ($q) use ($employeeDivisionId) {
-                    $q->where('divisions.id_divisi', $employeeDivisionId);
-                });
-            }
-            if (!$query->getQuery()->wheres) {
-                $query->orWhere('is_global', true);
-            }
-        })
-        ->with(['points.questions'])
-        ->get();
 
-    \Log::info("🔍 Processing KPI for export - SAME LOGIC AS TABLE");
-
-    foreach ($kpis as $kpi) {
-        $aspekUtama = $kpi->nama;
-        
-        // Ambil kpis_has_employees ID
-        $kpisHasEmployeeId = DB::table('kpis_has_employees')
-            ->where('kpis_id_kpi', $kpi->id_kpi)
-            ->where('employees_id_karyawan', $employeeId)
-            ->where('periode_id', $periodId)
-            ->value('id');
-
-        foreach ($kpi->points as $point) {
-            $subAspekName = $point->nama;
-            $pointScore = 0;
-            $isAbsensi = stripos($point->nama, 'absensi') !== false 
-                      || stripos($point->nama, 'kehadiran') !== false;
-
-            \Log::info("🎯 Point Analysis:", [
-                'point_name' => $subAspekName,
-                'is_absensi' => $isAbsensi
-            ]);
-
-            // ✅ 1. PROSES ABSENSI - AMBIL DARI nilai_absensi (0-100)
-            if ($isAbsensi && $kpisHasEmployeeId) {
-                $pointRecord = DB::table('kpi_points_has_employee')
-                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
-                    ->where('kpi_point_id', $point->id_point)
-                    ->first();
-
-                $pointScore = $pointRecord->nilai_absensi ?? 0;
-                
-                \Log::info("📊 ABSENSI SCORE:", [
-                    'point' => $subAspekName,
-                    'score' => $pointScore,
-                    'from_db' => 'kpi_points_has_employee.nilai_absensi'
-                ]);
-            } 
-            // ✅ 2. PROSES QUESTIONS - PAKAI RUMUS YANG SAMA DENGAN TABEL
-            else if ($point->questions->count() > 0) {
-                $pointTotal = 0;
-                $answeredQuestions = 0;
-
-                foreach ($point->questions as $question) {
-                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
-                        ->where('kpi_question_id_question', $question->id_question)
-                        ->where('periode_id', $periodId)
-                        ->first();
-
-                    if ($answer && $answer->nilai !== null) {
-                        // ✅ KONVERSI YANG SAMA: (nilai 1-4) → (0-100)
-                        $questionScore = (($answer->nilai - 1) / 3) * 100;
-                        $pointTotal += $questionScore;
-                        $answeredQuestions++;
-                        
-                        \Log::info("  ✅ Question converted:", [
-                            'question_id' => $question->id_question,
-                            'original_value' => $answer->nilai,
-                            'converted_value' => $questionScore
-                        ]);
-                    }
-                }
-
-                if ($answeredQuestions > 0) {
-                    $pointScore = $pointTotal / $answeredQuestions;
-                }
-
-                \Log::info("📊 QUESTIONS SCORE:", [
-                    'point' => $subAspekName,
-                    'questions_answered' => $answeredQuestions,
-                    'average_score' => $pointScore
-                ]);
-            } else {
-                \Log::info("❌ POINT SKIPPED:", [
-                    'point' => $subAspekName,
-                    'reason' => 'Not absensi and no questions'
-                ]);
-                continue;
-            }
-
-            // ✅ HITUNG KONTRIBUSI DENGAN BOBOT (SAMA DENGAN TABEL)
-            $pointBobot = floatval($point->bobot) ?? 0;
-            $pointContribution = ($pointScore * $pointBobot) / 100;
-
-            \Log::info("🧮 FINAL POINT CALCULATION:", [
-                'point' => $subAspekName,
-                'raw_score' => $pointScore,
-                'bobot' => $pointBobot,
-                'contribution' => $pointContribution,
-                'formula' => "({$pointScore} × {$pointBobot}) / 100"
-            ]);
-
-            $kpiData[] = [
-                'aspek_utama' => $aspekUtama,
-                'sub_aspek_name' => $subAspekName,
-                'score' => $pointContribution, // ✅ PAKAI KONTRIBUSI, BUKAN RAW SCORE
-                'bobot' => $pointBobot,
-                'raw_score' => $pointScore // Simpan juga untuk debug
-            ];
-        }
-    }
-
-    // ✅ HITUNG TOTAL (SAMA DENGAN CARA TABEL)
-    $totalScore = array_sum(array_column($kpiData, 'score'));
-    
-    \Log::info("🎯 FINAL EXPORT DATA - SYNCHRONIZED WITH TABLE:", [
-        'total_points' => count($kpiData),
-        'total_score' => $totalScore,
-        'data' => $kpiData
-    ]);
-
-    return $kpiData;
-}
 
 // Di KpiEvaluationController.php - method getEmployeeKpiDetail
 private function getKpiDataWithSubAspek($employeeId, $periodId)
@@ -2685,4 +1929,222 @@ private function formatExportDataWithSubAspek($exportData, $monthlyTotals, $allS
         'grouped_data' => $groupedData // Untuk grouping di Excel
     ];
 }
+
+private function getKpiDataByDivision($employeeId, $periodId, $employeeDivisionId)
+{
+    $kpiData = [];
+    
+    $kpis = Kpi::where('periode_id', $periodId)
+        ->where(function ($query) use ($employeeDivisionId) {
+            if ($employeeDivisionId) {
+                $query->whereHas('divisions', function ($q) use ($employeeDivisionId) {
+                    $q->where('divisions.id_divisi', $employeeDivisionId);
+                });
+            }
+            if (!$query->getQuery()->wheres) {
+                $query->orWhere('is_global', true);
+            }
+        })
+        ->with(['points.questions'])
+        ->get();
+
+    foreach ($kpis as $kpi) {
+        $aspekUtama = $kpi->nama;
+        
+        $kpisHasEmployeeId = DB::table('kpis_has_employees')
+            ->where('kpis_id_kpi', $kpi->id_kpi)
+            ->where('employees_id_karyawan', $employeeId)
+            ->where('periode_id', $periodId)
+            ->value('id');
+
+        foreach ($kpi->points as $point) {
+            $subAspekName = $point->nama;
+            $pointScore = 0;
+            $isAbsensi = stripos($point->nama, 'absensi') !== false 
+                      || stripos($point->nama, 'kehadiran') !== false;
+
+            // ✅ RUMUS BARU: (rata-rata × 2.5) × bobot
+            if ($isAbsensi && $kpisHasEmployeeId) {
+                $pointRecord = DB::table('kpi_points_has_employee')
+                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                    ->where('kpi_point_id', $point->id_point)
+                    ->first();
+
+                $pointScore = ($pointRecord->nilai_absensi * floatval($point->bobot)) / 100;
+                
+            } else if ($point->questions->count() > 0) {
+                $pointTotal = 0;
+                $answeredQuestions = 0;
+
+                foreach ($point->questions as $question) {
+                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $question->id_question)
+                        ->where('periode_id', $periodId)
+                        ->first();
+
+                    if ($answer && $answer->nilai !== null) {
+                        $pointTotal += $answer->nilai;
+                        $answeredQuestions++;
+                    }
+                }
+
+                if ($answeredQuestions > 0) {
+                    $avgQuestionScore = $pointTotal / $answeredQuestions;
+                    // RUMUS BARU: (rata-rata × 2.5) × (bobot / 100)
+                    $pointScore = ($avgQuestionScore * 2.5) * (floatval($point->bobot) / 100);
+                }
+            } else {
+                continue;
+            }
+
+            $kpiData[] = [
+                'aspek_utama' => $aspekUtama,
+                'sub_aspek_name' => $subAspekName,
+                'score' => $pointScore, // ✅ Sudah dalam bentuk kontribusi final
+                'bobot' => floatval($point->bobot),
+                'raw_score' => $pointScore // Untuk debug
+            ];
+        }
+    }
+
+    // ✅ HITUNG TOTAL (SAMA DENGAN CARA TABEL)
+    $totalScore = array_sum(array_column($kpiData, 'score'));
+    
+    \Log::info("🎯 FINAL EXPORT DATA - NEW FORMULA:", [
+        'total_points' => count($kpiData),
+        'total_score' => $totalScore,
+        'data' => $kpiData
+    ]);
+
+    return $kpiData;
+}
+
+private function getKpiDetailsFromDatabase($employeeId, $periodId)
+{
+    $kpiData = [];
+    
+    $employee = Employee::with(['roles.division'])->find($employeeId);
+    $divisionId = $employee->roles->first()->division_id ?? null;
+
+    $kpis = Kpi::where('periode_id', $periodId)
+        ->where(function ($query) use ($divisionId) {
+            $query->where('is_global', true);
+            if ($divisionId) {
+                $query->orWhereHas('divisions', function ($q) use ($divisionId) {
+                    $q->where('divisions.id_divisi', $divisionId);
+                });
+            }
+        })
+        ->with(['points.questions'])
+        ->get();
+
+    foreach ($kpis as $kpi) {
+        $aspekUtama = $kpi->nama;
+        
+        // Ambil nilai akhir KPI dari database
+        $kpiFinalScore = DB::table('kpis_has_employees')
+            ->where('kpis_id_kpi', $kpi->id_kpi)
+            ->where('employees_id_karyawan', $employeeId)
+            ->where('periode_id', $periodId)
+            ->value('nilai_akhir');
+
+        // TOTAL ASPEK UTAMA
+        $kpiData[] = [
+            'aspek_kpi' => $aspekUtama,
+            'sub_aspek_name' => 'TOTAL ASPEK',
+            'score' => floatval($kpiFinalScore) ?? 0,
+            'bobot' => floatval($kpi->bobot),
+            'kontribusi' => floatval($kpiFinalScore) ?? 0,
+            'is_total_aspek' => true
+        ];
+
+        // DETAIL SUB-ASPEK
+        $kpisHasEmployeeId = DB::table('kpis_has_employees')
+            ->where('kpis_id_kpi', $kpi->id_kpi)
+            ->where('employees_id_karyawan', $employeeId)
+            ->where('periode_id', $periodId)
+            ->value('id');
+
+        foreach ($kpi->points as $point) {
+            $pointScore = 0;
+            $isAbsensi = stripos($point->nama, 'absensi') !== false;
+
+            if ($isAbsensi && $kpisHasEmployeeId) {
+                $pointRecord = DB::table('kpi_points_has_employee')
+                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                    ->where('kpi_point_id', $point->id_point)
+                    ->first();
+                // RUMUS BARU: (nilai_absensi × bobot) / 100
+                $pointScore = ($pointRecord->nilai_absensi * floatval($point->bobot)) / 100;
+            } else {
+                $pointTotal = 0;
+                $answeredQuestions = 0;
+
+                foreach ($point->questions as $question) {
+                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $question->id_question)
+                        ->where('periode_id', $periodId)
+                        ->first();
+
+                    if ($answer && $answer->nilai !== null) {
+                        $pointTotal += $answer->nilai;
+                        $answeredQuestions++;
+                    }
+                }
+                // RUMUS BARU: (rata-rata × 2.5) × (bobot / 100)
+                if ($answeredQuestions > 0) {
+                    $avgQuestionScore = $pointTotal / $answeredQuestions;
+                    $pointScore = ($avgQuestionScore * 2.5) * (floatval($point->bobot) / 100);
+                }
+            }
+
+            $kpiData[] = [
+                'aspek_kpi' => $aspekUtama,
+                'sub_aspek_name' => $point->nama,
+                'score' => $pointScore,
+                'bobot' => floatval($point->bobot),
+                'kontribusi' => $pointScore,
+                'is_total_aspek' => false
+            ];
+        }
+    }
+
+    return $kpiData;
+}
+
+    private function getStatusByContribution($contribution)
+    {
+        $numericContribution = floatval($contribution);
+
+        if ($numericContribution >= 90) return 'Sangat Baik';
+        if ($numericContribution >= 80) return 'Baik'; 
+        if ($numericContribution >= 70) return 'Cukup';
+        if ($numericContribution >= 50) return 'Kurang';
+        return 'Sangat Kurang';
+    }
+
+        // STANDARDISASI UNTUK SEMUA METHOD
+    private function getScoreStatus($score)
+    {
+        $numericScore = floatval($score);
+        
+        if ($numericScore >= 90) return 'Sangat Baik';
+        if ($numericScore >= 80) return 'Baik';
+        if ($numericScore >= 70) return 'Cukup'; 
+        if ($numericScore >= 50) return 'Kurang';
+        return 'Sangat Kurang';
+    }
+
+        // STANDARDISASI UNTUK GRADE HURUF
+    private function getLetterGrade($score)
+    {
+        $numericScore = floatval($score);
+        
+        if ($numericScore >= 90) return 'A';
+        if ($numericScore >= 80) return 'B';
+        if ($numericScore >= 70) return 'C';
+        if ($numericScore >= 50) return 'D';
+        return 'E';
+    } 
+
 }

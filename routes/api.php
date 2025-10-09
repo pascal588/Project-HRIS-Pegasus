@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\KpiTemplateController;
 use App\Http\Controllers\Api\KpiPeriodController;
 use App\Http\Controllers\Api\KpiEvaluationController;
+use App\Http\Controllers\Api\KpiCalculationController;
 
 // ==================== ATTENDANCE ROUTES ====================
 Route::prefix('attendances')->group(function () {
@@ -84,7 +85,8 @@ Route::prefix('kpis')->group(function () {
   Route::get('/global', [KpiTemplateController::class, 'listGlobalKpi']);
 
   // KPI Scoring & Evaluation
-  Route::post('/submit-answers', [KpiEvaluationController::class, 'storeEmployeeScore']);
+  Route::get('/submit-answers', [KpiCalculationController::class, 'storeEmployeeScore']);
+  Route::post('/submit-answers', [KpiCalculationController::class, 'storeEmployeeScore']);
   Route::get('/attendance-summary/{employeeId}/{periodeId}', [KpiEvaluationController::class, 'getAttendanceSummary']);
   Route::post('/calculate/{employeeId}/{periodeId}', [KpiEvaluationController::class, 'calculateFinalScore']);
   Route::get('/scores/{employeeId}/{periodeId}', [KpiEvaluationController::class, 'getScoreByAspekUtama']);
@@ -109,7 +111,7 @@ Route::prefix('kpis')->group(function () {
   Route::get('/available-periods-publishing', [KpiPeriodController::class, 'getAvailablePeriodsForPublishing']);
   Route::post('/publish-to-period', [KpiPeriodController::class, 'publishToPeriod']);
 
-  Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiEvaluationController::class, 'getAttendanceCalculationData']);
+  Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiCalculationController::class, 'getAttendanceCalculationData']);
 
   // Division Reports
   Route::get('/division/{divisionId}/unrated-employees', [KpiEvaluationController::class, 'getUnratedEmployees']);

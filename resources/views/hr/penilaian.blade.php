@@ -1047,6 +1047,7 @@
                 </div>
             </div>
 
+
             <!-- PERHITUNGAN DETAIL -->
             <div class="card border-warning">
                 <div class="card-header bg-warning text-dark">
@@ -1314,73 +1315,67 @@ function goToStep(stepNumber) {
             showAlert('success', 'Berhasil', 'Progress step ini telah disimpan!');
         }
 
-function finishWizard() {
-    // Kumpulkan data absensi untuk disimpan
-    const attendanceScores = [];
+        function finishWizard() {
+            // Kumpulkan data absensi untuk disimpan
+            const attendanceScores = [];
 
-    // CARI SEMUA POINT ABSENSI DAN KUMPULKAN NILAINYA
-    stepsData.forEach(step => {
-        step.points.forEach(point => {
-            if (point.isAbsensi) {
-                const attendanceKey = `attendance_${point.pointId}`;
-                const finalScore = answersMap[attendanceKey] || 0;
-                
-                console.log(`Attendance score for point ${point.pointId}:`, finalScore);
-                
-                if (finalScore > 0) {
-                    attendanceScores.push({
-                        point_id: point.pointId,
-                        score: finalScore
-                    });
-                }
-            }
-        });
-    });
-
-    console.log('Final attendance scores to save:', attendanceScores);
-
-    // ⚠️ PERBAIKAN: Validasi HANYA pertanyaan yang ada di stepsData
-    let totalQuestions = 0;
-    let answeredQuestions = 0;
-
-    stepsData.forEach(step => {
-        step.points.forEach(point => {
-            if (!point.isAbsensi && point.questions && point.questions.length > 0) {
-                point.questions.forEach(question => {
-                    totalQuestions++;
-                    if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
-                        answeredQuestions++;
+            // CARI SEMUA POINT ABSENSI DAN KUMPULKAN NILAINYA
+            stepsData.forEach(step => {
+                step.points.forEach(point => {
+                    if (point.isAbsensi) {
+                        const attendanceKey = `attendance_${point.pointId}`;
+                        const finalScore = answersMap[attendanceKey] || 0;
+                        
+                        console.log(`Attendance score for point ${point.pointId}:`, finalScore);
+                        
+                        if (finalScore > 0) {
+                            attendanceScores.push({
+                                point_id: point.pointId,
+                                score: finalScore // Kirim dalam skala 0-100
+                            });
+                        }
                     }
                 });
+            });
+
+            console.log('Final attendance scores to save:', attendanceScores);
+
+            // Validasi pertanyaan normal (HANYA untuk yang bukan absensi)
+            let totalQuestions = 0;
+            let answeredQuestions = 0;
+
+            stepsData.forEach(step => {
+                step.points.forEach(point => {
+                    if (!point.isAbsensi) { // Hanya hitung yang bukan absensi
+                        point.questions.forEach(question => {
+                            totalQuestions++;
+                            if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
+                                answeredQuestions++;
+                            }
+                        });
+                    }
+                });
+            });
+
+            // ⚠️ PERUBAHAN: Validasi HARUS mengisi semua pertanyaan
+            if (answeredQuestions < totalQuestions) {
+                showAlert(
+                    'warning', 
+                    'Peringatan', 
+                    `Anda harus mengisi semua ${totalQuestions} pertanyaan sebelum menyimpan! \n\nAnda baru mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan.`
+                );
+                return; // Hentikan proses
             }
-        });
-    });
 
-    console.log('Validation Check:', {
-        totalQuestions: totalQuestions,
-        answeredQuestions: answeredQuestions,
-        stepsData: stepsData
-    });
+            // Validasi minimal harus ada jawaban atau nilai absensi
+            if (answeredQuestions === 0 && attendanceScores.length === 0) {
+                showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
+                return;
+            }
 
-    // ⚠️ PERBAIKAN: Validasi HARUS mengisi semua pertanyaan YANG ADA
-    if (answeredQuestions < totalQuestions) {
-        showAlert(
-            'warning', 
-            'Peringatan', 
-            `Anda harus mengisi semua ${totalQuestions} pertanyaan sebelum menyimpan! \n\nAnda baru mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan.\n\nPeriksa sub-aspek yang masih kosong.`
-        );
-        return;
-    }
-
-    // Validasi minimal harus ada jawaban atau nilai absensi
-    if (answeredQuestions === 0 && attendanceScores.length === 0) {
-        showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
-        return;
-    }
-
-    // Submit jika semua sudah terisi
-    submitAnswers(attendanceScores);
-}
+            // ⚠️ PERUBAHAN: Langsung submit tanpa konfirmasi jika semua sudah terisi
+            submitAnswers(attendanceScores);
+        }
 
         function submitAnswers(attendanceScores = []) {
             console.log('=== DEBUG SUBMIT ANSWERS ===');

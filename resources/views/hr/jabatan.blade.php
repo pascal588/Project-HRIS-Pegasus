@@ -9,75 +9,117 @@
 
 <style>
   .card {
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    margin-bottom: 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 16px;
+    border: 1px solid #eef2f7;
   }
 
   .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #eaeaea;
-    padding: 1rem 1.5rem;
+    background-color: #fff;
+    border-bottom: 1px solid #eef2f7;
+    padding: 1.25rem 1.5rem;
   }
 
   .card .card-body {
-    padding: 1rem;
+    padding: 1.25rem;
+  }
+
+  .table {
+    margin-bottom: 0;
   }
 
   .table th {
-    background-color: #f8f9fa;
+    background-color: #f8fafc;
     font-weight: 600;
-    color: #495057;
+    color: #374151;
+    font-size: 0.875rem;
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+
+  .table td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.875rem;
+  }
+
+  .table tbody tr:hover {
+    background-color: #fafbfc;
   }
 
   .badge {
     font-weight: 500;
-    padding: 0.5em 0.75em;
+    padding: 0.35em 0.65em;
+    font-size: 0.75rem;
+  }
+
+  .btn {
+    font-weight: 500;
+    font-size: 0.8125rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
   }
 
   .btn-outline-primary {
-    border-color: #4e73df;
-    color: #4e73df;
+    border-color: #3b82f6;
+    color: #3b82f6;
   }
 
   .btn-outline-primary:hover {
-    background-color: #4e73df;
+    background-color: #3b82f6;
     color: white;
+    transform: translateY(-1px);
   }
 
   .btn-outline-danger {
-    border-color: #e74a3b;
-    color: #e74a3b;
+    border-color: #ef4444;
+    color: #ef4444;
   }
 
   .btn-outline-danger:hover {
-    background-color: #e74a3b;
+    background-color: #ef4444;
     color: white;
+    transform: translateY(-1px);
+  }
+
+  .btn-dark {
+    background-color: #1f2937;
+    border-color: #1f2937;
+  }
+
+  .btn-dark:hover {
+    background-color: #374151;
+    border-color: #374151;
+    transform: translateY(-1px);
   }
 
   .table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    overflow: hidden;
   }
 
   .action-buttons {
     display: flex;
-    gap: 0.4rem;
-    justify-content: center;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 
   .action-buttons .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    min-width: 60px;
   }
 
   .loading-spinner {
     display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #3498db;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #3b82f6;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -93,19 +135,178 @@
   }
 
   .pagination-info {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+  }
+
+  .table-container {
+    min-height: 400px;
+    position: relative;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+  }
+
+  .empty-state i {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    color: #d1d5db;
+    opacity: 0.7;
+  }
+
+  .empty-state p {
+    margin-bottom: 0;
+    font-size: 0.9375rem;
+  }
+
+  .form-control,
+  .form-select {
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
     font-size: 0.875rem;
-    color: #6c757d;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid #eef2f7;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .modal-footer {
+    border-top: 1px solid #eef2f7;
+    padding: 1.25rem 1.5rem;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .card-header {
+      padding: 1rem;
+    }
+
+    .card .card-body {
+      padding: 1rem;
+    }
+
+    .table th,
+    .table td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .action-buttons {
+      justify-content: center;
+      gap: 0.375rem;
+    }
+
+    .action-buttons .btn {
+      min-width: 50px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
+    }
+
+    .btn-text {
+      display: none;
+    }
+
+    .pagination-info {
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+      justify-content: center;
+    }
+
+    .pagination {
+      justify-content: center !important;
+    }
   }
 
   @media (max-width: 576px) {
+    .container-xxl {
+      padding: 0 0.5rem;
+    }
+
+    .card {
+      margin-bottom: 12px;
+      border-radius: 8px;
+    }
+
+    .table-responsive {
+      border-radius: 6px;
+    }
+
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+      display: none;
+    }
+
+    .action-buttons {
+      flex-direction: row;
+      gap: 0.25rem;
+    }
+
+    .action-buttons .btn {
+      min-width: 40px;
+      padding: 0.25rem;
+    }
+
+    .action-buttons .btn i {
+      margin-right: 0 !important;
+    }
+
+    .empty-state {
+      padding: 2rem 1rem;
+    }
+
+    .empty-state i {
+      font-size: 2.5rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+      display: none;
+    }
+
     .action-buttons {
       flex-direction: column;
+      gap: 0.25rem;
     }
 
     .action-buttons .btn {
       width: 100%;
-      margin-bottom: 0.25rem;
+      min-width: auto;
+      justify-content: center;
     }
+  }
+
+  /* Pagination styling */
+  .page-link {
+    border: 1px solid #e5e7eb;
+    color: #6b7280;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .page-item.active .page-link {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+  }
+
+  .page-link:hover {
+    color: #374151;
+    background-color: #f9fafb;
+    border-color: #d1d5db;
   }
 </style>
 
@@ -116,7 +317,7 @@
       <div class="row align-items-center">
         <div class="border-0 mb-4">
           <div class="card-header py-3 no-bg bg-transparent d-flex align-items-center px-0 justify-content-between border-bottom flex-wrap">
-            <h3 class="fw-bold mb-0">Jabatan</h3>
+            <h3 class="fw-bold mb-0" style="color: #1f2937;">Manajemen Jabatan</h3>
             <div class="col-auto d-flex w-sm-100 gap-2">
               <button type="button" class="btn btn-dark btn-set-task w-sm-100 w-100 w-md-auto" id="addJabatanBtn">
                 <i class="icofont-plus-circle me-2 fs-6"></i>Tambah Jabatan
@@ -158,23 +359,22 @@
       <div class="row clearfix g-3">
         <div class="col-sm-12">
           <div class="card mb-3">
-            <div class="card-body">
+            <div class="card-body table-container">
               <!-- Loading Indicator -->
-              <div id="loadingIndicator" class="text-center py-4" style="display: none;">
-                <div class="loading-spinner"></div>
-                <p class="mt-2">Memuat data...</p>
+              <div id="loadingIndicator" class="text-center py-5" style="display: none;">
+                <div class="loading-spinner mb-3"></div>
+                <p class="text-muted">Memuat data...</p>
               </div>
 
               <div class="table-responsive" id="tableContainer">
                 <table id="jabatanTable" class="table table-hover align-middle mb-0">
                   <thead>
                     <tr>
-                      <th>No</th>
+                      <th width="60">No</th>
                       <th>Nama Jabatan</th>
-                      <th>Divisi</th>
-                      <th>Jumlah Karyawan</th>
-                      <th>Status</th>
-                      <th>Aksi</th>
+                      <th width="200">Divisi</th>
+                      <th width="140" class="text-center">Jumlah Karyawan</th>
+                      <th width="150" class="text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -184,13 +384,13 @@
               </div>
 
               <!-- Pagination Info -->
-              <div class="row mt-3">
+              <div class="row mt-4 align-items-center">
                 <div class="col-md-6">
                   <div id="paginationInfo" class="pagination-info"></div>
                 </div>
                 <div class="col-md-6">
                   <nav>
-                    <ul class="pagination justify-content-end" id="pagination">
+                    <ul class="pagination justify-content-end mb-0" id="pagination">
                       <!-- Pagination akan diisi via JavaScript -->
                     </ul>
                   </nav>
@@ -229,14 +429,6 @@
               <option value="">Pilih Divisi...</option>
             </select>
             <div class="invalid-feedback" id="divisiError"></div>
-          </div>
-
-          <div class="mb-3">
-            <label for="status" class="form-label">Status</label>
-            <select class="form-select" id="status" name="status">
-              <option value="Aktif">Aktif</option>
-              <option value="Non-Aktif">Non-Aktif</option>
-            </select>
           </div>
         </form>
       </div>
@@ -306,12 +498,8 @@
     // Load divisi options untuk dropdown
     async loadDivisiOptions() {
       try {
-        console.log('🔄 Loading divisi options...');
-
         const response = await fetch('/api/divisions');
         const result = await response.json();
-
-        console.log('📦 Divisi API Response:', result);
 
         if (!response.ok) {
           throw new Error(result.message || `HTTP error! status: ${response.status}`);
@@ -323,7 +511,7 @@
           throw new Error('Format response divisi tidak valid');
         }
       } catch (error) {
-        console.error('❌ Error loading divisions:', error);
+        console.error('Error loading divisions:', error);
         this.showAlert('error', 'Gagal memuat data divisi: ' + error.message);
       }
     }
@@ -359,12 +547,8 @@
       });
 
       try {
-        console.log('🔄 Loading jabatan data...', params.toString());
-
         const response = await fetch(`/api/roles?${params}`);
         const result = await response.json();
-
-        console.log('📦 Jabatan API Response:', result);
 
         if (!response.ok) {
           throw new Error(result.message || `HTTP error! status: ${response.status}`);
@@ -378,7 +562,7 @@
           throw new Error(result.message || 'Format response tidak valid');
         }
       } catch (error) {
-        console.error('❌ Error loading jabatan:', error);
+        console.error('Error loading jabatan:', error);
         this.showAlert('error', 'Gagal memuat data jabatan: ' + error.message);
       } finally {
         this.showLoading(false);
@@ -393,8 +577,9 @@
       if (!jabatanData || jabatanData.length === 0) {
         tbody.html(`
         <tr>
-          <td colspan="6" class="text-center py-4">
-            <i class="icofont-inbox me-2"></i>Tidak ada data jabatan
+          <td colspan="5" class="text-center py-5 empty-state">
+            <i class="icofont-inbox"></i>
+            <p class="mt-3 mb-0">Tidak ada data jabatan</p>
           </td>
         </tr>
       `);
@@ -404,37 +589,35 @@
       jabatanData.forEach((jabatan, index) => {
         const nomor = (this.currentPage - 1) * this.perPage + index + 1;
 
-        // ✅ SESUAI DENGAN RESPONSE API
         const jabatanId = jabatan.id_jabatan;
         const jabatanNama = jabatan.nama_jabatan;
         const divisiNama = jabatan.division?.nama_divisi || '-';
-        const status = jabatan.status || 'Aktif';
         const jumlahKaryawan = jabatan.jumlah_karyawan || 0;
-
-        const statusBadge = status === 'Aktif' ?
-          '<span class="badge bg-success">Aktif</span>' :
-          '<span class="badge bg-danger">Non-Aktif</span>';
 
         const row = `
         <tr>
-          <td>${nomor}</td>
-          <td>${jabatanNama}</td>
-          <td>${divisiNama}</td>
-          <td>${jumlahKaryawan}</td>
-          <td>${statusBadge}</td>
+          <td class="text-muted">${nomor}</td>
           <td>
+            <div class="fw-semibold text-dark">${jabatanNama}</div>
+          </td>
+          <td>
+            <span class="text-muted">${divisiNama}</span>
+          </td>
+          <td class="text-center">
+            <span class="badge bg-primary rounded-pill px-3 py-2">${jumlahKaryawan}</span>
+          </td>
+          <td class="text-center">
             <div class="action-buttons">
               <button class="btn btn-outline-primary btn-sm btn-edit" 
                       data-id="${jabatanId}"
                       data-nama="${jabatanNama}"
-                      data-divisi="${jabatan.division_id}"
-                      data-status="${status}">
-                <i class="icofont-edit"></i>
+                      data-divisi="${jabatan.division_id}">
+                <i class="icofont-edit me-1 btn-text"></i>Edit
               </button>
               <button class="btn btn-outline-danger btn-sm btn-delete" 
                       data-id="${jabatanId}"
                       data-nama="${jabatanNama}">
-                <i class="icofont-ui-delete"></i>
+                <i class="icofont-ui-delete me-1 btn-text"></i>Hapus
               </button>
             </div>
           </td>
@@ -549,8 +732,7 @@
         this.showModal(
           button.data('id'),
           button.data('nama'),
-          button.data('divisi'),
-          button.data('status')
+          button.data('divisi')
         );
       });
 
@@ -567,11 +749,10 @@
     }
 
     // Show modal untuk tambah/edit
-    showModal(id = null, nama = '', divisiId = '', status = 'Aktif') {
+    showModal(id = null, nama = '', divisiId = '') {
       $('#editId').val(id || '');
       $('#nama_jabatan').val(nama);
       $('#division_id').val(divisiId);
-      $('#status').val(status || 'Aktif');
 
       // Setup auto-capitalize untuk input nama jabatan
       this.setupAutoCapitalize();
@@ -585,23 +766,16 @@
 
     // Setup auto-capitalize untuk input field
     setupAutoCapitalize() {
-      // Hapus event listener sebelumnya jika ada
       $('#nama_jabatan').off('input.capitalize');
-
-      // Tambahkan event listener untuk auto-capitalize
       $('#nama_jabatan').on('input.capitalize', (e) => {
         const input = e.target;
         const cursorPosition = input.selectionStart;
         const originalValue = input.value;
 
-        // Format value dengan kapital setiap kata
         const formattedValue = this.formatCapitalize(originalValue);
 
-        // Update value hanya jika berbeda
         if (formattedValue !== originalValue) {
           input.value = formattedValue;
-
-          // Kembalikan cursor ke posisi semula
           const newPosition = cursorPosition + (formattedValue.length - originalValue.length);
           input.setSelectionRange(newPosition, newPosition);
         }
@@ -610,24 +784,20 @@
 
     // Save jabatan (create/update)
     async saveJabatan() {
-      // Format nama jabatan sebelum dikirim
       const rawNama = $('#nama_jabatan').val().trim();
       const formattedNama = this.formatCapitalize(rawNama);
 
-      // Update value di form dengan yang sudah diformat
       if (rawNama !== formattedNama) {
         $('#nama_jabatan').val(formattedNama);
       }
 
       const formData = {
         nama_jabatan: formattedNama,
-        division_id: $('#division_id').val(),
-        status: $('#status').val() || 'Aktif'
+        division_id: $('#division_id').val()
       };
 
       const editId = $('#editId').val();
 
-      // Client-side validation
       if (!this.validateForm(formData)) {
         return;
       }
@@ -637,12 +807,6 @@
       try {
         const url = editId ? `/api/roles/${editId}` : '/api/roles';
         const method = editId ? 'PUT' : 'POST';
-
-        console.log('💾 Saving jabatan:', {
-          url,
-          method,
-          formData
-        });
 
         const response = await fetch(url, {
           method: method,
@@ -655,7 +819,6 @@
         });
 
         const result = await response.json();
-        console.log('💾 Save Response:', result);
 
         if (!response.ok) {
           throw new Error(result.message || `HTTP error! status: ${response.status}`);
@@ -669,7 +832,7 @@
           throw new Error(result.message || 'Terjadi kesalahan tidak diketahui');
         }
       } catch (error) {
-        console.error('❌ Error saving jabatan:', error);
+        console.error('Error saving jabatan:', error);
         this.showAlert('error', 'Gagal menyimpan jabatan: ' + error.message);
       } finally {
         this.toggleSaveButton(false);
@@ -723,8 +886,6 @@
       this.toggleDeleteButton(true);
 
       try {
-        console.log('🗑️ Deleting jabatan:', id);
-
         const response = await fetch(`/api/roles/${id}`, {
           method: 'DELETE',
           headers: {
@@ -734,7 +895,6 @@
         });
 
         const result = await response.json();
-        console.log('🗑️ Delete Response:', result);
 
         if (!response.ok) {
           throw new Error(result.message || `HTTP error! status: ${response.status}`);
@@ -748,7 +908,7 @@
           throw new Error(result.message || 'Gagal menghapus jabatan');
         }
       } catch (error) {
-        console.error('❌ Error deleting jabatan:', error);
+        console.error('Error deleting jabatan:', error);
         this.showAlert('error', 'Gagal menghapus jabatan: ' + error.message);
       } finally {
         this.toggleDeleteButton(false);

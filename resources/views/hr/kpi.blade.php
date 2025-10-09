@@ -8,6 +8,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    overflow-x: auto;
+    flex-wrap: wrap;
   }
 
   .nav-link:not(.active) {
@@ -17,19 +19,23 @@
   .global-kpi-badge {
     background-color: #6c757d;
     color: white;
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-radius: 4px;
-    font-size: 0.75rem;
-    margin-left: 8px;
+    font-size: 0.7rem;
+    margin-left: 6px;
+    white-space: nowrap;
   }
 
   .subaspect-card {
     border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
   }
 
   .question-row {
     border-left: 2px solid #6c757d;
     padding-left: 10px;
+    margin-bottom: 0.5rem;
   }
 
   .swal2-container {
@@ -38,16 +44,18 @@
 
   .nav-tabs .nav-item {
     position: relative;
+    min-width: 120px;
   }
 
   .nav-tabs .nav-link {
     padding-right: 35px !important;
-    /* Diperbesar untuk tombol yang lebih besar */
     position: relative;
     display: flex;
     align-items: center;
     min-height: 40px;
-    /* Tinggi minimum untuk konsistensi */
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .tab-delete-btn {
@@ -59,8 +67,8 @@
     color: white;
     border: none;
     border-radius: 4px;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     cursor: pointer;
     display: flex;
@@ -68,7 +76,7 @@
     justify-content: center;
     opacity: 0;
     transition: all 0.2s ease;
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .nav-tabs .nav-link.active .tab-delete-btn {
@@ -105,6 +113,395 @@
     text-overflow: ellipsis;
     flex: 1;
     min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 0.5rem;
+    }
+
+    .card {
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+
+    .card-header {
+      padding: 0.75rem 1rem;
+    }
+
+    .card-body {
+      padding: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+    }
+
+    /* Form controls mobile */
+    .form-control,
+    .form-select {
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    /* Info cards mobile */
+    .p-3.bg-light.rounded {
+      padding: 0.75rem !important;
+      margin-bottom: 0.5rem;
+    }
+
+    .p-3.bg-light.rounded i {
+      font-size: 1.25rem !important;
+      margin-right: 0.5rem !important;
+    }
+
+    /* Button group mobile */
+    .d-flex.justify-content-between {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .d-flex.justify-content-between .btn {
+      width: 100%;
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+    }
+
+    /* Nav tabs mobile */
+    .nav-tabs-wrapper {
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+    }
+
+    .nav-tabs {
+      flex-wrap: nowrap;
+      min-width: max-content;
+    }
+
+    .nav-tabs .nav-item {
+      min-width: 100px;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
+    /* Subaspect card mobile */
+    .subaspect-card {
+      padding: 0.75rem;
+    }
+
+    .subaspect-card .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .subaspect-card .d-flex>div {
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+
+    .subaspect-card .btn {
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    /* Attendance configuration mobile */
+    .card-body.p-3 .row.g-2 {
+      margin: -0.25rem;
+    }
+
+    .card-body.p-3 .row.g-2>[class*="col-"] {
+      padding: 0.25rem;
+    }
+
+    .attendance-multiplier {
+      font-size: 0.8rem;
+    }
+
+    /* Questions mobile */
+    .input-group.mb-2 {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .input-group.mb-2 .form-control {
+      width: 100%;
+    }
+
+    .input-group.mb-2 .btn {
+      width: 100%;
+    }
+
+    /* Alert mobile */
+    .alert {
+      padding: 0.75rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .container {
+      padding: 0 0.25rem;
+    }
+
+    .body.d-flex.py-3 {
+      padding: 0.5rem 0 !important;
+    }
+
+    .card {
+      margin-bottom: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .card-header {
+      padding: 0.5rem 0.75rem;
+    }
+
+    .card-body {
+      padding: 0.75rem;
+    }
+
+    /* Grid system mobile */
+    .row.g-3 {
+      margin: -0.5rem;
+    }
+
+    .row.g-3>[class*="col-"] {
+      padding: 0.5rem;
+    }
+
+    /* Info section mobile */
+    .row.g-3 .col-md-6,
+    .row.g-3 .col-md-4 {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Form labels mobile */
+    .form-label {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .form-label.fw-bold {
+      font-size: 0.9rem;
+    }
+
+    /* Button sizes mobile */
+    .btn {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.75rem;
+    }
+
+    .btn-sm {
+      font-size: 0.75rem;
+      padding: 0.3rem 0.6rem;
+    }
+
+    /* Tab navigation mobile */
+    .nav-tabs .nav-item {
+      min-width: 90px;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+    }
+
+    .tab-delete-btn {
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+    }
+
+    .global-kpi-badge {
+      font-size: 0.65rem;
+      padding: 1px 4px;
+      margin-left: 4px;
+    }
+
+    /* Subaspect mobile optimization */
+    .subaspects-wrapper h6 {
+      font-size: 0.9rem;
+    }
+
+    .questions-list {
+      font-size: 0.875rem;
+    }
+
+    /* Attendance multipliers grid mobile */
+    .card-body.p-3 .row.g-2>[class*="col-"] {
+      flex: 0 0 50%;
+      max-width: 50%;
+    }
+
+    /* Modal adjustments for mobile */
+    .modal-dialog {
+      margin: 0.5rem;
+    }
+
+    .modal-content {
+      border-radius: 8px;
+    }
+
+    .modal-header,
+    .modal-footer {
+      padding: 0.75rem 1rem;
+    }
+
+    .modal-body {
+      padding: 1rem;
+    }
+  }
+
+  @media (max-width: 400px) {
+
+    /* Extra small devices */
+    .nav-tabs .nav-item {
+      min-width: 80px;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.35rem 0.5rem;
+      font-size: 0.7rem;
+    }
+
+    .tab-text {
+      font-size: 0.7rem;
+    }
+
+    /* Info cards extra small */
+    .p-3.bg-light.rounded {
+      padding: 0.5rem !important;
+    }
+
+    .p-3.bg-light.rounded i {
+      font-size: 1rem !important;
+      margin-right: 0.25rem !important;
+    }
+
+    .p-3.bg-light.rounded div:first-child {
+      font-size: 0.75rem;
+    }
+
+    .p-3.bg-light.rounded .fw-bold.fs-6 {
+      font-size: 0.8rem !important;
+    }
+
+    /* Attendance multipliers single column */
+    .card-body.p-3 .row.g-2>[class*="col-"] {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+
+    /* Button text adjustment */
+    .btn .bi {
+      margin-right: 0.25rem;
+    }
+
+    .btn-text {
+      font-size: 0.75rem;
+    }
+  }
+
+  /* Tablet specific adjustments */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+      max-width: 100%;
+      padding: 0 1rem;
+    }
+
+    .nav-tabs .nav-item {
+      min-width: 140px;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.6rem 1rem;
+    }
+
+    /* Subaspect card tablet */
+    .subaspect-card .d-flex {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .subaspect-card .d-flex>div {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .subaspect-card .d-flex>div:last-child {
+      flex: 0 0 auto;
+    }
+
+    /* Attendance configuration tablet */
+    .card-body.p-3 .row.g-2>[class*="col-"] {
+      flex: 0 0 33.333%;
+      max-width: 33.333%;
+    }
+  }
+
+  /* Desktop optimizations */
+  @media (min-width: 1025px) {
+    .container {
+      max-width: 1200px;
+    }
+
+    .nav-tabs .nav-item {
+      min-width: 160px;
+    }
+
+    .nav-tabs .nav-link {
+      padding: 0.75rem 1.25rem;
+    }
+  }
+
+  /* Common improvements for all devices */
+  .card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #eef2f7;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .btn {
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Loading state improvements */
+  .swal2-popup {
+    border-radius: 12px;
+  }
+
+  /* Scrollbar styling for mobile */
+  .nav-tabs-wrapper::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .nav-tabs-wrapper::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+  }
+
+  .nav-tabs-wrapper::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 2px;
+  }
+
+  .nav-tabs-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
   }
 </style>
 
@@ -162,16 +559,20 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-percent text-warning fs-4 me-3"></i>
                       <div>
                         <div>Total Bobot</div>
                         <div id="infoTotalWeight" class="fw-bold fs-6">0%</div>
+                        <!-- Tambahan untuk detail perhitungan -->
+                        <div id="weightCalculation" class="small text-muted mt-1" style="display: none;">
+                          <span id="globalWeight">0%</span> + <span id="divisionWeight">0%</span> = <span id="totalWeight">0%</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-graph-up text-danger fs-4 me-3"></i>
                       <div>
@@ -180,7 +581,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-6">
                     <div class="p-3 bg-light rounded d-flex align-items-center">
                       <i class="bi bi-list-ol text-primary fs-4 me-3"></i>
                       <div>
@@ -1168,24 +1569,39 @@
 
   function updateInfo() {
     let totalWeight = 0;
+    let globalWeight = 0;
+    let divisionWeight = 0;
 
-    // ⚠️ PERBAIKAN: Hanya hitung bobot Global jika sudah memilih divisi
+    // ⚠️ PERBAIKAN: Hitung bobot Global dan Divisi secara terpisah
     if (currentMode === "division" && currentDivisionId && window.allKpiData) {
-      // ✅ Hitung dari SEMUA data KPI (Global + Divisi) HANYA jika divisi sudah dipilih
-      totalWeight = window.allKpiData.reduce((sum, kpi) => {
-        return sum + (Number(kpi.bobot) || 0);
-      }, 0);
+      // Hitung bobot Global
+      globalWeight = window.allKpiData
+        .filter(kpi => kpi.is_global)
+        .reduce((sum, kpi) => sum + (Number(kpi.bobot) || 0), 0);
 
-      console.log('📊 Total weight calculation:', {
-        division: currentDivisionId,
-        allKPI: window.allKpiData.length,
-        globalKPIs: window.allKpiData.filter(k => k.is_global).length,
-        divisionKPIs: window.allKpiData.filter(k => !k.is_global).length,
+      // Hitung bobot Divisi
+      divisionWeight = window.allKpiData
+        .filter(kpi => !kpi.is_global)
+        .reduce((sum, kpi) => sum + (Number(kpi.bobot) || 0), 0);
+
+      totalWeight = globalWeight + divisionWeight;
+
+      console.log('📊 Detailed weight calculation:', {
+        globalWeight: globalWeight,
+        divisionWeight: divisionWeight,
         totalWeight: totalWeight
       });
+
+      // Tampilkan detail perhitungan
+      $("#weightCalculation").show();
+      $("#globalWeight").text(globalWeight + "%");
+      $("#divisionWeight").text(divisionWeight + "%");
+      $("#totalWeight").text(totalWeight + "%");
+
     } else if (currentMode === "division" && !currentDivisionId) {
-      // ⚠️ FIX: Jika mode divisi tapi belum pilih divisi, bobot = 0%
+      // ⚠️ FIX: Jika mode divisi tapi belum pilih divisi
       totalWeight = 0;
+      $("#weightCalculation").hide();
       console.log('🔴 Mode divisi dipilih tapi belum pilih divisi, bobot = 0%');
     } else if (currentMode === "global") {
       // Mode Global: hitung seperti biasa
@@ -1193,9 +1609,13 @@
         .map((_, el) => Number($(el).val()) || 0)
         .get()
         .reduce((a, b) => a + b, 0);
+
+      // Sembunyikan detail perhitungan di mode Global
+      $("#weightCalculation").hide();
     } else {
       // Fallback untuk kondisi lainnya
       totalWeight = 0;
+      $("#weightCalculation").hide();
     }
 
     $("#infoTotalWeight").text(totalWeight + "%");
@@ -1204,8 +1624,17 @@
     // Highlight jika total bobot tidak 100%
     if (totalWeight > 100) {
       $("#infoTotalWeight").addClass("text-danger");
+      $("#totalWeight").addClass("text-danger");
     } else {
       $("#infoTotalWeight").removeClass("text-danger");
+      $("#totalWeight").removeClass("text-danger");
+    }
+
+    // Highlight jika ada masalah di perhitungan detail
+    if (globalWeight > 100 || divisionWeight > 100) {
+      $("#globalWeight, #divisionWeight").addClass("text-danger");
+    } else {
+      $("#globalWeight, #divisionWeight").removeClass("text-danger");
     }
   }
 

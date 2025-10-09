@@ -180,3 +180,4 @@ Route::prefix('report')->group(function () {
     // Detail Absensi
     Route::get('/detail-absensi/{employee_id}', [App\Http\Controllers\HrController::class, 'detailAbsensi']);
 });
+

@@ -69,6 +69,28 @@
                                     </div>
                                 </div>
                                 @endif
+
+                                <!-- Rate Limiting Alert -->
+                                @if(session('login_attempts'))
+                                <div class="card border-warning mb-3" id="rateLimitAlert">
+                                    <div class="card-body text-warning">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="20" height="20" fill="currentColor" class="bi bi-shield-exclamation me-2" viewBox="0 0 16 16">
+                                                <path d="M5.338 1.59a61.44 61.44 0 0 0-2.837.856.481.481 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.725 10.725 0 0 0 2.287 2.233c.346.244.652.42.893.533.12.057.218.095.293.118a.55.55 0 0 0 .101.025.615.615 0 0 0 .1-.025c.076-.023.174-.061.294-.118.24-.113.547-.29.893-.533a10.726 10.726 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.775 11.775 0 0 1-2.517 2.453 7.159 7.159 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7.158 7.158 0 0 1-1.048-.625 11.777 11.777 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 62.456 62.456 0 0 1 5.072.56z" />
+                                                <path d="M7.001 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z" />
+                                            </svg>
+                                            <h6 class="card-title mb-0">Peringatan Keamanan</h6>
+                                        </div>
+                                        <p class="card-text mt-2 mb-0">
+                                            @if(session('login_attempts') >= 5)
+                                            Terlalu banyak percobaan login. Silakan tunggu 15 menit atau reset sandi Anda.
+                                            @else
+                                            Percobaan login gagal: {{ session('login_attempts') }}/5. Setelah 5 kali gagal, akun akan terkunci sementara.
+                                            @endif
+                                        </p>
+                                    </div>
+                                </div>
+                                @endif
                                 <!-- End Error Messages -->
 
                                 <!-- Form -->
@@ -81,7 +103,7 @@
                                     <div class="col-12">
                                         <div class="mb-2">
                                             <label class="form-label">Alamat Email</label>
-                                            <input type="email" name="email" class="form-control form-control-lg" placeholder="name@example.com" required aria-describedby="emailHelp">
+                                            <input type="email" name="email" class="form-control form-control-lg" placeholder="name@example.com" value="{{ old('email', Cookie::get('remember_email')) }}" required aria-describedby="emailHelp">
                                             <div id="emailHelp" class="form-text text-light">Masukkan alamat email yang terdaftar</div>
                                         </div>
                                     </div>
@@ -106,19 +128,39 @@
                                     </div>
                                     <div class="col-12">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="remember" id="flexCheckDefault">
+                                            <input class="form-check-input" type="checkbox" name="remember" id="flexCheckDefault" {{ Cookie::get('remember_email') ? 'checked' : '' }}>
                                             <label class="form-check-label" for="flexCheckDefault">
                                                 Ingat Saya
                                             </label>
                                         </div>
                                     </div>
                                     <div class="col-12 text-center mt-4">
-                                        <button type="submit" class="btn btn-lg btn-block btn-light lift text-uppercase" id="submitBtn">
+                                        <button type="submit" class="btn btn-lg btn-block btn-light lift text-uppercase" id="submitBtn"
+                                            @if(session('login_attempts')>= 5) disabled @endif>
+                                            @if(session('login_attempts') >= 5)
+                                            🔒 Akun Terkunci
+                                            @else
                                             {{ __('Masuk') }}
+                                            @endif
                                         </button>
                                     </div>
+
+                                    @if(session('login_attempts') >= 5)
+                                    <div class="col-12 text-center mt-3">
+                                        <div class="alert alert-warning">
+                                            <small>
+                                                <strong>Akun terkunci sementara.</strong><br>
+                                                Silakan tunggu 15 menit atau
+                                                <a href="{{ route('password.request') }}" class="alert-link">reset sandi Anda</a>.
+                                            </small>
+                                        </div>
+                                    </div>
+                                    @endif
                                 </form>
                                 <!-- End Form -->
+
+                                <!-- Login Attempts Counter (Hidden) -->
+                                <div id="loginAttempts" data-attempts="{{ session('login_attempts', 0) }}" style="display: none;"></div>
                             </div>
                         </div>
                     </div> <!-- End Row -->
@@ -138,35 +180,49 @@
             const eyeIcon = document.getElementById('eyeIcon');
             const errorAlert = document.getElementById('errorAlert');
             const successAlert = document.getElementById('successAlert');
+            const rateLimitAlert = document.getElementById('rateLimitAlert');
+            const loginAttempts = document.getElementById('loginAttempts');
+            const attemptsCount = loginAttempts ? parseInt(loginAttempts.getAttribute('data-attempts')) : 0;
 
             // Auto hide alerts after 5 seconds
-            if (errorAlert) {
-                setTimeout(() => {
-                    errorAlert.style.opacity = '0';
-                    errorAlert.style.transition = 'opacity 0.5s ease';
+            const alerts = [errorAlert, successAlert, rateLimitAlert];
+            alerts.forEach(alert => {
+                if (alert) {
                     setTimeout(() => {
-                        errorAlert.remove();
-                    }, 500);
-                }, 5000);
-            }
+                        alert.style.opacity = '0';
+                        alert.style.transition = 'opacity 0.5s ease';
+                        setTimeout(() => {
+                            alert.remove();
+                        }, 500);
+                    }, 5000);
+                }
+            });
 
-            if (successAlert) {
-                setTimeout(() => {
-                    successAlert.style.opacity = '0';
-                    successAlert.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => {
-                        successAlert.remove();
-                    }, 500);
-                }, 5000);
-            }
-
+            // Form submission handling
             if (loginForm && submitBtn) {
                 loginForm.addEventListener('submit', function(e) {
+                    // Jika sudah mencapai limit, prevent submission
+                    if (attemptsCount >= 5) {
+                        e.preventDefault();
+                        return;
+                    }
+
                     submitBtn.disabled = true;
                     submitBtn.innerHTML = 'Loading...';
+
+                    // Simpan email ke cookie jika "Ingat Saya" dicentang
+                    const rememberMe = document.getElementById('flexCheckDefault').checked;
+                    const email = document.querySelector('input[name="email"]').value;
+
+                    if (rememberMe) {
+                        document.cookie = `remember_email=${email}; max-age=${60*60*24*30}; path=/`; // 30 days
+                    } else {
+                        document.cookie = 'remember_email=; max-age=0; path=/';
+                    }
                 });
             }
 
+            // Toggle password visibility
             if (togglePassword && passwordInput && eyeIcon) {
                 togglePassword.addEventListener('click', function() {
                     const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -177,6 +233,14 @@
                     } else {
                         eyeIcon.innerHTML = '<path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>';
                     }
+                });
+            }
+
+            // Disable form jika sudah mencapai limit
+            if (attemptsCount >= 5) {
+                const inputs = loginForm.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.disabled = true;
                 });
             }
         });

@@ -15,6 +15,8 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('nama', 255);
             $table->decimal('bobot', 5, 2)->default(0);
+            $table->json('attendance_multipliers')->nullable();
+            $table->json('attendance_config')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

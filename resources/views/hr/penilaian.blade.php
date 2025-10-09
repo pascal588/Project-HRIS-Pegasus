@@ -1001,72 +1001,155 @@
         }
 
         function renderAbsenceCalculationTable(data) {
-            const calc = data.calculation;
-            
-            return `
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Jenis</th>
-                                <th>Jumlah</th>
-                                <th>Point</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Hadir</td>
-                                <td>${data.attendance_data?.hadir || 0}</td>
-                                <td>${calc.hadir_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Sakit</td>
-                                <td>${data.attendance_data?.sakit || 0}</td>
-                                <td>${calc.sakit_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Izin</td>
-                                <td>${data.attendance_data?.izin || 0}</td>
-                                <td>${calc.izin_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Mangkir</td>
-                                <td>${data.attendance_data?.mangkir || 0}</td>
-                                <td>${calc.mangkir_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Terlambat</td>
-                                <td>${data.attendance_data?.terlambat || 0}</td>
-                                <td>${calc.terlambat_points || 0}</td>
-                            </tr>
-                        </tbody>
-                        <tfoot class="table-secondary fw-bold">
-                            <tr>
-                                <td>Total Point</td>
-                                <td colspan="2">${calc.total_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Max Point</td>
-                                <td colspan="2">${calc.max_points || 0}</td>
-                            </tr>
-                            <tr>
-                                <td>Persentase</td>
-                                <td colspan="2">${calc.percentage || 0}%</td>
-                            </tr>
-                            <tr class="table-success">
-                                <td><strong>Nilai Final</strong></td>
-                                <td colspan="2"><strong>${calc.final_score || 0}</strong></td>
-                            </tr>
-                        </tfoot>
-                    </table>
+    const calc = data.calculation;
+    const attendance = data.attendance_data;
+    const config = data.config;
+    
+    return `
+        <div class="absence-calculation-card">
+            <!-- HEADER INFO -->
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="icofont-calculator me-2"></i>
+                        Ringkasan Perhitungan Absensi
+                    </h6>
                 </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block">Total Hari Kerja</small>
+                                <h5 class="mb-0 text-primary">${attendance.total_work_days}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block">Persentase Kehadiran</small>
+                                <h5 class="mb-0 ${calc.attendance_percent >= 80 ? 'text-success' : calc.attendance_percent >= 60 ? 'text-warning' : 'text-danger'}">
+                                    ${calc.attendance_percent}%
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block">Total Points</small>
+                                <h5 class="mb-0 text-info">${calc.total_points_x}/${calc.max_points_y}</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border rounded p-2 bg-success text-white">
+                                <small class="d-block">Nilai Final</small>
+                                <h4 class="mb-0">${calc.final_score}/100</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <div class="alert alert-success mt-3">
-                    <i class="icofont-check-circled"></i>
-                    <strong>Nilai absensi otomatis: ${calc.final_score || 0}/100</strong>
+            <!-- PERHITUNGAN DETAIL -->
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="icofont-calculator me-2"></i>
+                        Detail Perhitungan
+                    </h6>
                 </div>
-            `;
-        }
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Jenis</th>
+                                    <th>Jumlah</th>
+                                    <th>Multiplier</th>
+                                    <th>Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="${attendance.hadir > 0 ? 'table-success' : ''}">
+                                    <td>Hadir</td>
+                                    <td>${attendance.hadir}</td>
+                                    <td>× ${config.hadir_multiplier}</td>
+                                    <td>${calc.kehadiran_points}</td>
+                                </tr>
+                                <tr class="${attendance.sakit > 0 ? 'table-warning' : ''}">
+                                    <td>Sakit</td>
+                                    <td>${attendance.sakit}</td>
+                                    <td>× ${config.sakit_multiplier}</td>
+                                    <td>${calc.sakit_points}</td>
+                                </tr>
+                                <tr class="${attendance.izin > 0 ? 'table-info' : ''}">
+                                    <td>Izin</td>
+                                    <td>${attendance.izin}</td>
+                                    <td>× ${config.izin_multiplier}</td>
+                                    <td>${calc.izin_points}</td>
+                                </tr>
+                                <tr class="${attendance.mangkir > 0 ? 'table-danger' : ''}">
+                                    <td>Mangkir</td>
+                                    <td>${attendance.mangkir}</td>
+                                    <td>× ${config.mangkir_multiplier}</td>
+                                    <td>${calc.mangkir_points}</td>
+                                </tr>
+                                <tr class="${attendance.terlambat > 0 ? 'table-danger' : ''}">
+                                    <td>Terlambat</td>
+                                    <td>${attendance.terlambat}</td>
+                                    <td>× ${config.terlambat_multiplier}</td>
+                                    <td>${calc.terlambat_points}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-secondary fw-bold">
+                                <tr>
+                                    <td colspan="3">Sub Total</td>
+                                    <td>${calc.sub_total}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">Total Points (X)</td>
+                                    <td>${calc.total_points_x}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3">Max Points (Y) = ${attendance.total_work_days} × ${config.workday_multiplier}</td>
+                                    <td>${calc.max_points_y}</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td colspan="3">Persentase = (${calc.total_points_x} ÷ ${calc.max_points_y}) × 100</td>
+                                    <td>${calc.attendance_percent}%</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td colspan="3"><strong>Nilai Final</strong></td>
+                                    <td><strong>${calc.final_score}/100</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- KONVERSI NILAI -->
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <h6 class="mb-2">Konversi Persentase ke Nilai:</h6>
+                        <div class="small">
+                            <span class="badge ${calc.attendance_percent >= 100 ? 'bg-success' : 'bg-light text-dark'}">≥100% = 100</span>
+                            <span class="badge ${calc.attendance_percent >= 90 && calc.attendance_percent < 100 ? 'bg-success' : 'bg-light text-dark'}">90-99% = 80</span>
+                            <span class="badge ${calc.attendance_percent >= 80 && calc.attendance_percent < 90 ? 'bg-warning' : 'bg-light text-dark'}">80-89% = 60</span>
+                            <span class="badge ${calc.attendance_percent >= 65 && calc.attendance_percent < 80 ? 'bg-warning' : 'bg-light text-dark'}">65-79% = 40</span>
+                            <span class="badge ${calc.attendance_percent >= 50 && calc.attendance_percent < 65 ? 'bg-danger' : 'bg-light text-dark'}">50-64% = 20</span>
+                            <span class="badge ${calc.attendance_percent < 50 ? 'bg-danger' : 'bg-light text-dark'}">&lt;50% = 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-success mt-3">
+                <div class="d-flex align-items-center">
+                    <i class="icofont-check-circled fs-4 me-3"></i>
+                    <div>
+                        <strong>Nilai absensi otomatis: ${calc.final_score}/100</strong><br>
+                        <small class="text-muted">Nilai ini akan otomatis tersimpan saat Anda menyelesaikan penilaian</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 function goToStep(stepNumber) {
     if (stepNumber < 1 || stepNumber > totalSteps) return;
 
@@ -1231,67 +1314,73 @@ function goToStep(stepNumber) {
             showAlert('success', 'Berhasil', 'Progress step ini telah disimpan!');
         }
 
-        function finishWizard() {
-            // Kumpulkan data absensi untuk disimpan
-            const attendanceScores = [];
+function finishWizard() {
+    // Kumpulkan data absensi untuk disimpan
+    const attendanceScores = [];
 
-            // CARI SEMUA POINT ABSENSI DAN KUMPULKAN NILAINYA
-            stepsData.forEach(step => {
-                step.points.forEach(point => {
-                    if (point.isAbsensi) {
-                        const attendanceKey = `attendance_${point.pointId}`;
-                        const finalScore = answersMap[attendanceKey] || 0;
-                        
-                        console.log(`Attendance score for point ${point.pointId}:`, finalScore);
-                        
-                        if (finalScore > 0) {
-                            attendanceScores.push({
-                                point_id: point.pointId,
-                                score: finalScore // Kirim dalam skala 0-100
-                            });
-                        }
+    // CARI SEMUA POINT ABSENSI DAN KUMPULKAN NILAINYA
+    stepsData.forEach(step => {
+        step.points.forEach(point => {
+            if (point.isAbsensi) {
+                const attendanceKey = `attendance_${point.pointId}`;
+                const finalScore = answersMap[attendanceKey] || 0;
+                
+                console.log(`Attendance score for point ${point.pointId}:`, finalScore);
+                
+                if (finalScore > 0) {
+                    attendanceScores.push({
+                        point_id: point.pointId,
+                        score: finalScore
+                    });
+                }
+            }
+        });
+    });
+
+    console.log('Final attendance scores to save:', attendanceScores);
+
+    // ⚠️ PERBAIKAN: Validasi HANYA pertanyaan yang ada di stepsData
+    let totalQuestions = 0;
+    let answeredQuestions = 0;
+
+    stepsData.forEach(step => {
+        step.points.forEach(point => {
+            if (!point.isAbsensi && point.questions && point.questions.length > 0) {
+                point.questions.forEach(question => {
+                    totalQuestions++;
+                    if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
+                        answeredQuestions++;
                     }
                 });
-            });
-
-            console.log('Final attendance scores to save:', attendanceScores);
-
-            // Validasi pertanyaan normal (HANYA untuk yang bukan absensi)
-            let totalQuestions = 0;
-            let answeredQuestions = 0;
-
-            stepsData.forEach(step => {
-                step.points.forEach(point => {
-                    if (!point.isAbsensi) { // Hanya hitung yang bukan absensi
-                        point.questions.forEach(question => {
-                            totalQuestions++;
-                            if (answersMap[question.id] !== undefined && answersMap[question.id] !== null) {
-                                answeredQuestions++;
-                            }
-                        });
-                    }
-                });
-            });
-
-            // ⚠️ PERUBAHAN: Validasi HARUS mengisi semua pertanyaan
-            if (answeredQuestions < totalQuestions) {
-                showAlert(
-                    'warning', 
-                    'Peringatan', 
-                    `Anda harus mengisi semua ${totalQuestions} pertanyaan sebelum menyimpan! \n\nAnda baru mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan.`
-                );
-                return; // Hentikan proses
             }
+        });
+    });
 
-            // Validasi minimal harus ada jawaban atau nilai absensi
-            if (answeredQuestions === 0 && attendanceScores.length === 0) {
-                showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
-                return;
-            }
+    console.log('Validation Check:', {
+        totalQuestions: totalQuestions,
+        answeredQuestions: answeredQuestions,
+        stepsData: stepsData
+    });
 
-            // ⚠️ PERUBAHAN: Langsung submit tanpa konfirmasi jika semua sudah terisi
-            submitAnswers(attendanceScores);
-        }
+    // ⚠️ PERBAIKAN: Validasi HARUS mengisi semua pertanyaan YANG ADA
+    if (answeredQuestions < totalQuestions) {
+        showAlert(
+            'warning', 
+            'Peringatan', 
+            `Anda harus mengisi semua ${totalQuestions} pertanyaan sebelum menyimpan! \n\nAnda baru mengisi ${answeredQuestions} dari ${totalQuestions} pertanyaan.\n\nPeriksa sub-aspek yang masih kosong.`
+        );
+        return;
+    }
+
+    // Validasi minimal harus ada jawaban atau nilai absensi
+    if (answeredQuestions === 0 && attendanceScores.length === 0) {
+        showAlert('warning', 'Peringatan', 'Anda belum mengisi jawaban apapun!');
+        return;
+    }
+
+    // Submit jika semua sudah terisi
+    submitAnswers(attendanceScores);
+}
 
         function submitAnswers(attendanceScores = []) {
             console.log('=== DEBUG SUBMIT ANSWERS ===');

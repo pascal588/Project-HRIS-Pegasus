@@ -630,7 +630,7 @@ function selectPeriod(period) {
     loadKpiDetail(currentEmployeeId, period.id_periode);
 }
 
-// --- BAGIAN 3: LOAD DETAIL KPI ---
+// --- BAGIAN 3: LOAD DETAIL KPI (DENGAN SUB-ASPEK) ---
 async function loadKpiDetail(employeeId, periodId) {
     try {
         console.log(`📊 Memuat detail KPI untuk employee ${employeeId}, period ${periodId}`);
@@ -648,7 +648,7 @@ async function loadKpiDetail(employeeId, periodId) {
             kpiData = data.data;
             updateEmployeeInfo(kpiData.employee);
             updateKpiSummary(kpiData.kpi_summary);
-            updateKpiDetails(kpiData.kpi_details);
+            updateKpiDetailsWithSubAspek(kpiData.kpi_details); // ⚠️ GANTI KE FUNGSI BARU
         } else {
             throw new Error(data.message);
         }
@@ -659,6 +659,163 @@ async function loadKpiDetail(employeeId, periodId) {
             kpiDetailBody.innerHTML = 
                 `<tr><td colspan="6" class="text-center text-danger">Gagal memuat detail KPI: ${error.message}</td></tr>`;
         }
+    }
+}
+
+// ⚠️ FUNGSI YANG DIPERBAIKI: Update KPI Details dengan perhitungan yang benar
+function updateKpiDetailsWithSubAspek(details) {
+    const tbody = document.getElementById('kpiDetailBody');
+    const tfoot = document.getElementById('kpiDetailFooter');
+    
+    if (!tbody) {
+        console.error('❌ Element #kpiDetailBody tidak ditemukan');
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    if (!details || details.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
+
+    console.log('📊 Raw KPI details:', details);
+
+    let totalBobotAllAspek = 0;
+    let totalKontribusiAllAspek = 0;
+    let currentAspek = '';
+    let aspekCount = 0;
+
+    // Kelompokkan data berdasarkan aspek
+    const aspekGroups = {};
+    details.forEach(item => {
+        const aspekName = item.aspek_kpi || 'Aspek Lain';
+        if (!aspekGroups[aspekName]) {
+            aspekGroups[aspekName] = [];
+        }
+        aspekGroups[aspekName].push(item);
+    });
+
+    // Render setiap aspek
+    Object.keys(aspekGroups).forEach(aspekName => {
+        const aspekItems = aspekGroups[aspekName];
+        const totalAspek = aspekItems.find(item => item.is_total_aspek);
+        const subAspeks = aspekItems.filter(item => !item.is_total_aspek);
+        
+        aspekCount++;
+        
+        // Header Aspek
+        if (aspekCount > 1) {
+            tbody.innerHTML += `<tr style="height: 10px; background-color: transparent;"><td colspan="6"></td></tr>`;
+        }
+        
+        tbody.innerHTML += `
+            <tr class="table-primary fw-bold">
+                <td colspan="6">${aspekCount}. ${aspekName}</td>
+            </tr>
+        `;
+
+        // Sub-aspek
+        let totalKontribusiAspek = 0;
+        let totalBobotAspek = 0;
+
+        subAspeks.forEach(subAspek => {
+            const nilai = parseFloat(subAspek.score) || 0;
+            const bobot = parseFloat(subAspek.bobot) || 0;
+            const kontribusi = parseFloat(subAspek.kontribusi) || 0;
+            const status = getKpiStatus(nilai);
+            const statusClass = getKpiStatusClass(status);
+            const progressValue = Math.min(nilai, 100);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="ps-4">${subAspek.sub_aspek_name}</td>
+                    <td>${bobot.toFixed(1)}%</td>
+                    <td>${nilai.toFixed(2)}</td>
+                    <td>${kontribusi.toFixed(2)}%</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        <div class="progress kpi-progress">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${progressValue}%" 
+                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
+                    </td>
+                </tr>
+            `;
+
+            totalKontribusiAspek += kontribusi;
+            totalBobotAspek += bobot;
+        });
+
+        // Total Aspek
+        if (totalAspek) {
+            const totalNilai = parseFloat(totalAspek.score) || 0;
+            const totalBobot = parseFloat(totalAspek.bobot) || 0;
+            const totalKontribusi = parseFloat(totalAspek.kontribusi) || 0;
+            const status = getKpiStatus(totalNilai);
+            const statusClass = getKpiStatusClass(status);
+            const progressValue = Math.min(totalNilai, 100);
+
+            tbody.innerHTML += `
+                <tr class="table-warning fw-semibold">
+                    <td><strong>TOTAL ${aspekName}</strong></td>
+                    <td>${totalBobot.toFixed(1)}%</td>
+                    <td>${totalNilai.toFixed(2)}</td>
+                    <td>${totalKontribusi.toFixed(2)}%</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        <div class="progress kpi-progress">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: ${progressValue}%" 
+                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
+                    </td>
+                </tr>
+            `;
+
+            // Verifikasi perhitungan
+            console.log(`🔍 Verification for ${aspekName}:`, {
+                'calculated_kontribusi': totalKontribusiAspek.toFixed(2),
+                'displayed_kontribusi': totalKontribusi.toFixed(2),
+                'difference': Math.abs(totalKontribusiAspek - totalKontribusi).toFixed(2)
+            });
+
+            totalBobotAllAspek += totalBobot;
+            totalKontribusiAllAspek += totalKontribusi;
+        }
+    });
+
+    // TOTAL KESELURUHAN
+    const totalNilaiAkhir = totalKontribusiAllAspek;
+    const totalPersentase = totalBobotAllAspek > 0 ? (totalNilaiAkhir / totalBobotAllAspek) * 100 : 0;
+    const overallStatus = getKpiStatus(totalNilaiAkhir);
+    const overallStatusClass = getKpiStatusClass(overallStatus);
+    
+    console.log('🎯 Final Overall Calculation:', { 
+        totalBobotAllAspek: totalBobotAllAspek.toFixed(2),
+        totalKontribusiAllAspek: totalKontribusiAllAspek.toFixed(2),
+        totalNilaiAkhir: totalNilaiAkhir.toFixed(2),
+        totalPersentase: totalPersentase.toFixed(2)
+    });
+
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr class="table-active fw-bold">
+                <th>TOTAL KESELURUHAN</th>
+                <th>${totalBobotAllAspek.toFixed(1)}%</th>
+                <th>${totalNilaiAkhir.toFixed(2)}</th>
+                <th>${totalPersentase.toFixed(2)}%</th>
+                <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
+                <th>
+                    <div class="progress kpi-progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${totalNilaiAkhir}%" 
+                             aria-valuenow="${totalNilaiAkhir}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="progress-percentage">${totalNilaiAkhir.toFixed(1)}%</div>
+                </th>
+            </tr>`;
     }
 }
 
@@ -688,13 +845,22 @@ function updateKpiSummary(summary) {
         rankingText: document.getElementById('rankingText')
     };
 
-    if (elements.totalScore) elements.totalScore.textContent = (parseFloat(summary.total_score) || 0).toFixed(2);
-    if (elements.averageScore) elements.averageScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(2);
-    if (elements.performanceScore) elements.performanceScore.textContent = (parseFloat(summary.average_score) || 0).toFixed(1);
+    // ⚠️ PERBAIKAN: Gunakan total_score sebagai nilai utama
+    const totalScore = parseFloat(summary.total_score) || 0;
+    
+    if (elements.totalScore) elements.totalScore.textContent = totalScore.toFixed(2);
+    if (elements.averageScore) elements.averageScore.textContent = totalScore.toFixed(2); // Sama dengan total
+    if (elements.performanceScore) elements.performanceScore.textContent = totalScore.toFixed(1);
     if (elements.performanceStatus) elements.performanceStatus.textContent = `(${summary.performance_status || '-'})`;
     if (elements.performanceText) elements.performanceText.textContent = `(${summary.performance_status || '-'})`;
     if (elements.ranking) elements.ranking.textContent = summary.ranking || '-';
     if (elements.rankingText) elements.rankingText.textContent = `(Dari ${summary.total_employees} Karyawan)`;
+
+    console.log('🎯 Summary KPI (SAMA DENGAN LIST):', {
+        total_score: totalScore,
+        performance_status: summary.performance_status,
+        ranking: summary.ranking
+    });
 }
 
 function updateKpiDetails(details) {
@@ -1161,10 +1327,11 @@ window.addEventListener('load', function() {
 const exportBtn = document.getElementById('exportMonthlyBtn');
 if (exportBtn) {
     exportBtn.addEventListener('click', function() {
-        if (!currentEmployeeId) {
-            alert('❌ ID Karyawan tidak valid!');
-            return;
-        }
+        // Ambil data yang sama dengan yang ditampilkan di blade
+        const currentTotalScore = document.getElementById('totalScore')?.textContent || '0';
+        
+        console.log('📊 Current Blade Total Score:', currentTotalScore);
+        console.log('📅 Exporting for year:', currentYear);
 
         const button = this;
         const originalText = button.textContent;

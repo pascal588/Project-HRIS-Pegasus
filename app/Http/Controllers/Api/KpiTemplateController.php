@@ -35,6 +35,13 @@ class KpiTemplateController extends Controller
             'kpis.*.points.*.bobot' => 'required|numeric|min:0|max:100',
             'kpis.*.points.*.questions' => 'sometimes|array',
             'kpis.*.points.*.questions.*.pertanyaan' => 'required_with:kpis.*.points.*.questions|string|max:1000',
+            // 'kpis.*.points.*.attendance_multipliers' => 'sometimes|array',
+            // 'kpis.*.points.*.attendance_multipliers.hadir_multiplier' => 'sometimes|numeric',
+            // 'kpis.*.points.*.attendance_multipliers.sakit_multiplier' => 'sometimes|numeric',
+            // 'kpis.*.points.*.attendance_multipliers.izin_multiplier' => 'sometimes|numeric',
+            // 'kpis.*.points.*.attendance_multipliers.mangkir_multiplier' => 'sometimes|numeric',
+            // 'kpis.*.points.*.attendance_multipliers.terlambat_multiplier' => 'sometimes|numeric',
+            // 'kpis.*.points.*.attendance_multipliers.workday_multiplier' => 'sometimes|numeric|min:1',
         ]);
 
         // Validasi tambahan: Jika is_global=false, division_id harus ada
@@ -61,9 +68,17 @@ class KpiTemplateController extends Controller
         foreach ($request->kpis as $kpiIndex => $kpiData) {
             foreach ($kpiData['points'] as $pointIndex => $pointData) {
                 $pointName = $pointData['nama'] ?? '';
-                $isAbsensi = stripos($pointName, 'absensi') !== false;
+                $isAbsensi = stripos($pointName, 'absensi') !== false || stripos($pointName, 'kehadiran') !== false;
                 $hasQuestions = !empty($pointData['questions']) && count($pointData['questions']) > 0;
     
+                // Validasi: Untuk sub-aspek absensi, harus ada konfigurasi multiplier
+                if ($isAbsensi && empty($pointData['attendance_multipliers'])) {
+                    $errors["kpis.{$kpiIndex}.points.{$pointIndex}.attendance_multipliers"] = [
+                        "Sub-aspek absensi '{$pointName}' harus memiliki konfigurasi multiplier"
+                    ];
+                }
+
+                // Validasi: Untuk non-absensi, harus ada pertanyaan
                 if (!$isAbsensi && !$hasQuestions) {
                     $errors["kpis.{$kpiIndex}.points.{$pointIndex}.questions"] = [
                         "Sub-aspek '{$pointName}' harus memiliki minimal 1 pertanyaan"
@@ -225,6 +240,143 @@ class KpiTemplateController extends Controller
         return response()->json(['success' => true, 'data' => $kpis]);
     }
 
+    public function getKpiByDivision($divisionId)
+    {
+        try {
+            Log::info("Getting KPI for division: {$divisionId}");
+
+            // Ambil KPI global
+            $globalKpis = Kpi::where('is_global', true)
+                ->whereNull('periode_id')
+                ->with(['points.questions'])
+                ->get();
+
+            // Ambil KPI spesifik divisi
+            $divisionKpis = Kpi::whereHas('divisions', function ($q) use ($divisionId) {
+                $q->where('divisions.id_divisi', $divisionId);
+            })
+                ->whereNull('periode_id')
+                ->with(['points.questions'])
+                ->get();
+
+            // Gabungkan hasil
+            $allKpis = $globalKpis->merge($divisionKpis);
+
+            Log::info("KPI results:", [
+                'division_id' => $divisionId,
+                'global_count' => $globalKpis->count(),
+                'division_count' => $divisionKpis->count(),
+                'total_count' => $allKpis->count()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $allKpis,
+                'debug_info' => [
+                    'division_id' => $divisionId,
+                    'global_kpis' => $globalKpis->count(),
+                    'division_kpis' => $divisionKpis->count(),
+                    'total_kpis' => $allKpis->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting KPI by division: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error getting KPI: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getAttendanceConfig($pointId)
+    {
+        try {
+            $point = KpiPoint::findOrFail($pointId);
+            
+            $isAbsensi = stripos($point->nama, 'absensi') !== false || 
+                        stripos($point->nama, 'kehadiran') !== false;
+
+            if (!$isAbsensi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This point is not an attendance point'
+                ], 400);
+            }
+
+            // Ambil konfigurasi dari database
+            $config = $this->extractAttendanceConfig($point);
+
+            return response()->json([
+                'success' => true,
+                'data' => $config
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting attendance config: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading attendance config: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Extract attendance configuration from KPI point
+     */
+    private function extractAttendanceConfig($point)
+    {
+        // Default configuration
+        $defaultConfig = [
+            'hadir_multiplier' => 3,
+            'sakit_multiplier' => 0,
+            'izin_multiplier' => 0,
+            'mangkir_multiplier' => -3,
+            'terlambat_multiplier' => -2,
+            'workday_multiplier' => 2
+        ];
+
+        try {
+            // Coba ambil dari kolom attendance_config (JSON)
+            if (!empty($point->attendance_config)) {
+                $config = json_decode($point->attendance_config, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($config)) {
+                    return array_merge($defaultConfig, $config);
+                }
+            }
+
+            // Coba parse dari kolom description atau nama
+            $pointName = strtolower($point->nama);
+            
+            // Custom logic berdasarkan nama point
+            if (strpos($pointName, 'ketat') !== false) {
+                return [
+                    'hadir_multiplier' => 4,
+                    'sakit_multiplier' => -1,
+                    'izin_multiplier' => -1,
+                    'mangkir_multiplier' => -5,
+                    'terlambat_multiplier' => -3,
+                    'workday_multiplier' => 2
+                ];
+            } elseif (strpos($pointName, 'longgar') !== false) {
+                return [
+                    'hadir_multiplier' => 2,
+                    'sakit_multiplier' => 1,
+                    'izin_multiplier' => 1,
+                    'mangkir_multiplier' => -2,
+                    'terlambat_multiplier' => -1,
+                    'workday_multiplier' => 2
+                ];
+            }
+
+            return $defaultConfig;
+
+        } catch (\Exception $e) {
+            Log::error('Error extracting attendance config: ' . $e->getMessage());
+            return $defaultConfig;
+        }
+    }
+
 private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = null, $periodeId = null)
 {
     $kpi = isset($kpiData['id_kpi']) ? Kpi::findOrFail($kpiData['id_kpi']) : new Kpi();
@@ -257,13 +409,60 @@ private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = nul
             $point->kpis_id_kpi = $kpi->id_kpi;
             $point->nama = $pointData['nama'];
             $point->bobot = $pointData['bobot'];
+            
+            // ⚠️ PERBAIKAN PENTING: Simpan konfigurasi absensi dengan handle nilai 0
+            $isAbsensi = stripos($pointData['nama'], 'absensi') !== false ||
+                        stripos($pointData['nama'], 'kehadiran') !== false;
+
+            if ($isAbsensi && isset($pointData['attendance_multipliers'])) {
+                $multipliers = $pointData['attendance_multipliers'];
+                
+                // ⚠️ FIX: Handle nilai 0 dengan benar - jangan skip!
+                $validMultipliers = [
+                    'hadir_multiplier' => isset($multipliers['hadir_multiplier']) ? (int)$multipliers['hadir_multiplier'] : 3,
+                    'sakit_multiplier' => isset($multipliers['sakit_multiplier']) ? (int)$multipliers['sakit_multiplier'] : 0,
+                    'izin_multiplier' => isset($multipliers['izin_multiplier']) ? (int)$multipliers['izin_multiplier'] : 0,
+                    'mangkir_multiplier' => isset($multipliers['mangkir_multiplier']) ? (int)$multipliers['mangkir_multiplier'] : -3,
+                    'terlambat_multiplier' => isset($multipliers['terlambat_multiplier']) ? (int)$multipliers['terlambat_multiplier'] : -2,
+                    'workday_multiplier' => isset($multipliers['workday_multiplier']) && $multipliers['workday_multiplier'] >= 1 
+                        ? (int)$multipliers['workday_multiplier'] 
+                        : 2
+                ];
+                
+                $point->attendance_config = json_encode($validMultipliers);
+                
+                Log::info("💾 SAVING ATTENDANCE CONFIG:", [
+                    'point_id' => $point->id_point,
+                    'point_name' => $point->nama,
+                    'multipliers_received' => $multipliers,
+                    'multipliers_saved' => $validMultipliers,
+                    'has_zero_values' => in_array(0, $validMultipliers) || in_array(-0, $validMultipliers)
+                ]);
+            } else {
+                // Reset jika bukan absensi
+                $point->attendance_config = null;
+                
+                Log::info("Not saving attendance config - not absensi point:", [
+                    'point_name' => $point->nama,
+                    'is_absensi' => $isAbsensi,
+                    'has_multipliers' => isset($pointData['attendance_multipliers'])
+                ]);
+            }
+            
             $point->save();
             $existingPointIds[] = $point->id_point;
 
-            $isAbsensi = stripos($pointData['nama'], 'absensi') !== false ||
-                stripos($pointData['nama'], 'kehadiran') !== false;
+            // Log detail point
+            Log::info("Saved KPI Point:", [
+                'point_id' => $point->id_point,
+                'point_name' => $point->nama,
+                'is_absensi' => $isAbsensi,
+                'has_attendance_config' => !empty($point->attendance_config),
+                'attendance_config' => $point->attendance_config
+            ]);
 
-            if (isset($pointData['questions']) && count($pointData['questions']) > 0) {
+            // Handle questions hanya untuk non-absensi
+            if (!$isAbsensi && isset($pointData['questions']) && count($pointData['questions']) > 0) {
                 $existingQuestionIds = [];
                 foreach ($pointData['questions'] as $qData) {
                     $question = isset($qData['id_question']) ? KpiQuestion::findOrFail($qData['id_question']) : new KpiQuestion();
@@ -273,28 +472,46 @@ private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = nul
                     $existingQuestionIds[] = $question->id_question;
                 }
                 
-                // ⚠️ PERBAIKAN: Hanya hapus questions jika bukan absensi
-                if (!$isAbsensi) {
-                    KpiQuestion::where('kpi_point_id', $point->id_point)
-                        ->whereNotIn('id_question', $existingQuestionIds)
-                        ->delete();
-                }
+                // Hapus questions yang tidak ada dalam data baru
+                KpiQuestion::where('kpi_point_id', $point->id_point)
+                    ->whereNotIn('id_question', $existingQuestionIds)
+                    ->delete();
+                    
+                Log::info("Saved questions for point:", [
+                    'point_id' => $point->id_point,
+                    'questions_count' => count($existingQuestionIds)
+                ]);
+            } elseif ($isAbsensi) {
+                // Untuk absensi, hapus semua questions (absensi tidak butuh questions)
+                $deletedCount = KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
+                Log::info("Cleared questions for absensi point:", [
+                    'point_id' => $point->id_point,
+                    'questions_deleted' => $deletedCount
+                ]);
             } else {
-                // ⚠️ PERBAIKAN: Untuk absensi, jangan hapus questions (tidak ada questions)
-                if (!$isAbsensi) {
-                    KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
-                }
+                // Untuk non-absensi tanpa questions, hapus semua questions
+                $deletedCount = KpiQuestion::where('kpi_point_id', $point->id_point)->delete();
+                Log::info("Cleared questions for non-absensi point:", [
+                    'point_id' => $point->id_point,
+                    'questions_deleted' => $deletedCount
+                ]);
             }
         }
         
         // ⚠️ PERBAIKAN: Hanya hapus points yang tidak ada dalam data baru
-        KpiPoint::where('kpis_id_kpi', $kpi->id_kpi)
+        $deletedPointsCount = KpiPoint::where('kpis_id_kpi', $kpi->id_kpi)
             ->whereNotIn('id_point', $existingPointIds)
             ->delete();
+            
+        Log::info("Cleaned up old points:", [
+            'kpi_id' => $kpi->id_kpi,
+            'points_deleted' => $deletedPointsCount
+        ]);
     }
 
     // ⚠️ PERBAIKAN: Handle divisions dengan lebih baik
-    if ($isGlobal) {
+    if ($kpi->is_global) {
+        // Untuk KPI global, assign ke semua divisi
         $allDivisions = Division::pluck('id_divisi');
         foreach ($allDivisions as $divId) {
             DB::table('division_has_kpis')->updateOrInsert(
@@ -303,10 +520,13 @@ private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = nul
             );
         }
         
-        Log::info("Assigned KPI to ALL divisions (Global)");
+        Log::info("Assigned KPI to ALL divisions (Global)", [
+            'kpi_id' => $kpi->id_kpi,
+            'divisions_count' => $allDivisions->count()
+        ]);
     } elseif ($divisionId) {
         // ⚠️ PERBAIKAN PENTING: Untuk KPI divisi, HAPUS hubungan dengan divisi lain
-        DB::table('division_has_kpis')->where('kpis_id_kpi', $kpi->id_kpi)->delete();
+        $deletedRelations = DB::table('division_has_kpis')->where('kpis_id_kpi', $kpi->id_kpi)->delete();
         
         // Tambahkan hanya ke divisi yang dipilih
         DB::table('division_has_kpis')->updateOrInsert(
@@ -314,9 +534,107 @@ private function saveSingleKpi(array $kpiData, bool $isGlobal, $divisionId = nul
             ['created_at' => now(), 'updated_at' => now()]
         );
         
-        Log::info("Assigned KPI to specific division:", ['division_id' => $divisionId]);
+        Log::info("Assigned KPI to specific division:", [
+            'kpi_id' => $kpi->id_kpi,
+            'division_id' => $divisionId,
+            'old_relations_deleted' => $deletedRelations
+        ]);
+    } else {
+        Log::warning("KPI has no division assignment:", [
+            'kpi_id' => $kpi->id_kpi,
+            'is_global' => $kpi->is_global,
+            'division_id_param' => $divisionId
+        ]);
     }
 
-    return $kpi->load('points.questions');
+    // Load relasi untuk return
+    $kpi->load(['points.questions', 'divisions']);
+
+    Log::info("✅ Successfully saved KPI with all relations", [
+        'kpi_id' => $kpi->id_kpi,
+        'points_count' => $kpi->points->count(),
+        'divisions_count' => $kpi->divisions->count()
+    ]);
+
+    return $kpi;
 }
+
+    /**
+     * Helper method untuk mendapatkan konfigurasi absensi dari point ID
+     */
+    public static function getAttendanceConfigByPointId($pointId)
+    {
+        try {
+            $point = KpiPoint::find($pointId);
+            if (!$point) {
+                return null;
+            }
+
+            $controller = new self();
+            return $controller->extractAttendanceConfig($point);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting attendance config by point ID: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Update konfigurasi absensi untuk point tertentu
+     */
+    public function updateAttendanceConfig(Request $request, $pointId)
+    {
+        $validator = Validator::make($request->all(), [
+            'hadir_multiplier' => 'required|numeric',
+            'sakit_multiplier' => 'required|numeric',
+            'izin_multiplier' => 'required|numeric',
+            'mangkir_multiplier' => 'required|numeric',
+            'terlambat_multiplier' => 'required|numeric',
+            'workday_multiplier' => 'required|numeric|min:1'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $point = KpiPoint::findOrFail($pointId);
+            
+            $isAbsensi = stripos($point->nama, 'absensi') !== false || 
+                        stripos($point->nama, 'kehadiran') !== false;
+
+            if (!$isAbsensi) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya point absensi yang dapat diupdate konfigurasinya'
+                ], 400);
+            }
+
+            // Simpan konfigurasi
+            $point->attendance_config = json_encode($request->all());
+            $point->save();
+
+            Log::info("Updated attendance config for point:", [
+                'point_id' => $pointId,
+                'config' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Konfigurasi absensi berhasil diupdate',
+                'data' => $request->all()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error updating attendance config: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate konfigurasi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

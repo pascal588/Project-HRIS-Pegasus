@@ -51,6 +51,10 @@ Route::middleware(['auth', 'nama_jabatan:HR'])->group(function () {
         return view('hr.kpi');
     })->name('hr.kpi');
 
+    Route::get('/jabatan', function() {
+        return view('hr.jabatan');
+    })->name('hr.jabatan');
+
     Route::get('/hr/kpi/monthly-export/{employeeId}', [HrController::class, 'exportMonthlyKpi']);
 });
 
@@ -84,7 +88,5 @@ Route::middleware(['auth', 'nama_jabatan:Karyawan'])->group(function () {
     })->name('karyawan.kpi');
 });
 
-// Route testing (sementara)
-Route::get('/test-export/{employeeId}', [HrController::class, 'testExport']);
 
 require __DIR__.'/auth.php';

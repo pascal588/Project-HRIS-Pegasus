@@ -456,26 +456,35 @@
     });
   }
 
-  function normalizeKpiFromServer(kpi) {
-    console.log('Normalizing KPI:', kpi); // Debug
+function normalizeKpiFromServer(kpi) {
+    console.log('Normalizing KPI:', kpi);
     return {
-      uid: uid("kpi"),
-      id: kpi.id_kpi || null,
-      nama: kpi.nama || "",
-      bobot: kpi.bobot || 0,
-      is_global: kpi.is_global || false,
-      points: (kpi.points || []).map((pt) => ({
-        uid: uid("sub"),
-        id: pt.id_point || null,
-        nama: pt.nama || "",
-        bobot: pt.bobot || 0,
-        questions: (pt.questions || []).map((q) => ({
-          id: q.id_question || null,
-          pertanyaan: q.pertanyaan || "",
+        uid: uid("kpi"),
+        id: kpi.id_kpi || null,
+        nama: kpi.nama || "",
+        bobot: kpi.bobot || 0,
+        is_global: kpi.is_global || false,
+        points: (kpi.points || []).map((pt) => ({
+            uid: uid("sub"),
+            id: pt.id_point || null,
+            nama: pt.nama || "",
+            bobot: pt.bobot || 0,
+            // ⚠️ PERBAIKAN: Bawa attendance_multipliers dari database
+            attendance_multipliers: pt.attendance_config ? JSON.parse(pt.attendance_config) : {
+                hadir_multiplier: 3,
+                sakit_multiplier: 0,
+                izin_multiplier: 0,
+                mangkir_multiplier: -3,
+                terlambat_multiplier: -2,
+                workday_multiplier: 2
+            },
+            questions: (pt.questions || []).map((q) => ({
+                id: q.id_question || null,
+                pertanyaan: q.pertanyaan || "",
+            })),
         })),
-      })),
     };
-  }
+}
 
   // ==================== UI RENDERING ====================
   function clearKPIForm() {
@@ -622,11 +631,20 @@
 `;
     $("#topicContents").append(contentHtml);
 
-    // ✅ AUTO-CREATE SUB-ASPEK ABSENSI JIKA DISIPLIN GLOBAL BARU
-    const isDisiplinGlobal = isGlobal && aspectName.toLowerCase().includes('disiplin');
-    if (isDisiplinGlobal && newlyCreated && points.length === 0) {
-      addAbsensiSubaspect(aspectUid);
-    }
+  // Di function renderAspect(), cari bagian untuk absensi:
+  const isDisiplinGlobal = isGlobal && aspectName.toLowerCase().includes('disiplin');
+
+  // ⚠️ PERBAIKAN: Untuk absensi, bawa multipliers dari data
+  if (isDisiplinGlobal && newlyCreated && points.length === 0) {
+      addAbsensiSubaspect(aspectUid, 10, {
+          hadir_multiplier: 3,
+          sakit_multiplier: 0, 
+          izin_multiplier: 0,
+          mangkir_multiplier: -3,
+          terlambat_multiplier: -2,
+          workday_multiplier: 2
+      });
+  }
 
     if (points.length === 0 && !isReadOnly && !isDisiplinGlobal) addSubaspect(aspectUid);
     if (newlyCreated || $("#topicTabs .nav-link").length === 1) setActiveTab(aspectUid);
@@ -634,12 +652,22 @@
   }
 
   function addAbsensiSubaspect(aspectUid, defaultBobot = 10) {
+    const defaultMultipliers = {
+        hadir_multiplier: 3,
+        sakit_multiplier: 0,
+        izin_multiplier: 0,
+        mangkir_multiplier: -3,
+        terlambat_multiplier: -2,
+        workday_multiplier: 2
+    };
+
     const sub = {
-      uid: uid("sub"),
-      id: "",
-      nama: "Penilaian Absensi",
-      bobot: defaultBobot,
-      questions: [],
+        uid: uid("sub"),
+        id: "",
+        nama: "Penilaian Absensi",
+        bobot: defaultBobot,
+        attendance_multipliers: multipliers || defaultMultipliers, // ⚠️ Bawa multipliers
+        questions: [],
     };
 
     const html = subaspectTemplate(aspectUid, sub);
@@ -657,76 +685,85 @@
     updateInfo();
   }
 
-  function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
+function subaspectTemplate(aspectUid, saObj = {}, isGlobalAspect = false) {
     const suid = saObj.uid || uid("sub");
     const sid = saObj.id || "";
     const sname = saObj.nama || "";
     const sweight = saObj.bobot || 0;
     const questions = saObj.questions || [];
 
-    // ✅ DETEKSI JIKA INI SUB-ASPEK ABSENSI
     const isAbsensi = sname.toLowerCase().includes('absensi') ||
-      sname.toLowerCase().includes('kehadiran') ||
-      sname.toLowerCase().includes('penilaian absensi');
+                      sname.toLowerCase().includes('kehadiran') ||
+                      sname.toLowerCase().includes('penilaian absensi');
 
-    // Subaspek menjadi read-only jika termasuk dalam KPI Global di mode Divisi
-    const isReadOnly = currentMode === "division" && isGlobalAspect;
+    // ⚠️ PERBAIKAN: Untuk input absensi, JANGAN readonly meskipun global!
+    const isReadOnly = currentMode === "division" && isGlobalAspect && !isAbsensi;
 
     let qHtml = "";
 
-    // ✅ JIKA ABSENSI, TAMPILKAN KONFIGURASI DAN INFORMASI KHUSUS
     if (isAbsensi) {
-      qHtml = `
-        <!-- ✅ KONFIGURASI ABSENSI DINAMIS -->
-        <div class="card border-warning mt-3">
-            <div class="card-header bg-warning text-dark py-2">
-                <i class="bi bi-gear-fill me-2"></i>
-                Konfigurasi Penilaian Absensi
-            </div>
-            <div class="card-body p-3">
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <label class="form-label small">Hadir ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="hadir_multiplier" value="3" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Sakit ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="sakit_multiplier" value="0" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Izin ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="izin_multiplier" value="0" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Mangkir ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="mangkir_multiplier" value="-3" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Terlambat ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="terlambat_multiplier" value="-2" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label small">Hari Kerja ×</label>
-                        <input type="number" class="form-control form-control-sm attendance-multiplier" 
-                               data-type="workday_multiplier" value="2" min="1" ${isReadOnly ? 'readonly' : ''}>
-                    </div>
+        // ⚠️ AMBIL NILAI DARI DATA YANG DISIMPAN, BUKAN HARDCODE
+        const multipliers = saObj.attendance_multipliers || {
+            hadir_multiplier: 3,
+            sakit_multiplier: 0,
+            izin_multiplier: 0,
+            mangkir_multiplier: -3,
+            terlambat_multiplier: -2,
+            workday_multiplier: 2
+        };
+
+        qHtml = `
+            <!-- ✅ KONFIGURASI ABSENSI DINAMIS - BISA DI-EDIT! -->
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning text-dark py-2">
+                    <i class="bi bi-gear-fill me-2"></i>
+                    Konfigurasi Penilaian Absensi
+                    ${isGlobalAspect ? '<span class="badge bg-info ms-2">Global</span>' : ''}
                 </div>
-                <small class="text-muted mt-2 d-block">
-                    <i class="bi bi-info-circle"></i> Konfigurasi ini menentukan rumus perhitungan nilai absensi otomatis
-                </small>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label small">Hadir ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="hadir_multiplier" value="${multipliers.hadir_multiplier || 3}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Sakit ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="sakit_multiplier" value="${multipliers.sakit_multiplier || 0}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Izin ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="izin_multiplier" value="${multipliers.izin_multiplier || 0}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Mangkir ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="mangkir_multiplier" value="${multipliers.mangkir_multiplier || -3}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Terlambat ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="terlambat_multiplier" value="${multipliers.terlambat_multiplier || -2}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Hari Kerja ×</label>
+                            <input type="number" class="form-control form-control-sm attendance-multiplier" 
+                                   data-type="workday_multiplier" value="${multipliers.workday_multiplier || 2}" min="1">
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle"></i> Konfigurasi ini menentukan rumus perhitungan nilai absensi otomatis
+                    </small>
+                </div>
             </div>
-        </div>
-        
-        <div class="alert alert-info mt-2">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Sub-aspek Absensi</strong><br>
-            Nilai akan dihitung otomatis berdasarkan data kehadiran karyawan dengan konfigurasi multiplier yang ditentukan.
-        </div>
+            
+            <div class="alert alert-info mt-2">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Sub-aspek Absensi</strong><br>
+                Nilai akan dihitung otomatis berdasarkan data kehadiran karyawan dengan konfigurasi multiplier yang ditentukan.
+            </div>
         `;
     } else {
       // Tampilkan pertanyaan normal untuk sub-aspek lainnya
@@ -1293,14 +1330,34 @@
 
         // ✅ AMBIL KONFIGURASI MULTIPLIER JIKA INI SUB-ASPEK ABSENSI
         let attendanceMultipliers = null;
-        if (isAbsensiSubaspect) {
-          attendanceMultipliers = {};
-          $sub.find('.attendance-multiplier').each(function() {
-            const type = $(this).data('type');
-            const value = Number($(this).val()) || 0;
-            attendanceMultipliers[type] = value;
-          });
+
+if (isAbsensiSubaspect) {
+    attendanceMultipliers = {};
+    $sub.find('.attendance-multiplier').each(function() {
+        const type = $(this).data('type');
+        const inputValue = $(this).val();
+        
+        // ⚠️ PERBAIKAN: Handle nilai 0 dengan benar!
+        let value;
+        if (inputValue === '' || inputValue === null || inputValue === undefined) {
+            value = 0; // Default ke 0 jika kosong
+        } else {
+            value = Number(inputValue);
+            // Handle NaN
+            if (isNaN(value)) value = 0;
         }
+        
+        attendanceMultipliers[type] = value;
+    });
+    
+    // Debug multipliers
+    console.log('🔢 Multipliers for', subNama, ':', attendanceMultipliers);
+    
+    // ⚠️ PASTIKAN workday_multiplier minimal 1
+    if (attendanceMultipliers.workday_multiplier < 1) {
+        attendanceMultipliers.workday_multiplier = 1;
+    }
+}
 
         points.push({
           id_point: idPoint,

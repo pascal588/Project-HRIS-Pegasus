@@ -158,7 +158,7 @@
                   @csrf
                   <div class="mb-3">
                     <label for="files" class="form-label">Pilih File Excel</label>
-                    <input class="form-control" type="file" id="file" name="files[]" accept=".xlsx,.xls" multiple required>
+                    <input class="form-control" type="file" id="files" name="files[]" accept=".xlsx,.xls" multiple required>
                   </div>
                 </form>
               </div>
@@ -495,81 +495,82 @@ $.ajax({
 });
     }
     
-    // Handle import
-    $('#submitImport').click(function() {
-        const file = $('#file')[0].files[0];
-        if (!file) {
-            showAlert('warning', 'Peringatan', 'Pilih file terlebih dahulu');
-            return;
-        }
-        
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        // Tampilkan loading
-        Swal.fire({
-            title: 'Mengimport...',
-            text: 'Sedang memproses file absensi',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+$('#submitImport').click(function() {
+    const files = $('#files')[0].files;
+    
+    if (files.length === 0) {
+        showAlert('warning', 'Peringatan', 'Pilih minimal 1 file');
+        return;
+    }
 
-        $.ajax({
-            url: '/api/attendances/import',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                Swal.close();
-                if (response.success) {
-                    showAlert('success', 'Berhasil', 'Import berhasil: ' + response.message);
-                    $('#importModal').modal('hide');
-                    $('#file').val('');
-                    
-                    // Force refresh cache dengan parameter tambahan
-                    const timestamp = new Date().getTime();
-                    
-                    // Reload periods dengan force refresh
-                    $.ajax({
-                        url: '/api/attendances/periods?refresh=true&' + timestamp,
-                        success: function(periodResponse) {
-                            if (periodResponse.success) {
-                                periods = periodResponse.data;
-                                let options = '<option value="">Semua Periode</option>';
-                                periods.forEach(period => {
-                                    options += `<option value="${period}">${period}</option>`;
-                                });
-                                $('#periodFilter').html(options);
-                                
-                                // Update years filter juga
-                                loadYearsFromPeriods(periods);
-                                
-                                // Show the imported period in filter
-                                if (response.period) {
-                                    $('#periodFilter').val(response.period);
-                                }
-                                
-                                // Reload data
-                                loadAttendanceData();
-                                loadSummaryCards();
-                            }
-                        }
-                    });
-                } else {
-                    showAlert('error', 'Gagal', 'Import gagal: ' + response.message);
-                }
-            },
-            error: function(xhr) {
-                Swal.close();
-                let errorMessage = 'Error during import';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                showAlert('error', 'Error', 'Error: ' + errorMessage);
-            }
-        });
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+        formData.append('files[]', files[i]); // Append semua files
+    }
+
+    // Tampilkan loading dengan info jumlah file
+    Swal.fire({
+        title: 'Mengimport ' + files.length + ' File...',
+        html: 'Sedang memproses multiple file absensi<br><small>Harap tunggu, ini mungkin butuh waktu</small>',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
     });
+
+    $.ajax({
+        url: '/api/attendances/import',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            Swal.close();
+            
+            if (response.success) {
+                // Tampilkan summary yang lebih detail
+                let successFiles = response.processed_files.filter(f => f.status === 'success').length;
+                let failedFiles = response.processed_files.filter(f => f.status === 'failed').length;
+                
+                let message = `Berhasil import ${response.total_imported} data dari ${successFiles} file`;
+                if (failedFiles > 0) {
+                    message += `<br>${failedFiles} file gagal diproses`;
+                }
+                
+                showAlert('success', 'Import Berhasil', message);
+                $('#importModal').modal('hide');
+                $('#files').val('');
+                
+                // Refresh data
+                const timestamp = new Date().getTime();
+                $.ajax({
+                    url: '/api/attendances/periods?refresh=true&' + timestamp,
+                    success: function(periodResponse) {
+                        if (periodResponse.success) {
+                            periods = periodResponse.data;
+                            let options = '<option value="">Semua Periode</option>';
+                            periods.forEach(period => {
+                                options += `<option value="${period}">${period}</option>`;
+                            });
+                            $('#periodFilter').html(options);
+                            loadYearsFromPeriods(periods);
+                            loadAttendanceData();
+                            loadSummaryCards();
+                        }
+                    }
+                });
+            } else {
+                showAlert('error', 'Import Gagal', response.message);
+            }
+        },
+        error: function(xhr) {
+            Swal.close();
+            let errorMessage = 'Error selama import';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            showAlert('error', 'Error', errorMessage);
+        }
+    });
+});
     
     // Apply filters
     $('#applyFilter').click(function() {

@@ -300,7 +300,7 @@ async function loadDashboardData() {
 }
 
 // ======================
-// LOAD DATA KPI PERSONAL
+// LOAD DATA KPI PERSONAL (ASPEK SAJA)
 // ======================
 async function loadPersonalKpiData() {
     try {
@@ -316,7 +316,8 @@ async function loadPersonalKpiData() {
             
             for (const period of periods.slice(0, 12)) { // Maksimal 12 bulan
                 try {
-                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/detail/${period.id_periode}`);
+                    // ⚠️ GUNAKAN API BARU: Hanya ambil aspek saja
+                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/aspek-only/${period.id_periode}`);
                     const data = await response.json();
                     
                     if (data.success) {
@@ -334,7 +335,7 @@ async function loadPersonalKpiData() {
                             averageScore: periodData.kpi_summary.average_score,
                             periodName: period.nama,
                             fullDate: startDate,
-                            kpiDetails: periodData.kpi_details,
+                            kpiDetails: periodData.kpi_aspek_only, // ⚠️ SEKARANG HANYA ASPEK
                             ranking: periodData.kpi_summary.ranking,
                             totalEmployees: periodData.kpi_summary.total_employees,
                             performanceStatus: periodData.kpi_summary.performance_status
@@ -567,28 +568,37 @@ async function loadDivisionData() {
 }
 
 // ======================
-// LOAD KARYAWAN BELUM DINILAI
+// LOAD KARYAWAN BELUM DINILAI - DASHBOARD VERSION
 // ======================
 async function loadUnratedEmployees() {
     try {
-        const response = await fetch(`/api/kpis/division/${currentDivisionId}/unrated-employees`);
+        console.log('Loading unrated employees for dashboard, division:', currentDivisionId);
+        
+        // ⚠️ GUNAKAN API BARU UNTUK DASHBOARD
+        const response = await fetch(`/api/kpis/dashboard/${currentDivisionId}/unrated-employees`);
         const data = await response.json();
         
-        console.log('Unrated employees data:', data);
+        console.log('Dashboard unrated employees API response:', data);
         
         if (data.success) {
             renderUnratedEmployees(data.data);
             document.getElementById('unratedCount').textContent = data.data.length || 0;
+            
+            if (data.debug_info) {
+                console.log('Dashboard debug info:', data.debug_info);
+            }
         } else {
-            throw new Error(data.message);
+            throw new Error(data.message || 'Failed to load unrated employees for dashboard');
         }
     } catch (error) {
-        console.error('Error loading unrated employees:', error);
+        console.error('Error loading unrated employees for dashboard:', error);
         showError('belum-dinilai', error.message);
     }
 }
 
-
+// ======================
+// RENDER KARYAWAN BELUM DINILAI - DASHBOARD VERSION
+// ======================
 function renderUnratedEmployees(employees) {
     const container = document.getElementById('belum-dinilai');
     let html = `
@@ -602,25 +612,28 @@ function renderUnratedEmployees(employees) {
             <div class="text-center text-muted py-4">
                 <i class="icofont-checked fs-1"></i>
                 <p class="mt-2">Semua karyawan sudah dinilai</p>
+                <small class="text-success">Tidak ada yang perlu dinilai</small>
             </div>
         `;
     } else {
         employees.forEach(employee => {
-            // ⚠️ PERBAIKAN: Update route tombol "Nilai"
+            // ⚠️ GUNAKAN FORMAT URL YANG SAMA dengan kpi-karyawan.blade.php
             const evaluateUrl = `{{ url('penilai/kpi-karyawan') }}`;
             
             html += `
                 <div class="py-2 d-flex align-items-center border-bottom flex-wrap">
                     <img class="avatar lg rounded-circle img-thumbnail" 
-                         src="${employee.foto ? '/storage/' + employee.foto : '{{ asset('assets/images/profile_av.png') }}'}" 
+                         src="${employee.foto}" 
                          alt="${employee.nama}"
-                         onerror="this.src='{{ asset('assets/images/profile_av.png') }}'">
+                         onerror="this.src='{{ asset('assets/images/profile_av.png') }}'"
+                         style="width: 50px; height: 50px;">
                     <div class="d-flex flex-column ps-3 flex-fill">
                         <h6 class="fw-bold mb-0 small-14">${employee.nama}</h6>
-                        <span class="text-muted">${employee.position}</span>
+                        <span class="text-muted small">${employee.position}</span>
+                        <small class="text-warning">Periode: ${employee.period || 'Aktif'}</small>
                     </div>
                     <a class="btn btn-outline-warning btn-sm" href="${evaluateUrl}">
-                        Nilai
+                        <i class="icofont-edit me-1"></i> Nilai
                     </a>
                 </div>
             `;
@@ -629,6 +642,8 @@ function renderUnratedEmployees(employees) {
     
     html += `</div></div>`;
     container.innerHTML = html;
+    
+    console.log('Dashboard rendered unrated employees:', employees.length);
 }
 
 async function loadEmployeesNeedWarning() {

@@ -114,7 +114,7 @@ Route::prefix('kpis')->group(function () {
   Route::get('/attendance-calculation/{employeeId}/{periodeId}', [KpiCalculationController::class, 'getAttendanceCalculationData']);
 
   // Division Reports
-  Route::get('/division/{divisionId}/unrated-employees', [KpiEvaluationController::class, 'getUnratedEmployees']);
+Route::get('/dashboard/{divisionId}/unrated-employees', [KpiEvaluationController::class, 'getUnratedEmployeesForDashboard']);
   Route::get('/division/{divisionId}/low-performing-employees', [KpiEvaluationController::class, 'getLowPerformingEmployees']);
   Route::get('/division/{divisionId}/stats', [KpiEvaluationController::class, 'getDivisionKpiStats']);
 
@@ -134,6 +134,9 @@ Route::get('/kpi-evaluation/employees/non-head/unrated/{divisionId}', [KpiEvalua
     Route::get('/export-monthly/{employeeId}/{year?}', [KpiEvaluationController::class, 'exportMonthlyKpi']);
     Route::get('/test-export/{employeeId}/{year?}', [KpiEvaluationController::class, 'exportMonthlyKpi']);
     Route::get('/test-export/{employeeId}/{year?}', [KpiEvaluationController::class, 'testExport']);
+
+    Route::get('/top-employees/{limit?}', [KpiEvaluationController::class, 'getTopEmployees']);
+    Route::get('/employee/{employeeId}/aspek-only/{periodId?}', [KpiEvaluationController::class, 'getEmployeeKpiAspekOnly']);
 });
 
 // ==================== PERIOD ROUTES ====================

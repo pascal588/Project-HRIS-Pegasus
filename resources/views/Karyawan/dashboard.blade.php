@@ -139,7 +139,7 @@
         <!-- Top Karyawan -->
         <div class="card p-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="fw-bold mb-0">Top Karyawan</h6>
+            <h6 class="fw-bold mb-0">Top 3 Karyawan</h6>
             <span class="text-muted small" id="topEmployeePeriod">-</span>
           </div>
 
@@ -213,7 +213,7 @@ async function loadDashboardData() {
     }
 }
 
-// Load data KPI untuk grafik dan summary
+// Load data KPI untuk grafik dan summary - MODIFIKASI: PAKAI API BARU
 async function loadKpiData() {
     try {
         // 1. Load available periods dulu
@@ -223,12 +223,13 @@ async function loadKpiData() {
         if (periodsData.success && periodsData.data.length > 0) {
             const periods = periodsData.data;
             
-            // 2. Load data untuk setiap periode
+            // 2. Load data untuk setiap periode - ⚠️ GUNAKAN API BARU
             allMonthlyData = {};
             
             for (const period of periods.slice(0, 12)) { // Maksimal 12 bulan
                 try {
-                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/detail/${period.id_periode}`);
+                    // ⚠️ MODIFIKASI: Gunakan API yang hanya menampilkan aspek saja
+                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/aspek-only/${period.id_periode}`);
                     const data = await response.json();
                     
                     if (data.success) {
@@ -246,7 +247,7 @@ async function loadKpiData() {
                             averageScore: periodData.kpi_summary.average_score,
                             periodName: period.nama,
                             fullDate: startDate,
-                            kpiDetails: periodData.kpi_details,
+                            kpiDetails: periodData.kpi_aspek_only, // ⚠️ SEKARANG HANYA ASPEK
                             ranking: periodData.kpi_summary.ranking,
                             totalEmployees: periodData.kpi_summary.total_employees,
                             performanceStatus: periodData.kpi_summary.performance_status
@@ -277,7 +278,7 @@ function updateDashboardSummary() {
         const latestData = monthlyArray[0];
         const previousData = monthlyArray[1] || latestData;
         
-        // Update current score - PAKAI totalScore BUKAN averageScore
+        // Update current score
         const currentTotalScore = latestData.totalScore;
         document.getElementById('currentScore').textContent = currentTotalScore.toFixed(1);
         
@@ -285,7 +286,7 @@ function updateDashboardSummary() {
         const previousScore = previousData.totalScore.toFixed(1);
         document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore}`;
         
-        // ⚠️ PERBAIKAN: Hitung grade dari TOTAL SCORE bukan average score
+        // Hitung grade dari TOTAL SCORE
         const gradeInfo = calculateGrade(currentTotalScore);
         document.getElementById('currentGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceGrade').textContent = gradeInfo.grade;
@@ -298,7 +299,6 @@ function updateDashboardSummary() {
         
         console.log("Dashboard Summary Updated:", {
             totalScore: currentTotalScore,
-            averageScore: latestData.averageScore,
             grade: gradeInfo.grade,
             status: gradeInfo.status
         });
@@ -308,7 +308,6 @@ function updateDashboardSummary() {
 // Calculate grade berdasarkan score
 function calculateGrade(score) {
     const numericScore = parseFloat(score) || 0;
-    console.log("Calculating grade for score:", numericScore);
     
     if (numericScore >= 90) return { grade: 'A', text: 'Sangat Baik', status: 'Sangat Baik' };
     if (numericScore >= 80) return { grade: 'B', text: 'Baik', status: 'Baik' };
@@ -391,7 +390,7 @@ function updateKpiChart() {
                     tooltipHTML += `<div style="border-top: 1px solid #e0e0e0; margin-top: 6px; padding-top: 6px;">`;
                     tooltipHTML += `<div style="font-weight: 600; margin-bottom: 4px;">Detail Aspek:</div>`;
                     
-                    monthData.kpiDetails.forEach(aspek => {
+                    monthData.kpiDetails.forEach((aspek, index) => {
                         const nilai = parseFloat(aspek.score) || 0;
                         tooltipHTML += `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
@@ -414,7 +413,7 @@ function updateKpiChart() {
     kpiChart.render();
 }
 
-// Update tabel detail KPI
+// Update tabel detail KPI - MODIFIKASI: HANYA TAMPILKAN ASPEK UTAMA
 function updateKpiDetailTable() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
     
@@ -426,34 +425,63 @@ function updateKpiDetailTable() {
         periodElement.textContent = latestData.month;
         tbody.innerHTML = '';
         
-        latestData.kpiDetails.forEach((item, index) => {
-            const nilai = parseFloat(item.score) || 0;
-            const status = item.status;
-            const statusClass = getStatusClass(status);
-            
-            const row = `
+        // ⚠️ MODIFIKASI: Sekarang kpiDetails sudah hanya berisi aspek utama saja
+        if (latestData.kpiDetails && latestData.kpiDetails.length > 0) {
+            latestData.kpiDetails.forEach((aspek, index) => {
+                const nilai = parseFloat(aspek.score) || 0;
+                const status = aspek.performance_status || getStatusByScore(nilai);
+                const statusClass = getStatusClass(status);
+                
+                const row = `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="small">${aspek.aspek_kpi}</td>
+                        <td class="fw-bold">${nilai.toFixed(1)}</td>
+                        <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        } else {
+            tbody.innerHTML = `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td class="small">${item.aspek_kpi}</td>
-                    <td class="fw-bold">${nilai.toFixed(1)}</td>
-                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td colspan="4" class="text-center text-muted py-3">
+                        <i class="icofont-info-circle"></i>
+                        <p class="small mt-2">Tidak ada data aspek KPI</p>
+                    </td>
                 </tr>
             `;
-            tbody.innerHTML += row;
-        });
+        }
         
         document.getElementById('kpiDetailLoading').classList.add('d-none');
     }
 }
 
+// Helper function untuk menentukan status berdasarkan score
+function getStatusByScore(score) {
+    if (score >= 90) return 'Sangat Baik';
+    if (score >= 80) return 'Baik';
+    if (score >= 70) return 'Cukup';
+    if (score >= 50) return 'Kurang';
+    return 'Sangat Kurang';
+}
+
 // Load top employees
 async function loadTopEmployees() {
     try {
-        const response = await fetch('/api/kpis/all-employees');
+        const response = await fetch('/api/kpis/top-employees/3');
         const data = await response.json();
         
         if (data.success) {
             updateTopEmployees(data.data);
+        } else {
+            // Fallback ke method lama jika method baru tidak ada
+            const fallbackResponse = await fetch('/api/kpis/all-employees');
+            const fallbackData = await fallbackResponse.json();
+            
+            if (fallbackData.success) {
+                updateTopEmployees(fallbackData.data);
+            }
         }
     } catch (error) {
         console.error('Error loading top employees:', error);
@@ -477,9 +505,22 @@ function updateTopEmployees(employees) {
         
         listElement.innerHTML = '';
         
-        employees.slice(0, 5).forEach((employee, index) => {
+        // Ambil hanya 3 karyawan dengan score tertinggi
+        const topThreeEmployees = employees
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3);
+        
+        topThreeEmployees.forEach((employee, index) => {
+            const rankClass = index === 0 ? 'bg-warning text-dark' : 
+                            index === 1 ? 'bg-secondary text-white' : 
+                            'bg-info text-white';
+            
             const item = `
                 <div class="list-group-item d-flex align-items-center">
+                    <span class="avatar rounded-circle me-3 ${rankClass} d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        ${index + 1}
+                    </span>
+                    
                     <img class="avatar rounded-circle me-3" 
                          src="${employee.photo}" 
                          alt="${employee.nama}" width="40" height="40"
@@ -489,15 +530,23 @@ function updateTopEmployees(employees) {
                         <h6 class="mb-0 small-14 fw-bold text-truncate">
                             ${employee.nama}
                         </h6>
+                        <small class="text-muted">${employee.division}</small>
                     </div>
 
                     <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
-                        <span class="fw-bold text-primary">${employee.score.toFixed(0)}%</span>
+                        <span class="fw-bold text-primary">${employee.score.toFixed(0)}</span>
                     </div>
                 </div>
             `;
             listElement.innerHTML += item;
         });
+    } else {
+        listElement.innerHTML = `
+            <div class="text-center py-3 text-muted">
+                <i class="icofont-info-circle"></i>
+                <p class="small mt-2">Tidak ada data karyawan</p>
+            </div>
+        `;
     }
 }
 

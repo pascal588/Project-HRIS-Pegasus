@@ -6,6 +6,47 @@
    <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/responsive.dataTables.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/plugin/datatables/dataTables.bootstrap5.min.css') }}">
 
+    <style>
+        /* Style untuk dropdown aspek simple */
+.aspek-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.toggle-subaspek {
+    background: none;
+    border: none;
+    color: #6c757d;
+    padding: 2px 5px;
+    flex-shrink: 0;
+}
+
+.toggle-subaspek:hover {
+    color: #495057;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 3px;
+}
+
+.subaspek-row {
+    background-color: #fafbfc;
+}
+
+.subaspek-row:hover {
+    background-color: #f1f5f9;
+}
+
+.kpi-progress {
+    height: 10px;
+    border-radius: 5px;
+}
+
+.progress-percentage {
+    font-size: 0.8rem;
+    margin-top: 3px;
+    text-align: right;
+}
+    </style>
+
     <!-- Body: Body -->       
         <div class="body d-flex">
             <div class="container-xxl">
@@ -51,8 +92,8 @@
                 </div>
 
                  
-                <!-- Tabel KPI Detail -->
-                <div class="card shadow-sm mb-3">
+<!-- Tabel KPI Detail -->
+<div class="card shadow-sm mb-3">
     <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold">Detail Score KPI</h6>
         <div class="dropdown">
@@ -68,31 +109,29 @@
         <div class="row clearfix g-3">
             <div class="col-sm-12">
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <table id="myProjectTable" class="table table-hover align-middle mb-0" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>No</th>
-                                    <th>Aspek KPI</th>
-                                    <th>Bobot</th>
-                                    <th>Nilai</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpiTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center">Pilih periode untuk melihat data KPI</td>
-                                </tr>
-                            </tbody>
-                            <tfoot>
-                                <tr class="table-light">
-                                    <td colspan="2" class="fw-bold text-end">Total</td>
-                                    <td id="totalBobot">0%</td>
-                                    <td id="totalNilai">0</td>
-                                    <td id="totalStatus">-</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table id="myProjectTable" class="table table-hover align-middle mb-0" style="width:100%; min-width: 800px;">
+                                <thead>
+                                    <tr>
+                                        <th width="35%">Aspek KPI</th>
+                                        <th width="12%">Bobot</th>
+                                        <th width="12%">Nilai</th>
+                                        <th width="12%">Kontribusi</th>
+                                        <th width="14%">Status</th>
+                                        <th width="15%">Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kpiTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">Pilih periode untuk melihat data KPI</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot id="kpiTableFooter">
+                                    <!-- Total akan diisi oleh JavaScript -->
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -455,50 +494,159 @@ function updateKpiSummary(summary) {
 
 function updateKpiTable(details) {
     const tbody = document.getElementById('kpiTableBody');
+    const tfoot = document.getElementById('kpiTableFooter');
+    
     tbody.innerHTML = '';
     
-    let totalBobot = 0;
-    let totalNilai = 0;
-    let rowCount = 0;
+    if (!details || details.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
+        return;
+    }
 
-    details.forEach((item, index) => {
-        const nilai = parseFloat(item.score) || 0;
-        const bobot = parseFloat(item.bobot) || 0;
-        const status = item.status;
-        const statusClass = getStatusClass(status);
+    let totalBobotAllAspek = 0;
+    let totalKontribusiAllAspek = 0;
+    let aspekCount = 0;
+
+    // Kelompokkan data berdasarkan aspek
+    const aspekGroups = {};
+    details.forEach(item => {
+        const aspekName = item.aspek_kpi || 'Aspek Lain';
+        if (!aspekGroups[aspekName]) {
+            aspekGroups[aspekName] = [];
+        }
+        aspekGroups[aspekName].push(item);
+    });
+
+    // Render setiap aspek dengan format dropdown simple
+    Object.keys(aspekGroups).forEach(aspekName => {
+        const aspekItems = aspekGroups[aspekName];
+        const totalAspek = aspekItems.find(item => item.is_total_aspek);
+        const subAspeks = aspekItems.filter(item => !item.is_total_aspek);
         
-        const row = `
-            <tr>
-                <td><span class="fw-bold">${index + 1}</span></td>
-                <td><span class="fw-bold ms-1">${item.aspek_kpi}</span></td>
-                <td><span class="fw-bold ms-1">${bobot.toFixed(1)}%</span></td>
-                <td><span class="fw-bold ms-1">${nilai.toFixed(2)}</span></td>
-                <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+        aspekCount++;
+
+        // Hitung nilai untuk header aspek
+        const totalNilaiAspek = parseFloat(totalAspek?.score) || 0;
+        const totalBobotAspek = parseFloat(totalAspek?.bobot) || 0;
+        const totalKontribusiAspek = parseFloat(totalAspek?.kontribusi) || 0;
+        
+        const statusAspek = getOverallStatus(totalNilaiAspek);
+        const statusClassAspek = getStatusClass(statusAspek);
+        const progressValueAspek = Math.min(totalNilaiAspek, 100);
+
+        // Header Aspek - tanda di sebelah progress
+        tbody.innerHTML += `
+            <tr class="aspek-header" data-aspek="${aspekCount}">
+                <td>
+                    <span class="fw-bold">${aspekCount}. ${aspekName}</span>
+                </td>
+                <td class="fw-bold">${totalBobotAspek.toFixed(1)}%</td>
+                <td class="fw-bold">${totalNilaiAspek.toFixed(2)}</td>
+                <td class="fw-bold">${totalKontribusiAspek.toFixed(2)}</td>
+                <td><span class="kpi-badge ${statusClassAspek}">${statusAspek}</span></td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="flex-grow-1">
+                            <div class="progress kpi-progress">
+                                <div class="progress-bar" role="progressbar" style="width: ${progressValueAspek}%" 
+                                     aria-valuenow="${progressValueAspek}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div class="progress-percentage">${progressValueAspek.toFixed(1)}%</div>
+                        </div>
+                        <button class="btn btn-sm toggle-subaspek" data-aspek="${aspekCount}">
+                            <i class="icofont-caret-down" id="icon-${aspekCount}"></i>
+                        </button>
+                    </div>
+                </td>
             </tr>
         `;
-        
-        tbody.innerHTML += row;
-        
-        totalBobot += bobot;
-        totalNilai += nilai;
-        rowCount++;
+
+        // Sub-aspek (hidden by default)
+        subAspeks.forEach((subAspek, index) => {
+            const nilai = parseFloat(subAspek.score) || 0;
+            const bobot = parseFloat(subAspek.bobot) || 0;
+            const kontribusi = parseFloat(subAspek.kontribusi) || 0;
+            
+            let nilaiUntukStatus = nilai;
+            if (nilai <= 10) {
+                nilaiUntukStatus = nilai * 10;
+            }
+            
+            const status = getOverallStatus(nilaiUntukStatus);
+            const statusClass = getStatusClass(status);
+            const progressValue = Math.min(nilaiUntukStatus, 100);
+
+            tbody.innerHTML += `
+                <tr class="subaspek-row" id="subaspek-${aspekCount}-${index}" style="display: none;">
+                    <td class="ps-4">
+                        <i class="icofont-minus me-2 text-muted small"></i>
+                        ${subAspek.sub_aspek_name}
+                    </td>
+                    <td>${bobot.toFixed(1)}%</td>
+                    <td>${nilai.toFixed(2)}</td>
+                    <td>${kontribusi.toFixed(2)}</td>
+                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td>
+                        <div class="progress kpi-progress">
+                            <div class="progress-bar bg-secondary" role="progressbar" style="width: ${progressValue}%" 
+                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        totalBobotAllAspek += totalBobotAspek;
+        totalKontribusiAllAspek += totalKontribusiAspek;
     });
 
-    // Update footer
-    document.getElementById('totalBobot').textContent = totalBobot.toFixed(1) + '%';
-    document.getElementById('totalNilai').textContent = totalNilai.toFixed(2);
+    // Setup event listeners untuk toggle dropdown
+    document.querySelectorAll('.toggle-subaspek').forEach(button => {
+        button.addEventListener('click', function() {
+            const aspekId = this.getAttribute('data-aspek');
+            const icon = document.getElementById(`icon-${aspekId}`);
+            const subaspekRows = document.querySelectorAll(`[id^="subaspek-${aspekId}-"]`);
+            
+            if (subaspekRows[0].style.display === 'none') {
+                // Show sub-aspek
+                subaspekRows.forEach(row => {
+                    row.style.display = 'table-row';
+                });
+                icon.className = 'icofont-caret-up';
+            } else {
+                // Hide sub-aspek
+                subaspekRows.forEach(row => {
+                    row.style.display = 'none';
+                });
+                icon.className = 'icofont-caret-down';
+            }
+        });
+    });
+
+    // TOTAL KESELURUHAN
+    const totalNilaiAkhir = totalKontribusiAllAspek * 10;
+    const overallStatus = getOverallStatus(totalNilaiAkhir);
+    const overallStatusClass = getStatusClass(overallStatus);
     
-    // ⚠️ PERBAIKAN: Overall status berdasarkan TOTAL SCORE bukan rata-rata
-    const totalScore = rowCount > 0 ? totalNilai : 0;
-    const overallStatus = getOverallStatus(totalScore);
-    document.getElementById('totalStatus').innerHTML = `<span class="kpi-badge ${getStatusClass(overallStatus)}">${overallStatus}</span>`;
-
-    console.log("KPI Table Updated:", {
-        totalBobot: totalBobot,
-        totalNilai: totalNilai,
-        totalScore: totalScore,
-        overallStatus: overallStatus
-    });
+    if (tfoot) {
+        tfoot.innerHTML = `
+            <tr class="table-active fw-bold">
+                <th>TOTAL KESELURUHAN</th>
+                <th>${totalBobotAllAspek.toFixed(1)}%</th>
+                <th>${totalNilaiAkhir.toFixed(2)}</th>
+                <th>${totalKontribusiAllAspek.toFixed(2)}</th>
+                <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
+                <th>
+                    <div class="progress kpi-progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: ${totalNilaiAkhir}%" 
+                             aria-valuenow="${totalNilaiAkhir}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="progress-percentage">${totalNilaiAkhir.toFixed(1)}%</div>
+                </th>
+            </tr>`;
+    }
 }
 
 // Helper functions

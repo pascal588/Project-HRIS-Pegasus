@@ -1038,9 +1038,9 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="border rounded p-2 bg-success text-white">
-                                <small class="d-block">Nilai Final</small>
-                                <h4 class="mb-0">${calc.final_score}/100</h4>
+                            <div class="border rounded p-2 bg-light">
+                                <small class="d-block text-muted">Nilai Final</small>
+                                <h4 class="mb-0 text-success">${calc.final_score}/100</h4>
                             </div>
                         </div>
                     </div>

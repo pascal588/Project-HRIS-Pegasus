@@ -83,10 +83,10 @@ class AuthenticatedSessionController extends Controller
                         return redirect()->route('hr.dashboard');
                     case 'Kepala Divisi':
                         return redirect()->route('penilai.dashboard');
-                    case 'Karyawan':
-                        return redirect()->route('karyawan.dashboard');
+                    // case 'Karyawan':
+                    //     return redirect()->route('karyawan.dashboard');
                     default:
-                        return redirect('/');
+                        return redirect()->route('karyawan.dashboard');
                 }
             }
 

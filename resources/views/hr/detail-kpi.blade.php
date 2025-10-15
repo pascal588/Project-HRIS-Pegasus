@@ -339,13 +339,13 @@
                 <th width="10%">Bobot</th>
                 <th width="10%">Nilai</th>
                 <th width="10%">Kontribusi</th>
-                <th width="12%">Status</th>
-                <th width="13%">Progress</th>
+                {{-- <th width="12%">Status</th>
+                <th width="13%">Progress</th> --}}
               </tr>
             </thead>
             <tbody id="kpiDetailBody">
               <tr>
-                <td colspan="6" class="text-center">Memuat data...</td>
+                <td colspan="4" class="text-center">Memuat data...</td>
               </tr>
             </tbody>
             <tfoot id="kpiDetailFooter">
@@ -742,68 +742,42 @@ function updateKpiDetailsWithSubAspek(details) {
         const statusClassAspek = getKpiStatusClass(statusAspek);
         const progressValueAspek = Math.min(totalNilaiAspek, 100);
 
-        // Header Aspek - tanda di sebelah progress
         tbody.innerHTML += `
-            <tr class="aspek-header" data-aspek="${aspekCount}">
-                <td>
-                    <span class="fw-bold">${aspekCount}. ${aspekName}</span>
-                </td>
-                <td class="fw-bold">${totalBobotAspek.toFixed(1)}%</td>
-                <td class="fw-bold">${totalNilaiAspek.toFixed(2)}</td>
-                <td class="fw-bold">${totalKontribusiAspek.toFixed(2)}</td>
-                <td><span class="kpi-badge ${statusClassAspek}">${statusAspek}</span></td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="flex-grow-1">
-                            <div class="progress kpi-progress">
-                                <div class="progress-bar" role="progressbar" style="width: ${progressValueAspek}%" 
-                                     aria-valuenow="${progressValueAspek}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div class="progress-percentage">${progressValueAspek.toFixed(1)}%</div>
-                        </div>
-                        <button class="btn btn-sm toggle-subaspek" data-aspek="${aspekCount}">
-                            <i class="icofont-caret-down" id="icon-${aspekCount}"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
+      <tr class="aspek-header" data-aspek="${aspekCount}">
+          <td>
+              <span class="fw-bold">${aspekCount}. ${aspekName}</span>
+          </td>
+          <td class="fw-bold">${totalBobotAspek.toFixed(1)}%</td>
+          <td class="fw-bold">${totalNilaiAspek.toFixed(2)}</td>
+          <td class="fw-bold">
+              <div class="d-flex align-items-center gap-2">
+                  <span>${totalKontribusiAspek.toFixed(2)}</span>
+                  <button class="btn btn-sm toggle-subaspek" data-aspek="${aspekCount}">
+                      <i class="icofont-caret-down" id="icon-${aspekCount}"></i>
+                  </button>
+              </div>
+          </td>
+      </tr>
+  `;
 
-        // Sub-aspek (hidden by default)
-        subAspeks.forEach((subAspek, index) => {
-            const nilai = parseFloat(subAspek.score) || 0;
-            const bobot = parseFloat(subAspek.bobot) || 0;
-            const kontribusi = parseFloat(subAspek.kontribusi) || 0;
-            
-            let nilaiUntukStatus = nilai;
-            if (nilai <= 10) {
-                nilaiUntukStatus = nilai * 10;
-            }
-            
-            const status = getKpiStatus(nilaiUntukStatus);
-            const statusClass = getKpiStatusClass(status);
-            const progressValue = Math.min(nilaiUntukStatus, 100);
+        // Sub-aspek (hidden by default) - TANPA DROPDOWN
+      subAspeks.forEach((subAspek, index) => {
+          const nilai = parseFloat(subAspek.score) || 0;
+          const bobot = parseFloat(subAspek.bobot) || 0;
+          const kontribusi = parseFloat(subAspek.kontribusi) || 0;
 
-            tbody.innerHTML += `
-                <tr class="subaspek-row" id="subaspek-${aspekCount}-${index}" style="display: none;">
-                    <td class="ps-4">
-                        <i class="icofont-minus me-2 text-muted small"></i>
-                        ${subAspek.sub_aspek_name}
-                    </td>
-                    <td>${bobot.toFixed(1)}%</td>
-                    <td>${nilai.toFixed(2)}</td>
-                    <td>${kontribusi.toFixed(2)}</td>
-                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
-                    <td>
-                        <div class="progress kpi-progress">
-                            <div class="progress-bar bg-secondary" role="progressbar" style="width: ${progressValue}%" 
-                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
-                    </td>
-                </tr>
-            `;
-        });
+          tbody.innerHTML += `
+              <tr class="subaspek-row" id="subaspek-${aspekCount}-${index}" style="display: none;">
+                  <td class="ps-4">
+                      <i class="icofont-minus me-2 text-muted small"></i>
+                      ${subAspek.sub_aspek_name}
+                  </td>
+                  <td>${bobot.toFixed(1)}%</td>
+                  <td>${nilai.toFixed(2)}</td>
+                  <td>${kontribusi.toFixed(2)}</td>
+              </tr>
+          `;
+      });
 
         totalBobotAllAspek += totalBobotAspek;
         totalKontribusiAllAspek += totalKontribusiAspek;
@@ -834,26 +808,15 @@ function updateKpiDetailsWithSubAspek(details) {
 
     // TOTAL KESELURUHAN
     const totalNilaiAkhir = totalKontribusiAllAspek * 10;
-    const overallStatus = getKpiStatus(totalNilaiAkhir);
-    const overallStatusClass = getKpiStatusClass(overallStatus);
-    
     if (tfoot) {
-        tfoot.innerHTML = `
-            <tr class="table-active fw-bold">
-                <th>TOTAL KESELURUHAN</th>
-                <th>${totalBobotAllAspek.toFixed(1)}%</th>
-                <th>${totalNilaiAkhir.toFixed(2)}</th>
-                <th>${totalKontribusiAllAspek.toFixed(2)}</th>
-                <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
-                <th>
-                    <div class="progress kpi-progress">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: ${totalNilaiAkhir}%" 
-                             aria-valuenow="${totalNilaiAkhir}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="progress-percentage">${totalNilaiAkhir.toFixed(1)}%</div>
-                </th>
-            </tr>`;
-    }
+    tfoot.innerHTML = `
+        <tr class="table-active fw-bold">
+            <th>TOTAL KESELURUHAN</th>
+            <th>${totalBobotAllAspek.toFixed(1)}%</th>
+            <th>${totalNilaiAkhir.toFixed(2)}</th>
+            <th>${totalKontribusiAllAspek.toFixed(2)}</th>
+        </tr>`;
+}
 }
 
 // Tambahkan fungsi helper untuk rumus
@@ -909,21 +872,27 @@ function updateKpiSummary(summary) {
         rankingText: document.getElementById('rankingText')
     };
 
-    // ⚠️ PERBAIKAN: Gunakan total_score sebagai nilai utama
-    const totalScore = parseFloat(summary.total_score) || 0;
+    // ⚠️ PERBAIKAN: Kalikan total_score dengan 10 seperti di tabel indikator
+    const totalScoreFromAPI = parseFloat(summary.total_score) || 0;
+    const totalScore = totalScoreFromAPI * 10; // ⚠️ DIKALI 10
     
     if (elements.totalScore) elements.totalScore.textContent = totalScore.toFixed(2);
     if (elements.averageScore) elements.averageScore.textContent = totalScore.toFixed(2); // Sama dengan total
     if (elements.performanceScore) elements.performanceScore.textContent = totalScore.toFixed(1);
-    if (elements.performanceStatus) elements.performanceStatus.textContent = `(${summary.performance_status || '-'})`;
-    if (elements.performanceText) elements.performanceText.textContent = `(${summary.performance_status || '-'})`;
+    
+    // Update status performa berdasarkan nilai setelah dikali 10
+    const performanceStatus = getKpiStatus(totalScore);
+    if (elements.performanceStatus) elements.performanceStatus.textContent = `(${performanceStatus})`;
+    if (elements.performanceText) elements.performanceText.textContent = `(${performanceStatus})`;
+    
     if (elements.ranking) elements.ranking.textContent = summary.ranking || '-';
     if (elements.rankingText) elements.rankingText.textContent = `(Dari ${summary.total_employees} Karyawan)`;
 
-    console.log('🎯 Summary KPI (SAMA DENGAN LIST):', {
-        total_score: totalScore,
-        performance_status: summary.performance_status,
-        ranking: summary.ranking
+    console.log('🎯 Summary KPI (SETELAH ×10):', {
+        'total_score_from_api': totalScoreFromAPI,
+        'total_score_after_multiplier': totalScore,
+        'performance_status': performanceStatus,
+        'ranking': summary.ranking
     });
 }
 
@@ -1064,17 +1033,23 @@ async function getMonthlyScoresFromPeriods(employeeId, year) {
             if (data.success) {
                 const monthName = new Date(period.tanggal_mulai).toLocaleDateString('en-US', { month: 'long' });
                 const monthShort = new Date(period.tanggal_mulai).toLocaleDateString('id-ID', { month: 'short' });
-                const totalScore = data.data.kpi_summary.total_score;
+                
+                // ⚠️ AMBIL NILAI DARI SUMMARY (belum dikali 10)
+                const totalScoreFromAPI = data.data.kpi_summary.total_score;
+                
+                // ⚠️ TAMBAH PERKALIAN 10 DI JAVASCRIPT
+                const totalScore = totalScoreFromAPI * 10;
                 
                 monthlyScores.push({
                     month_name: monthName,
                     month_short: monthShort,
-                    total_score: totalScore,
+                    total_score: totalScore, // Sudah dikali 10
+                    raw_score: totalScoreFromAPI, // Simpan nilai asli untuk debug
                     period_name: period.nama,
                     period_date: period.tanggal_mulai
                 });
                 
-                console.log(`✅ Data untuk ${monthName}: ${totalScore}`);
+                console.log(`✅ Data untuk ${monthName}: ${totalScoreFromAPI} × 10 = ${totalScore}`);
             }
         } catch (error) {
             console.log(`❌ Gagal load period ${period.id_periode}:`, error.message);
@@ -1084,11 +1059,11 @@ async function getMonthlyScoresFromPeriods(employeeId, year) {
     // Urutkan berdasarkan bulan
     monthlyScores.sort((a, b) => monthOrder.indexOf(a.month_name) - monthOrder.indexOf(b.month_name));
     
-    console.log('📈 Data monthly scores:', monthlyScores);
+    console.log('📈 Data monthly scores (setelah ×10 di JS):', monthlyScores);
     return monthlyScores;
 }
 
-// Fungsi buat chart dari scores
+// Fungsi buat chart dari scores - PASTIKAN SUDAH ×10
 function createChartFromScores(monthlyScores, year) {
     console.log('🎨 Membuat chart dari data real:', monthlyScores);
 
@@ -1100,10 +1075,10 @@ function createChartFromScores(monthlyScores, year) {
 
     // Siapkan data untuk chart
     const labels = monthlyScores.map(item => item.month_short);
-    const scores = monthlyScores.map(item => parseFloat(item.total_score) || 0);
+    const scores = monthlyScores.map(item => parseFloat(item.total_score) || 0); // Sudah dikali 10
 
     console.log('🏷️ Labels:', labels);
-    console.log('📊 Scores:', scores);
+    console.log('📊 Scores (setelah ×10):', scores);
 
     // Hancurkan chart sebelumnya jika ada
     if (kpiTrendChart) {
@@ -1119,7 +1094,7 @@ function createChartFromScores(monthlyScores, year) {
             labels: labels,
             datasets: [{
                 label: 'Nilai KPI',
-                data: scores,
+                data: scores, // Sudah dikali 10
                 borderColor: '#4a90e2',
                 backgroundColor: 'rgba(74, 144, 226, 0.1)',
                 borderWidth: 3,
@@ -1195,7 +1170,7 @@ function createChartFromScores(monthlyScores, year) {
         }
     });
 
-    console.log('✅ Chart berhasil dibuat dengan data real');
+    console.log('✅ Chart berhasil dibuat dengan data real (sudah ×10)');
 }
 
 // Fungsi tampilkan chart "no data"
@@ -1218,7 +1193,7 @@ function showNoDataChart(year) {
     `;
 }
 
-// --- BAGIAN 5: TABEL REKAP BULANAN - DENGAN NULL CHECKING ---
+// --- BAGIAN 5: TABEL REKAPAN BULANAN - TAMBAH ×10 DI JS ---
 async function loadAndRenderMonthlyRecap(employeeId, year) {
     const loader = document.getElementById('monthlyRecapLoader');
     const container = document.getElementById('monthlyRecapContainer');
@@ -1237,7 +1212,7 @@ async function loadAndRenderMonthlyRecap(employeeId, year) {
     try {
         console.log(`📋 Memuat rekap bulanan untuk employee ${employeeId}, tahun ${year}`);
         
-        // GUNAKAN DATA DARI PERIODS
+        // GUNAKAN DATA DARI PERIODS (sudah ada ×10 di getMonthlyScoresFromPeriods)
         const monthlyScores = await getMonthlyScoresFromPeriods(employeeId, year);
 
         if (monthlyScores.length === 0) {
@@ -1259,7 +1234,7 @@ async function loadAndRenderMonthlyRecap(employeeId, year) {
         let totalNilai = 0;
 
         monthlyScores.forEach(item => {
-            const totalScore = parseFloat(item.total_score) || 0;
+            const totalScore = parseFloat(item.total_score) || 0; // Sudah dikali 10
             const status = getKpiStatus(totalScore);
             const statusClass = getKpiStatusClass(status);
             
@@ -1294,7 +1269,7 @@ async function loadAndRenderMonthlyRecap(employeeId, year) {
 
         loader.style.display = 'none';
         container.style.display = 'block';
-        console.log('✅ Tabel rekap berhasil dibuat');
+        console.log('✅ Tabel rekap berhasil dibuat (nilai sudah ×10)');
 
     } catch (error) {
         console.error('❌ Gagal memuat rekap bulanan:', error);
@@ -1391,11 +1366,7 @@ window.addEventListener('load', function() {
 const exportBtn = document.getElementById('exportMonthlyBtn');
 if (exportBtn) {
     exportBtn.addEventListener('click', function() {
-        // Ambil data yang sama dengan yang ditampilkan di blade
-        const currentTotalScore = document.getElementById('totalScore')?.textContent || '0';
-        
-        console.log('📊 Current Blade Total Score:', currentTotalScore);
-        console.log('📅 Exporting for year:', currentYear);
+        console.log('📤 Memulai export SYNC WITH BLADE...');
 
         const button = this;
         const originalText = button.textContent;
@@ -1403,9 +1374,9 @@ if (exportBtn) {
         button.disabled = true;
 
         try {
-            console.log(`📤 Memulai export untuk employee: ${currentEmployeeId}, tahun: ${currentYear}`);
+            console.log(`📤 Export untuk employee: ${currentEmployeeId}, tahun: ${currentYear}`);
             
-            // GUNAKAN ENDPOINT YANG BARU
+            // Tetap gunakan endpoint yang sama, tapi sekarang sudah sync dengan blade
             const exportUrl = `/api/kpis/export-monthly/${currentEmployeeId}/${currentYear}`;
             
             console.log('🔗 Export URL:', exportUrl);
@@ -1419,7 +1390,7 @@ if (exportBtn) {
             link.click();
             document.body.removeChild(link);
             
-            console.log('✅ Export berhasil diproses!');
+            console.log('✅ Export berhasil diproses! Data sync dengan tabel blade.');
             
         } catch (error) {
             console.error('❌ Gagal mengekspor:', error);

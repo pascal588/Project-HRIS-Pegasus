@@ -163,27 +163,27 @@
             </div>
             <div class="col-md-4">
               <div class="table-responsive">
-                <div class="fw-bold mb-2">Detail Nilai KPI Terakhir</div>
-                <div id="kpiDetailLoading" class="text-center py-2">
-                  <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                </div>
-                <div id="kpiDetailContent">
-                  <table class="table table-sm table-striped mb-0">
-                    <thead>
-                      <tr>
-                        <th>Aspek</th>
-                        <th class="text-center">Skor</th>
-                        <th class="text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody id="kpiDetailBody">
-                      <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+    <div class="fw-bold mb-2">Detail Nilai KPI Terakhir</div>
+    <div id="kpiDetailLoading" class="text-center py-2">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    <div id="kpiDetailContent">
+        <table class="table table-sm table-striped mb-0">
+            <thead>
+                <tr>
+                    <th>Aspek</th>
+                    <th class="text-center">Skor</th>
+                    <!-- ⚠️ HAPUS KOLOM STATUS -->
+                </tr>
+            </thead>
+            <tbody id="kpiDetailBody">
+                <!-- Data akan diisi oleh JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
             </div>
           </div>
         </div>
@@ -299,9 +299,6 @@ async function loadDashboardData() {
     }
 }
 
-// ======================
-// LOAD DATA KPI PERSONAL (ASPEK SAJA)
-// ======================
 async function loadPersonalKpiData() {
     try {
         // 1. Load available periods dulu
@@ -314,10 +311,10 @@ async function loadPersonalKpiData() {
             // 2. Load data untuk setiap periode
             allMonthlyData = {};
             
-            for (const period of periods.slice(0, 12)) { // Maksimal 12 bulan
+            for (const period of periods.slice(0, 12)) {
                 try {
-                    // ⚠️ GUNAKAN API BARU: Hanya ambil aspek saja
-                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/aspek-only/${period.id_periode}`);
+                    // ⚠️ GUNAKAN API ASLI TAPI PAHAMI STRUKTUR DATANYA
+                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/detail/${period.id_periode}`);
                     const data = await response.json();
                     
                     if (data.success) {
@@ -328,18 +325,26 @@ async function loadPersonalKpiData() {
                             year: 'numeric' 
                         });
                         
-                        // Simpan data lengkap
+                        // ⚠️ ANALISA STRUKTUR DATA DARI API
+                        console.log(`API Response for ${monthKey}:`, periodData);
+                        
+                        // Cek struktur data yang benar
+                        const totalScore = parseFloat(periodData.kpi_summary.total_score) || 0;
+                        const averageScore = parseFloat(periodData.kpi_summary.average_score) || 0;
+                        
+                        // Simpan data
                         allMonthlyData[monthKey] = {
                             month: monthKey,
-                            totalScore: periodData.kpi_summary.total_score,
-                            averageScore: periodData.kpi_summary.average_score,
+                            totalScore: totalScore, // Biarkan apa adanya dari API
+                            averageScore: averageScore,
                             periodName: period.nama,
                             fullDate: startDate,
-                            kpiDetails: periodData.kpi_aspek_only, // ⚠️ SEKARANG HANYA ASPEK
+                            kpiDetails: periodData.kpi_details,
                             ranking: periodData.kpi_summary.ranking,
                             totalEmployees: periodData.kpi_summary.total_employees,
                             performanceStatus: periodData.kpi_summary.performance_status
                         };
+                        
                     }
                 } catch (error) {
                     console.error(`Error loading data for period ${period.id_periode}:`, error);
@@ -360,7 +365,7 @@ async function loadPersonalKpiData() {
 }
 
 // ======================
-// UPDATE SUMMARY DASHBOARD - FIXED
+// UPDATE DASHBOARD SUMMARY - FIXED
 // ======================
 function updateDashboardSummary() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
@@ -369,26 +374,57 @@ function updateDashboardSummary() {
         const latestData = monthlyArray[0];
         const previousData = monthlyArray[1] || latestData;
         
-        // Update current score - PAKAI totalScore BUKAN averageScore
-        const currentTotalScore = latestData.totalScore;
-        document.getElementById('currentScore').textContent = currentTotalScore.toFixed(1);
+        // ⚠️ ANALISA: Cek nilai sebenarnya dari API
+        const currentScoreFromAPI = parseFloat(latestData.totalScore) || 0;
+        const previousScoreFromAPI = parseFloat(previousData.totalScore) || 0;
+        
+        console.log("🔍 DEBUG SCORE ANALYSIS:", {
+            currentScoreFromAPI: currentScoreFromAPI,
+            previousScoreFromAPI: previousScoreFromAPI,
+            latestData: latestData
+        });
+        
+        // ⚠️ TENTUKAN SKALA YANG BENAR
+        // Jika nilai dari API 6.3 tapi di kpi-penilai tampil 63, berarti perlu ×10
+        // Jika nilai dari API 63 tapi di kpi-penilai tampil 63, berarti sudah benar
+        
+        let currentScore, previousScore;
+        
+        // Logic deteksi skala
+        if (currentScoreFromAPI < 10) {
+            // Jika nilai < 10, berarti perlu ×10 (skala 0-10 → 0-100)
+            currentScore = currentScoreFromAPI * 10;
+            previousScore = previousScoreFromAPI * 10;
+            console.log("🔄 Applying ×10 multiplier (detected scale 0-10)");
+        } else {
+            // Jika nilai >= 10, berarti sudah skala 0-100
+            currentScore = currentScoreFromAPI;
+            previousScore = previousScoreFromAPI;
+            console.log("✅ Using direct score (detected scale 0-100)");
+        }
+        
+        // Update current score
+        document.getElementById('currentScore').textContent = currentScore.toFixed(1);
         
         // Update previous score
-        const previousScore = previousData.totalScore.toFixed(1);
-        document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore}`;
+        if (previousData !== latestData) {
+            document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore.toFixed(1)}`;
+        } else {
+            document.getElementById('previousScore').textContent = `Data pertama`;
+        }
         
-        // ⚠️ PERBAIKAN: Hitung grade dari TOTAL SCORE bukan average score
-        const gradeInfo = calculateGrade(currentTotalScore);
+        // Hitung grade
+        const gradeInfo = calculateGrade(currentScore);
         document.getElementById('currentGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceText').textContent = gradeInfo.text;
         document.getElementById('performanceStatus').textContent = gradeInfo.status;
         
-        console.log("Dashboard Summary Updated:", {
-            totalScore: currentTotalScore,
-            averageScore: latestData.averageScore,
+        console.log("🎯 Final Dashboard Summary:", {
+            rawFromAPI: currentScoreFromAPI,
+            finalDisplay: currentScore,
             grade: gradeInfo.grade,
-            status: gradeInfo.status
+            transformation: currentScoreFromAPI < 10 ? "×10 applied" : "direct"
         });
     }
 }
@@ -407,11 +443,8 @@ function calculateGrade(score) {
     return { grade: 'E', text: 'Sangat Kurang', status: 'Sangat Kurang' };
 }
 
-// ======================
-// UPDATE GRAFIK KPI
-// ======================
 function updateKpiChart() {
-    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - b.fullDate);
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - a.fullDate);
     
     if (monthlyArray.length === 0) {
         document.getElementById('chartKPI').innerHTML = `
@@ -424,7 +457,17 @@ function updateKpiChart() {
     }
 
     const categories = monthlyArray.map(item => item.month);
-    const totalScores = monthlyArray.map(item => parseFloat(item.totalScore) || 0);
+    const totalScores = monthlyArray.map(item => {
+        const rawScore = parseFloat(item.totalScore) || 0;
+        
+        // ⚠️ APPLY SAME LOGIC AS DASHBOARD SUMMARY
+        let finalScore = rawScore;
+        if (rawScore < 10) {
+            finalScore = rawScore * 10;
+        }
+        
+        return finalScore;
+    });
 
     if (kpiChart) {
         kpiChart.destroy();
@@ -456,7 +499,7 @@ function updateKpiChart() {
         yaxis: {
             title: { text: 'Total Nilai KPI' },
             min: 0,
-            max: Math.max(...totalScores) * 1.1,
+            max: 100, // ⚠️ FIXED MAX 100 karena skala 0-100
             labels: { formatter: function(val) { return val.toFixed(0); } }
         },
         colors: ['#0d6efd'],
@@ -475,7 +518,7 @@ function updateKpiChart() {
                         ${monthData.month}
                     </div>
                     <div style="padding: 4px 0;">
-                        <strong>Total Nilai: ${totalScore.toFixed(2)}</strong>
+                        <strong>Total Nilai: ${totalScore.toFixed(1)}</strong>
                     </div>
                 `;
                 
@@ -484,9 +527,10 @@ function updateKpiChart() {
                     tooltipHTML += `<div style="font-weight: 600; margin-bottom: 4px;">Detail Aspek:</div>`;
                     
                     monthData.kpiDetails.forEach(aspek => {
+                        // ⚠️ PERBAIKAN: Gunakan score yang sudah dikali 10
                         const nilai = parseFloat(aspek.score) || 0;
                         tooltipHTML += `
-                            <div style="display: flex; justify-content: between; align-items: center; padding: 2px 0; font-size: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
                                 <span>${aspek.aspek_kpi}:</span>
                                 <strong style="margin-left: 8px;">${nilai.toFixed(1)}</strong>
                             </div>
@@ -504,6 +548,13 @@ function updateKpiChart() {
 
     kpiChart = new ApexCharts(document.querySelector("#chartKPI"), options);
     kpiChart.render();
+    
+    console.log("Chart updated with fixed data:", {
+        categories: categories,
+        scores: totalScores,
+        maxScore: Math.max(...totalScores),
+        minScore: Math.min(...totalScores)
+    });
 }
 
 function updateKpiDetailTable() {
@@ -517,22 +568,48 @@ function updateKpiDetailTable() {
         periodElement.textContent = latestData.month;
         tbody.innerHTML = '';
         
-        latestData.kpiDetails.forEach((item, index) => {
-            const nilai = parseFloat(item.score) || 0;
-            const status = item.status;
-            const statusClass = getStatusClass(status);
+        // ⚠️ HITUNG TOTAL DARI DETAIL (konsisten dengan logic di atas)
+        const rawTotalFromAPI = parseFloat(latestData.totalScore) || 0;
+        let displayTotal = rawTotalFromAPI;
+        if (rawTotalFromAPI < 10) {
+            displayTotal = rawTotalFromAPI * 10;
+        }
+        
+        // Tampilkan hanya total aspek utama
+        const totalAspekItems = latestData.kpiDetails.filter(item => item.is_total_aspek);
+        
+        totalAspekItems.forEach((item, index) => {
+            const rawNilai = parseFloat(item.kontribusi) || 0;
+            let displayNilai = rawNilai;
+            if (rawNilai < 10) {
+                displayNilai = rawNilai * 10;
+            }
             
             const row = `
                 <tr>
                     <td class="small">${item.aspek_kpi}</td>
-                    <td class="text-center fw-bold">${nilai.toFixed(1)}</td>
-                    <td class="text-center"><span class="kpi-badge ${statusClass}">${status}</span></td>
+                    <td class="text-center fw-bold">${displayNilai.toFixed(1)}</td>
                 </tr>
             `;
             tbody.innerHTML += row;
         });
         
+        // Total row
+        const totalRow = `
+            <tr class="table-primary">
+                <td class="small fw-bold">TOTAL NILAI KPI</td>
+                <td class="text-center fw-bold">${displayTotal.toFixed(1)}</td>
+            </tr>
+        `;
+        tbody.innerHTML += totalRow;
+        
         document.getElementById('kpiDetailLoading').classList.add('d-none');
+        
+        console.log("📊 Detail Table Analysis:", {
+            rawTotalFromAPI: rawTotalFromAPI,
+            displayTotal: displayTotal,
+            transformation: rawTotalFromAPI < 10 ? "×10 applied" : "direct"
+        });
     }
 }
 

@@ -87,11 +87,11 @@
                                      class="avatar xl rounded-circle img-thumbnail shadow-sm"
                                      onerror="this.onerror=null; this.src='{{ $employee->gender === 'Wanita' ? asset('assets/images/xs/avatar1.jpg') : asset('assets/images/xs/avatar2.jpg') }}'">
                                 <div class="about-info d-flex align-items-center mt-3 justify-content-center">
-                                    <div class="star me-2">
+                                    {{-- <div class="star me-2">
                                         <i class="icofont-star text-warning fs-4"></i>
                                         <span>Nilai KPI</span>
                                         <span class="fw-bold">-</span>
-                                    </div>
+                                    </div> --}}
                                 </div>
                             </div>
 

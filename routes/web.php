@@ -79,7 +79,7 @@ Route::middleware(['auth', 'nama_jabatan:Kepala Divisi'])->group(function () {
     })->name('penilai.kpi-penilai');
 });
 
-Route::middleware(['auth', 'nama_jabatan:Karyawan'])->group(function () {
+Route::middleware(['auth', 'nama_jabatan:other'])->group(function () {
     Route::get('/dashboard-karyawan', function() {
         return view('karyawan.dashboard');
     })->name('karyawan.dashboard');

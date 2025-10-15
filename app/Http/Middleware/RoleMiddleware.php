@@ -13,15 +13,25 @@ class RoleMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, ...$roles)
-    {
-        $userRoles = $request->user()?->employee?->roles->pluck('nama_jabatan')->toArray() ?? [];
+public function handle($request, Closure $next, ...$roles)
+{
+    $user = $request->user();
+    if (!$user) {
+        return redirect()->route('login');
+    }
 
-        if (empty(array_intersect($roles, $userRoles))) {
-            abort(403, 'Unauthorized');
-        }
+    $userRoles = $user->employee?->roles->pluck('nama_jabatan')->toArray() ?? [];
 
+    // ✅ kalau route minta "other"
+    if (in_array('other', $roles) && empty(array_intersect($userRoles, ['hr', 'kepala_divisi']))) {
         return $next($request);
     }
 
+    // ✅ kalau user punya salah satu role yang diminta
+    if (!empty(array_intersect($roles, $userRoles))) {
+        return $next($request);
+    }
+
+    abort(403, 'Unauthorized');
+}
 }

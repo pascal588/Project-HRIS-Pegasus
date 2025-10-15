@@ -606,6 +606,7 @@ public function getEmployeeScoresByPeriod($periodId)
     }
 }
     
+// Di method getEmployeeKpiDetail - PERBAIKAN RUMUS
 public function getEmployeeKpiDetail($employeeId, $periodId = null)
 {
     try {
@@ -632,16 +633,16 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
 
         $period = Period::findOrFail($periodId);
 
-        // ⚠️ PERBAIKAN: HITUNG TOTAL SCORE DENGAN RUMUS BARU
-        $totalScore = $this->calculateTotalScoreWithNewFormula($employeeId, $periodId);
+        // ⚠️ PERBAIKAN: HITUNG TOTAL SCORE TANPA ×10
+        $totalScore = $this->calculateTotalScoreWithoutMultiplier($employeeId, $periodId);
 
-        // ⚠️ PERBAIKAN: Ambil detail KPI dengan rumus baru
-        $kpiDetails = $this->getKpiDetailsWithNewFormula($employeeId, $periodId);
+        // ⚠️ PERBAIKAN: Ambil detail KPI tanpa ×10
+        $kpiDetails = $this->getKpiDetailsWithoutMultiplier($employeeId, $periodId);
 
-        // Hitung ranking
+        // Hitung ranking TANPA ×10
         $allEmployeeScores = DB::table('kpis_has_employees')
             ->where('periode_id', $periodId)
-            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) * 10 as total_score')) // ⚠️ ×10
+            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) as total_score')) // ⚠️ TANPA ×10
             ->groupBy('employees_id_karyawan')
             ->orderBy('total_score', 'desc')
             ->get();
@@ -683,6 +684,197 @@ public function getEmployeeKpiDetail($employeeId, $periodId = null)
             'message' => 'Error getting KPI detail: ' . $e->getMessage()
         ], 500);
     }
+}
+
+// ⚠️ METHOD BARU: Hitung total score TANPA ×10
+private function calculateTotalScoreWithoutMultiplier($employeeId, $periodId)
+{
+    try {
+        $employee = Employee::with(['roles.division'])->find($employeeId);
+        $divisionId = $employee->roles->first()->division_id ?? null;
+
+        $kpis = Kpi::where('periode_id', $periodId)
+            ->where(function ($query) use ($divisionId) {
+                $query->where('is_global', true);
+                if ($divisionId) {
+                    $query->orWhereHas('divisions', function ($q) use ($divisionId) {
+                        $q->where('divisions.id_divisi', $divisionId);
+                    });
+                }
+            })
+            ->with(['points.questions'])
+            ->get();
+
+        $totalAllKpis = 0;
+
+        foreach ($kpis as $kpi) {
+            $totalAspekScore = 0;
+
+            foreach ($kpi->points as $point) {
+                $pointScore = 0;
+                $isAbsensi = stripos($point->nama, 'absensi') !== false;
+
+                if ($isAbsensi) {
+                    // RUMUS ABSENSI: (nilai_absensi / 10) × (bobot / 100)
+                    $kpisHasEmployeeId = DB::table('kpis_has_employees')
+                        ->where('kpis_id_kpi', $kpi->id_kpi)
+                        ->where('employees_id_karyawan', $employeeId)
+                        ->where('periode_id', $periodId)
+                        ->value('id');
+
+                    if ($kpisHasEmployeeId) {
+                        $pointRecord = DB::table('kpi_points_has_employee')
+                            ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                            ->where('kpi_point_id', $point->id_point)
+                            ->first();
+
+                        if ($pointRecord) {
+                            $nilaiAbsensiSkala10 = $pointRecord->nilai_absensi / 10;
+                            $pointScore = $nilaiAbsensiSkala10 * (floatval($point->bobot) / 100);
+                        }
+                    }
+                } else {
+                    // RUMUS NORMAL: (rata-rata × 2.5) × (bobot / 100)
+                    $pointTotal = 0;
+                    $answeredQuestions = 0;
+
+                    foreach ($point->questions as $q) {
+                        $score = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                            ->where('kpi_question_id_question', $q->id_question)
+                            ->where('periode_id', $periodId)
+                            ->first();
+
+                        if ($score && $score->nilai !== null) {
+                            $pointTotal += $score->nilai;
+                            $answeredQuestions++;
+                        }
+                    }
+
+                    if ($answeredQuestions > 0) {
+                        $avgQuestionScore = $pointTotal / $answeredQuestions;
+                        $pointScore = ($avgQuestionScore * 2.5) * (floatval($point->bobot) / 100);
+                    }
+                }
+
+                $totalAspekScore += $pointScore;
+            }
+
+            $totalAllKpis += $totalAspekScore;
+        }
+
+        // ⚠️ PERBAIKAN: TANPA ×10, langsung return totalAllKpis
+        return $totalAllKpis;
+
+    } catch (\Exception $e) {
+        Log::error('Error calculating total score: ' . $e->getMessage());
+        return 0;
+    }
+}
+
+// ⚠️ METHOD BARU: Get KPI details TANPA ×10
+private function getKpiDetailsWithoutMultiplier($employeeId, $periodId)
+{
+    $kpiData = [];
+    
+    $employee = Employee::with(['roles.division'])->find($employeeId);
+    $divisionId = $employee->roles->first()->division_id ?? null;
+
+    $kpis = Kpi::where('periode_id', $periodId)
+        ->where(function ($query) use ($divisionId) {
+            $query->where('is_global', true);
+            if ($divisionId) {
+                $query->orWhereHas('divisions', function ($q) use ($divisionId) {
+                    $q->where('divisions.id_divisi', $divisionId);
+                });
+            }
+        })
+        ->with(['points.questions'])
+        ->get();
+
+    foreach ($kpis as $kpi) {
+        $aspekUtama = $kpi->nama;
+        $totalAspekScore = 0;
+
+        // DETAIL SUB-ASPEK
+        $kpisHasEmployeeId = DB::table('kpis_has_employees')
+            ->where('kpis_id_kpi', $kpi->id_kpi)
+            ->where('employees_id_karyawan', $employeeId)
+            ->where('periode_id', $periodId)
+            ->value('id');
+
+        foreach ($kpi->points as $point) {
+            $pointScore = 0;
+            $isAbsensi = stripos($point->nama, 'absensi') !== false;
+
+            if ($isAbsensi && $kpisHasEmployeeId) {
+                $pointRecord = DB::table('kpi_points_has_employee')
+                    ->where('kpis_has_employee_id', $kpisHasEmployeeId)
+                    ->where('kpi_point_id', $point->id_point)
+                    ->first();
+                
+                // RUMUS ABSENSI: (nilai_absensi / 10) × (bobot / 100)
+                $nilaiAbsensiSkala10 = ($pointRecord->nilai_absensi ?? 0) / 10;
+                $pointScore = $nilaiAbsensiSkala10 * (floatval($point->bobot) / 100);
+                
+                $kpiData[] = [
+                    'aspek_kpi' => $aspekUtama,
+                    'sub_aspek_name' => $point->nama,
+                    'score' => $pointRecord->nilai_absensi ?? 0, // Nilai mentah (0-100)
+                    'bobot' => floatval($point->bobot),
+                    'kontribusi' => $pointScore, // Kontribusi setelah rumus
+                    'is_total_aspek' => false
+                ];
+            } else {
+                // RUMUS NORMAL: (rata-rata × 2.5) × (bobot / 100)
+                $pointTotal = 0;
+                $answeredQuestions = 0;
+
+                foreach ($point->questions as $question) {
+                    $answer = KpiQuestionHasEmployee::where('employees_id_karyawan', $employeeId)
+                        ->where('kpi_question_id_question', $question->id_question)
+                        ->where('periode_id', $periodId)
+                        ->first();
+
+                    if ($answer && $answer->nilai !== null) {
+                        $pointTotal += $answer->nilai;
+                        $answeredQuestions++;
+                    }
+                }
+
+                $rawScore = 0;
+                $pointScore = 0;
+
+                if ($answeredQuestions > 0) {
+                    $avgQuestionScore = $pointTotal / $answeredQuestions;
+                    $rawScore = $avgQuestionScore * 2.5; // Konversi ke 0-10
+                    $pointScore = $rawScore * (floatval($point->bobot) / 100);
+                }
+
+                $kpiData[] = [
+                    'aspek_kpi' => $aspekUtama,
+                    'sub_aspek_name' => $point->nama,
+                    'score' => $rawScore, // Nilai mentah (0-10)
+                    'bobot' => floatval($point->bobot),
+                    'kontribusi' => $pointScore, // Kontribusi setelah rumus
+                    'is_total_aspek' => false
+                ];
+            }
+
+            $totalAspekScore += $pointScore;
+        }
+
+        // TOTAL ASPEK UTAMA
+        $kpiData[] = [
+            'aspek_kpi' => $aspekUtama,
+            'sub_aspek_name' => 'TOTAL ASPEK',
+            'score' => $totalAspekScore, // ⚠️ TANPA ×10
+            'bobot' => floatval($kpi->bobot),
+            'kontribusi' => $totalAspekScore,
+            'is_total_aspek' => true
+        ];
+    }
+
+    return $kpiData;
 }
 
 // ⚠️ METHOD BARU: Hitung total score dengan rumus baru
@@ -1717,17 +1909,11 @@ public function getNonHeadEmployeesKpis(Request $request)
 public function exportMonthlyKpi($employeeId, $year = null)
 {
     try {
-        \Log::info("=== EXPORT MONTHLY KPI - SYNCHRONIZED WITH TABLE ===");
+        \Log::info("=== EXPORT MONTHLY KPI - SYNC WITH BLADE TABLE ===");
 
         $employee = Employee::with(['roles.division'])->find($employeeId);
         if (!$employee) {
             return response()->json(['error' => 'Employee not found'], 404);
-        }
-
-        // Dapatkan divisi karyawan
-        $employeeDivisionId = null;
-        if ($employee->roles && count($employee->roles) > 0) {
-            $employeeDivisionId = $employee->roles[0]->division_id ?? null;
         }
 
         $exportYear = $year ?: date('Y');
@@ -1755,18 +1941,23 @@ public function exportMonthlyKpi($employeeId, $year = null)
             $monthName = \Carbon\Carbon::parse($period->tanggal_mulai)->format('F Y');
             $monthKey = \Carbon\Carbon::parse($period->tanggal_mulai)->format('Y-m');
             
-            // ✅ PAKAI METHOD YANG SUDAH DIPERBAIKI
-            $kpiData = $this->getKpiDataByDivision($employeeId, $period->id_periode, $employeeDivisionId);
+            // ⚠️ GUNAKAN METHOD YANG SAMA DENGAN BLADE
+            $kpiDetails = $this->getKpiDetailsWithoutMultiplier($employeeId, $period->id_periode);
             
             $monthTotal = 0;
 
-            foreach ($kpiData as $subAspek) {
-                $subAspekName = $subAspek['sub_aspek_name'];
-                $score = $subAspek['score']; // Sudah dalam bentuk kontribusi
-                $aspekUtama = $subAspek['aspek_utama'];
-                $bobot = $subAspek['bobot'];
+            foreach ($kpiDetails as $detail) {
+                // Skip total aspek, hanya ambil sub-aspek
+                if ($detail['is_total_aspek']) {
+                    continue;
+                }
+
+                $aspekUtama = $detail['aspek_kpi'];
+                $subAspekName = $detail['sub_aspek_name'];
+                $score = $detail['score']; // Nilai mentah (0-10 untuk normal, 0-100 untuk absensi)
+                $bobot = $detail['bobot'];
+                $kontribusi = $detail['kontribusi']; // Kontribusi setelah rumus
                 
-                // Simpan semua nama sub aspek
                 $fullName = "{$aspekUtama} - {$subAspekName}";
                 if (!in_array($fullName, $allSubAspekNames)) {
                     $allSubAspekNames[] = $fullName;
@@ -1779,19 +1970,19 @@ public function exportMonthlyKpi($employeeId, $year = null)
                         'sub_aspek_name' => $subAspekName,
                         'full_name' => $fullName,
                         'bobot' => $bobot,
-                        'raw_scores' => [], // Simpan raw score untuk debug
-                        'scores' => []
+                        'scores' => [],
+                        'kontribusi' => [] // Simpan kontribusi juga
                     ];
                 }
                 
+                // Simpan score mentah DAN kontribusi
                 $exportData[$fullName]['scores'][$monthKey] = [
-                    'score' => $score,
+                    'score' => $score, // Nilai mentah
+                    'kontribusi' => $kontribusi, // Kontribusi setelah rumus
                     'month_name' => $monthName
                 ];
                 
-                $exportData[$fullName]['raw_scores'][$monthKey] = $subAspek['raw_score'] ?? 0;
-                
-                $monthTotal += $score;
+                $monthTotal += $kontribusi; // Total berdasarkan kontribusi
             }
 
             $monthlyTotals[$monthKey] = [
@@ -1799,27 +1990,24 @@ public function exportMonthlyKpi($employeeId, $year = null)
                 'month_name' => $monthName
             ];
 
-            \Log::info("📅 MONTHLY TOTAL CALCULATED:", [
+            \Log::info("📅 MONTHLY TOTAL SYNC WITH BLADE:", [
                 'month' => $monthName,
-                'total_score' => $monthTotal,
+                'total_kontribusi' => $monthTotal,
                 'period_id' => $period->id_periode
             ]);
         }
 
-        // ✅ VERIFIKASI: Bandingkan dengan nilai di tabel
-        $this->verifyExportWithTable($employeeId, $exportYear, $monthlyTotals);
-
         if (empty($exportData)) {
             return response("
                 <script>
-                    alert('Tidak ada data KPI yang ditemukan untuk karyawan ini di divisinya');
+                    alert('Tidak ada data KPI yang ditemukan untuk karyawan ini');
                     window.history.back();
                 </script>
             ");
         }
 
-        // Format data untuk export
-        $pivotedData = $this->formatExportDataWithSubAspek($exportData, $monthlyTotals, $allSubAspekNames);
+        // Format data untuk export - GUNAKAN KONTRIBUSI seperti di blade
+        $pivotedData = $this->formatExportDataSyncWithBlade($exportData, $monthlyTotals, $allSubAspekNames);
 
         // Generate filename
         $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $employee->nama);
@@ -1831,7 +2019,7 @@ public function exportMonthlyKpi($employeeId, $year = null)
         );
 
     } catch (\Exception $e) {
-        \Log::error("EXPORT ERROR: " . $e->getMessage());
+        \Log::error("EXPORT SYNC ERROR: " . $e->getMessage());
         \Log::error("Stack trace: " . $e->getTraceAsString());
         
         return response("
@@ -1842,6 +2030,70 @@ public function exportMonthlyKpi($employeeId, $year = null)
         ");
     }
 }
+
+// Tambahkan method baru untuk format data sync dengan blade
+private function formatExportDataSyncWithBlade($exportData, $monthlyTotals, $allSubAspekNames)
+{
+    // Urutkan bulan
+    $sortedMonths = array_keys($monthlyTotals);
+    usort($sortedMonths, function($a, $b) {
+        return strtotime($a) - strtotime($b);
+    });
+
+    // Format nama bulan untuk display
+    $formattedMonths = [];
+    foreach ($sortedMonths as $monthKey) {
+        $formattedMonths[$monthKey] = $monthlyTotals[$monthKey]['month_name'];
+    }
+
+    // Siapkan data scores (gunakan KONTRIBUSI seperti di blade)
+    $scores = [];
+    $rawScores = []; // Simpan nilai mentah juga
+    foreach ($allSubAspekNames as $fullName) {
+        if (isset($exportData[$fullName])) {
+            $subAspekData = $exportData[$fullName];
+            $scores[$fullName] = [];
+            $rawScores[$fullName] = [];
+            
+            foreach ($sortedMonths as $monthKey) {
+                // ⚠️ GUNAKAN KONTRIBUSI seperti di blade, bukan score mentah
+                $kontribusi = $subAspekData['scores'][$monthKey]['kontribusi'] ?? 0;
+                $scoreMentah = $subAspekData['scores'][$monthKey]['score'] ?? 0;
+                
+                $scores[$fullName][$monthKey] = $kontribusi;
+                $rawScores[$fullName][$monthKey] = $scoreMentah;
+            }
+        }
+    }
+
+    // Siapkan data totals
+    $totals = [];
+    foreach ($sortedMonths as $monthKey) {
+        $totals[$monthKey] = $monthlyTotals[$monthKey]['total'] ?? 0;
+    }
+
+    // Siapkan grouping by aspek utama
+    $groupedData = [];
+    foreach ($exportData as $fullName => $data) {
+        $aspekUtama = $data['aspek_utama'];
+        if (!isset($groupedData[$aspekUtama])) {
+            $groupedData[$aspekUtama] = [];
+        }
+        $groupedData[$aspekUtama][] = $fullName;
+    }
+
+    return [
+        'points' => $exportData,
+        'months' => $formattedMonths,
+        'scores' => $scores, // Kontribusi seperti di blade
+        'raw_scores' => $rawScores, // Nilai mentah untuk reference
+        'totals' => $totals,
+        'sorted_months' => $sortedMonths,
+        'grouped_data' => $groupedData,
+        'sync_with_blade' => true // Flag untuk export class
+    ];
+}
+
 
 // ✅ METHOD BARU UNTUK VERIFIKASI
 private function verifyExportWithTable($employeeId, $year, $monthlyTotals)
@@ -2281,7 +2533,7 @@ private function getKpiDetailsFromDatabase($employeeId, $periodId)
                 'employees.nama',
                 'employees.status',
                 'employees.foto',
-                DB::raw('SUM(kpis_has_employees.nilai_akhir) * 10 as total_score')
+                DB::raw('SUM(kpis_has_employees.nilai_akhir) as total_score')
             )
             ->where('employees.status', 'Aktif')
             ->groupBy('employees.id_karyawan', 'employees.nama', 'employees.status', 'employees.foto')
@@ -2371,7 +2623,7 @@ public function getEmployeeKpiAspekOnly($employeeId, $periodId = null)
         // Hitung ranking (sama seperti sebelumnya)
         $allEmployeeScores = DB::table('kpis_has_employees')
             ->where('periode_id', $periodId)
-            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) * 10 as total_score'))
+            ->select('employees_id_karyawan', DB::raw('SUM(nilai_akhir) as total_score'))
             ->groupBy('employees_id_karyawan')
             ->orderBy('total_score', 'desc')
             ->get();
@@ -2415,7 +2667,7 @@ public function getEmployeeKpiAspekOnly($employeeId, $periodId = null)
     }
 }
 
-// ⚠️ METHOD BARU: Ambil hanya aspek utama tanpa detail sub-aspek
+// Di method getKpiAspekOnly - PERBAIKAN AGAR KONSISTEN
 private function getKpiAspekOnly($employeeId, $periodId)
 {
     $kpiData = [];
@@ -2439,7 +2691,7 @@ private function getKpiAspekOnly($employeeId, $periodId)
         $aspekUtama = $kpi->nama;
         $totalAspekScore = 0;
 
-        // Hitung total score untuk aspek ini
+        // Hitung total score untuk aspek ini (SAMA DENGAN kpi-penilai)
         foreach ($kpi->points as $point) {
             $pointScore = 0;
             $isAbsensi = stripos($point->nama, 'absensi') !== false;
@@ -2458,7 +2710,9 @@ private function getKpiAspekOnly($employeeId, $periodId)
                         ->first();
 
                     if ($pointRecord) {
-                        $pointScore = ($pointRecord->nilai_absensi * floatval($point->bobot)) / 100;
+                        // ⚠️ RUMUS SAMA: (nilai_absensi / 10) × (bobot / 100)
+                        $nilaiAbsensiSkala10 = $pointRecord->nilai_absensi / 10;
+                        $pointScore = $nilaiAbsensiSkala10 * (floatval($point->bobot) / 100);
                     }
                 }
             } else {
@@ -2479,6 +2733,7 @@ private function getKpiAspekOnly($employeeId, $periodId)
 
                 if ($answeredQuestions > 0) {
                     $avgQuestionScore = $pointTotal / $answeredQuestions;
+                    // ⚠️ RUMUS SAMA: (rata-rata × 2.5) × (bobot / 100)
                     $pointScore = ($avgQuestionScore * 2.5) * (floatval($point->bobot) / 100);
                 }
             }
@@ -2488,10 +2743,9 @@ private function getKpiAspekOnly($employeeId, $periodId)
 
         $kpiData[] = [
             'aspek_kpi' => $aspekUtama,
-            'score' => $totalAspekScore * 10, // ⚠️ SUDAH ×10
+            'score' => $totalAspekScore * 10, // ⚠️ KALI 10 seperti di kpi-penilai
+            'kontribusi' => $totalAspekScore, // Nilai asli untuk reference
             'bobot' => floatval($kpi->bobot),
-            'kontribusi' => $totalAspekScore,
-            'performance_status' => $this->getStatusByContribution($totalAspekScore * 10)
         ];
     }
 

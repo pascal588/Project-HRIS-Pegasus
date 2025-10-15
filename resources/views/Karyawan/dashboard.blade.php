@@ -173,7 +173,6 @@
                     <th>No</th>
                     <th>Aspek</th>
                     <th>Skor</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="kpiDetailBody">
@@ -213,7 +212,7 @@ async function loadDashboardData() {
     }
 }
 
-// Load data KPI untuk grafik dan summary - MODIFIKASI: PAKAI API BARU
+// Load data KPI untuk grafik dan summary - GUNAKAN CARA MANUAL ×10
 async function loadKpiData() {
     try {
         // 1. Load available periods dulu
@@ -223,13 +222,13 @@ async function loadKpiData() {
         if (periodsData.success && periodsData.data.length > 0) {
             const periods = periodsData.data;
             
-            // 2. Load data untuk setiap periode - ⚠️ GUNAKAN API BARU
+            // 2. Load data untuk setiap periode - KITA HITUNG MANUAL ×10
             allMonthlyData = {};
             
             for (const period of periods.slice(0, 12)) { // Maksimal 12 bulan
                 try {
-                    // ⚠️ MODIFIKASI: Gunakan API yang hanya menampilkan aspek saja
-                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/aspek-only/${period.id_periode}`);
+                    // GUNAKAN API DETAIL
+                    const response = await fetch(`/api/kpis/employee/${currentEmployeeId}/detail/${period.id_periode}`);
                     const data = await response.json();
                     
                     if (data.success) {
@@ -240,18 +239,41 @@ async function loadKpiData() {
                             year: 'numeric' 
                         });
                         
-                        // Simpan data lengkap
+                        // ⚠️ PERBAIKAN: KITA KALI 10 MANUAL DI SINI
+                        const rawTotalScore = parseFloat(periodData.kpi_summary.total_score) || 0;
+                        const multipliedTotalScore = rawTotalScore * 10;
+                        
+                        // Kalikan juga detail aspek dengan 10
+                        const multipliedKpiDetails = periodData.kpi_details.map(detail => {
+                            return {
+                                ...detail,
+                                score: (parseFloat(detail.score) || 0) * 10,
+                                kontribusi: (parseFloat(detail.kontribusi) || 0) * 10
+                            };
+                        });
+
                         allMonthlyData[monthKey] = {
                             month: monthKey,
-                            totalScore: periodData.kpi_summary.total_score,
-                            averageScore: periodData.kpi_summary.average_score,
+                            totalScore: multipliedTotalScore, // ⚠️ SUDAH ×10
+                            averageScore: multipliedTotalScore, 
                             periodName: period.nama,
                             fullDate: startDate,
-                            kpiDetails: periodData.kpi_aspek_only, // ⚠️ SEKARANG HANYA ASPEK
+                            kpiDetails: multipliedKpiDetails, // Detail sudah ×10
                             ranking: periodData.kpi_summary.ranking,
                             totalEmployees: periodData.kpi_summary.total_employees,
-                            performanceStatus: periodData.kpi_summary.performance_status
+                            performanceStatus: periodData.kpi_summary.performance_status,
+                            // Simpan juga data mentah untuk debug
+                            debug: {
+                                rawTotalScore: rawTotalScore,
+                                multipliedTotalScore: multipliedTotalScore
+                            }
                         };
+
+                        console.log(`✅ Data for ${monthKey}:`, {
+                            raw: rawTotalScore,
+                            multiplied: multipliedTotalScore,
+                            details: multipliedKpiDetails.length
+                        });
                     }
                 } catch (error) {
                     console.error(`Error loading data for period ${period.id_periode}:`, error);
@@ -271,6 +293,7 @@ async function loadKpiData() {
     }
 }
 
+// UPDATE DASHBOARD SUMMARY - PAKAI NILAI YANG SUDAH ×10
 function updateDashboardSummary() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
     
@@ -278,16 +301,28 @@ function updateDashboardSummary() {
         const latestData = monthlyArray[0];
         const previousData = monthlyArray[1] || latestData;
         
+        // ⚠️ LANGSUNG PAKAI NILAI YANG SUDAH ×10
+        const currentScore = parseFloat(latestData.totalScore) || 0;
+        const previousScore = parseFloat(previousData.totalScore) || 0;
+        
+        console.log("🔍 KARYAWAN - Using multiplied values:", {
+            currentScore: currentScore,
+            previousScore: previousScore,
+            debug: latestData.debug
+        });
+        
         // Update current score
-        const currentTotalScore = latestData.totalScore;
-        document.getElementById('currentScore').textContent = currentTotalScore.toFixed(1);
+        document.getElementById('currentScore').textContent = currentScore.toFixed(1);
         
         // Update previous score
-        const previousScore = previousData.totalScore.toFixed(1);
-        document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore}`;
+        if (previousData !== latestData) {
+            document.getElementById('previousScore').textContent = `Sebelumnya: ${previousScore.toFixed(1)}`;
+        } else {
+            document.getElementById('previousScore').textContent = `Data pertama`;
+        }
         
-        // Hitung grade dari TOTAL SCORE
-        const gradeInfo = calculateGrade(currentTotalScore);
+        // Hitung grade
+        const gradeInfo = calculateGrade(currentScore);
         document.getElementById('currentGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceGrade').textContent = gradeInfo.grade;
         document.getElementById('performanceText').textContent = gradeInfo.text;
@@ -297,15 +332,14 @@ function updateDashboardSummary() {
         document.getElementById('rankingPosition').textContent = `${latestData.ranking}/${latestData.totalEmployees}`;
         document.getElementById('rankingText').textContent = `Dari ${latestData.totalEmployees} karyawan`;
         
-        console.log("Dashboard Summary Updated:", {
-            totalScore: currentTotalScore,
-            grade: gradeInfo.grade,
-            status: gradeInfo.status
+        console.log("🎯 KARYAWAN Final Summary:", {
+            finalScore: currentScore,
+            grade: gradeInfo.grade
         });
     }
 }
 
-// Calculate grade berdasarkan score
+// Calculate grade
 function calculateGrade(score) {
     const numericScore = parseFloat(score) || 0;
     
@@ -316,9 +350,9 @@ function calculateGrade(score) {
     return { grade: 'E', text: 'Sangat Kurang', status: 'Sangat Kurang' };
 }
 
-// Update grafik KPI
+// Update grafik KPI - PAKAI NILAI YANG SUDAH ×10
 function updateKpiChart() {
-    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - b.fullDate);
+    const monthlyArray = Object.values(allMonthlyData).sort((a, b) => a.fullDate - a.fullDate);
     
     if (monthlyArray.length === 0) {
         document.getElementById('chartKpi').innerHTML = `
@@ -331,6 +365,8 @@ function updateKpiChart() {
     }
 
     const categories = monthlyArray.map(item => item.month);
+    
+    // ⚠️ PAKAI NILAI YANG SUDAH ×10
     const totalScores = monthlyArray.map(item => parseFloat(item.totalScore) || 0);
 
     if (kpiChart) {
@@ -363,7 +399,7 @@ function updateKpiChart() {
         yaxis: {
             title: { text: 'Total Nilai KPI' },
             min: 0,
-            max: Math.max(...totalScores) * 1.1,
+            max: 100,
             labels: { formatter: function(val) { return val.toFixed(0); } }
         },
         colors: ['#0d6efd'],
@@ -382,7 +418,7 @@ function updateKpiChart() {
                         ${monthData.month}
                     </div>
                     <div style="padding: 4px 0;">
-                        <strong>Total Nilai: ${totalScore.toFixed(2)}</strong>
+                        <strong>Total Nilai: ${totalScore.toFixed(1)}</strong>
                     </div>
                 `;
                 
@@ -390,14 +426,17 @@ function updateKpiChart() {
                     tooltipHTML += `<div style="border-top: 1px solid #e0e0e0; margin-top: 6px; padding-top: 6px;">`;
                     tooltipHTML += `<div style="font-weight: 600; margin-bottom: 4px;">Detail Aspek:</div>`;
                     
-                    monthData.kpiDetails.forEach((aspek, index) => {
-                        const nilai = parseFloat(aspek.score) || 0;
-                        tooltipHTML += `
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
-                                <span>${aspek.aspek_kpi}:</span>
-                                <strong style="margin-left: 8px;">${nilai.toFixed(1)}</strong>
-                            </div>
-                        `;
+                    monthData.kpiDetails.forEach(aspek => {
+                        // Tampilkan hanya total aspek utama
+                        if (aspek.is_total_aspek) {
+                            const nilai = parseFloat(aspek.score) || 0;
+                            tooltipHTML += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px;">
+                                    <span>${aspek.aspek_kpi}:</span>
+                                    <strong style="margin-left: 8px;">${nilai.toFixed(1)}</strong>
+                                </div>
+                            `;
+                        }
                     });
                     
                     tooltipHTML += `</div>`;
@@ -411,9 +450,14 @@ function updateKpiChart() {
 
     kpiChart = new ApexCharts(document.querySelector("#chartKpi"), options);
     kpiChart.render();
+    
+    console.log("📈 KARYAWAN Chart data:", {
+        categories: categories,
+        scores: totalScores
+    });
 }
 
-// Update tabel detail KPI - MODIFIKASI: HANYA TAMPILKAN ASPEK UTAMA
+// Update tabel detail KPI - PAKAI NILAI YANG SUDAH ×10
 function updateKpiDetailTable() {
     const monthlyArray = Object.values(allMonthlyData).sort((a, b) => b.fullDate - a.fullDate);
     
@@ -425,27 +469,38 @@ function updateKpiDetailTable() {
         periodElement.textContent = latestData.month;
         tbody.innerHTML = '';
         
-        // ⚠️ MODIFIKASI: Sekarang kpiDetails sudah hanya berisi aspek utama saja
         if (latestData.kpiDetails && latestData.kpiDetails.length > 0) {
-            latestData.kpiDetails.forEach((aspek, index) => {
-                const nilai = parseFloat(aspek.score) || 0;
-                const status = aspek.performance_status || getStatusByScore(nilai);
-                const statusClass = getStatusClass(status);
+            // Filter hanya total aspek utama
+            const totalAspekItems = latestData.kpiDetails.filter(item => item.is_total_aspek);
+            
+            totalAspekItems.forEach((item, index) => {
+                // ⚠️ PAKAI NILAI YANG SUDAH ×10
+                const displayNilai = parseFloat(item.score) || 0;
                 
                 const row = `
                     <tr>
                         <td>${index + 1}</td>
-                        <td class="small">${aspek.aspek_kpi}</td>
-                        <td class="fw-bold">${nilai.toFixed(1)}</td>
-                        <td><span class="kpi-badge ${statusClass}">${status}</span></td>
+                        <td class="small">${item.aspek_kpi}</td>
+                        <td class="fw-bold">${displayNilai.toFixed(1)}</td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
             });
+            
+            // Total row
+            const displayTotal = parseFloat(latestData.totalScore) || 0;
+            
+            const totalRow = `
+                <tr class="table-primary">
+                    <td colspan="2" class="small fw-bold">TOTAL NILAI KPI</td>
+                    <td class="fw-bold">${displayTotal.toFixed(1)}</td>
+                </tr>
+            `;
+            tbody.innerHTML += totalRow;
         } else {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4" class="text-center text-muted py-3">
+                    <td colspan="3" class="text-center text-muted py-3">
                         <i class="icofont-info-circle"></i>
                         <p class="small mt-2">Tidak ada data aspek KPI</p>
                     </td>
@@ -457,30 +512,35 @@ function updateKpiDetailTable() {
     }
 }
 
-// Helper function untuk menentukan status berdasarkan score
-function getStatusByScore(score) {
-    if (score >= 90) return 'Sangat Baik';
-    if (score >= 80) return 'Baik';
-    if (score >= 70) return 'Cukup';
-    if (score >= 50) return 'Kurang';
-    return 'Sangat Kurang';
-}
-
-// Load top employees
+// Load top employees - PERBAIKAN: KALI 10 JUGA
 async function loadTopEmployees() {
     try {
         const response = await fetch('/api/kpis/top-employees/3');
         const data = await response.json();
         
+        console.log("🔍 Top Employees API Response:", data);
+        
         if (data.success) {
-            updateTopEmployees(data.data);
+            // ⚠️ PERBAIKAN: KALI 10 UNTUK TOP EMPLOYEES JUGA
+            const multipliedData = data.data.map(employee => ({
+                ...employee,
+                score: (parseFloat(employee.score) || 0) * 10
+            }));
+            
+            updateTopEmployees(multipliedData);
         } else {
             // Fallback ke method lama jika method baru tidak ada
             const fallbackResponse = await fetch('/api/kpis/all-employees');
             const fallbackData = await fallbackResponse.json();
             
             if (fallbackData.success) {
-                updateTopEmployees(fallbackData.data);
+                // ⚠️ PERBAIKAN: KALI 10 UNTUK FALLBACK JUGA
+                const multipliedFallbackData = fallbackData.data.map(employee => ({
+                    ...employee,
+                    score: (parseFloat(employee.score) || 0) * 10
+                }));
+                
+                updateTopEmployees(multipliedFallbackData);
             }
         }
     } catch (error) {
@@ -494,10 +554,12 @@ async function loadTopEmployees() {
     }
 }
 
-// Update top employees list
+// Update top employees list - PERBAIKAN: TAMPILKAN NILAI YANG SUDAH ×10
 function updateTopEmployees(employees) {
     const listElement = document.getElementById('topEmployeesList');
     const periodElement = document.getElementById('topEmployeePeriod');
+    
+    console.log("🎯 Top Employees Data (after ×10):", employees);
     
     if (employees.length > 0) {
         const latestPeriod = employees[0]?.period_month + ' ' + employees[0]?.period_year;
@@ -510,10 +572,15 @@ function updateTopEmployees(employees) {
             .sort((a, b) => b.score - a.score)
             .slice(0, 3);
         
+        console.log("🏆 Final Top 3:", topThreeEmployees);
+        
         topThreeEmployees.forEach((employee, index) => {
             const rankClass = index === 0 ? 'bg-warning text-dark' : 
                             index === 1 ? 'bg-secondary text-white' : 
                             'bg-info text-white';
+            
+            // ⚠️ PERBAIKAN: TAMPILKAN NILAI YANG SUDAH ×10
+            const displayScore = parseFloat(employee.score) || 0;
             
             const item = `
                 <div class="list-group-item d-flex align-items-center">
@@ -534,7 +601,7 @@ function updateTopEmployees(employees) {
                     </div>
 
                     <div class="ms-2" style="flex-shrink: 0; min-width: 50px; text-align: right;">
-                        <span class="fw-bold text-primary">${employee.score.toFixed(0)}</span>
+                        <span class="fw-bold text-primary">${displayScore.toFixed(0)}</span>
                     </div>
                 </div>
             `;
@@ -548,18 +615,6 @@ function updateTopEmployees(employees) {
             </div>
         `;
     }
-}
-
-// Helper function untuk status class
-function getStatusClass(status) {
-    const statusMap = {
-        'Sangat Baik': 'badge-excellent',
-        'Baik': 'badge-good', 
-        'Cukup': 'badge-average',
-        'Kurang': 'badge-poor',
-        'Sangat Kurang': 'badge-poor'
-    };
-    return statusMap[status] || 'badge-average';
 }
 
 // Fungsi untuk mengambil data absensi
@@ -595,35 +650,6 @@ function fetchAttendanceData() {
         document.getElementById('attendanceError').textContent = 'Gagal memuat data absensi: ' + error.message;
       });
 }
-
-// Add CSS untuk badge
-const style = document.createElement('style');
-style.textContent = `
-    .kpi-badge {
-        padding: 3px 8px;
-        border-radius: 12px;
-        font-weight: 500;
-        font-size: 0.7rem;
-        white-space: nowrap;
-    }
-    .badge-excellent {
-        background-color: rgba(40, 167, 69, 0.2);
-        color: #28a745;
-    }
-    .badge-good {
-        background-color: rgba(23, 162, 184, 0.2);
-        color: #17a2b8;
-    }
-    .badge-average {
-        background-color: rgba(255, 193, 7, 0.2);
-        color: #ffc107;
-    }
-    .badge-poor {
-        background-color: rgba(220, 53, 69, 0.2);
-        color: #dc3545;
-    }
-`;
-document.head.appendChild(style);
 
 // Load data ketika halaman siap
 document.addEventListener('DOMContentLoaded', function() {

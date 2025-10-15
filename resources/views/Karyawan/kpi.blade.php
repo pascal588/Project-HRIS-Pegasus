@@ -114,17 +114,15 @@
                             <table id="myProjectTable" class="table table-hover align-middle mb-0" style="width:100%; min-width: 800px;">
                                 <thead>
                                     <tr>
-                                        <th width="35%">Aspek KPI</th>
-                                        <th width="12%">Bobot</th>
-                                        <th width="12%">Nilai</th>
-                                        <th width="12%">Kontribusi</th>
-                                        <th width="14%">Status</th>
-                                        <th width="15%">Progress</th>
+                                        <th width="45%">Aspek KPI</th> <!-- Lebar ditambah -->
+                                        <th width="15%">Bobot</th> <!-- Lebar ditambah -->
+                                        <th width="15%">Nilai</th> <!-- Lebar ditambah -->
+                                        <th width="25%">Kontribusi</th> <!-- Lebar ditambah banyak -->
                                     </tr>
                                 </thead>
                                 <tbody id="kpiTableBody">
                                     <tr>
-                                        <td colspan="6" class="text-center">Pilih periode untuk melihat data KPI</td>
+                                        <td colspan="4" class="text-center">Pilih periode untuk melihat data KPI</td>
                                     </tr>
                                 </tbody>
                                 <tfoot id="kpiTableFooter">
@@ -460,12 +458,14 @@ async function loadKpiData(employeeId, periodId) {
 
 // Update summary KPI - STANDARDIZED WITH CONTROLLER
 function updateKpiSummary(summary) {
-    document.getElementById('totalScore').textContent = summary.total_score.toFixed(2);
+    // ⚠️ PERBAIKAN: Kalikan total_score dengan 10
+    const totalScore = (parseFloat(summary.total_score) || 0) * 10;
+    
+    document.getElementById('totalScore').textContent = totalScore.toFixed(2);
     document.getElementById('ranking').textContent = summary.ranking;
     document.getElementById('rankingText').textContent = `dari ${summary.total_employees} orang`;
     
-    // ⚠️ PERBAIKAN: Calculate grade berdasarkan TOTAL SCORE bukan average score
-    const totalScore = parseFloat(summary.total_score) || 0;
+    // Calculate grade berdasarkan TOTAL SCORE yang sudah dikali 10
     let grade, gradeText, gradeColor;
     
     if (totalScore >= 90) {
@@ -485,8 +485,8 @@ function updateKpiSummary(summary) {
     document.getElementById('gradeText').textContent = gradeText;
     
     console.log("KPI Summary Updated:", {
-        totalScore: totalScore,
-        averageScore: summary.average_score,
+        originalScore: summary.total_score,
+        multipliedScore: totalScore,
         grade: grade,
         status: gradeText
     });
@@ -499,7 +499,7 @@ function updateKpiTable(details) {
     tbody.innerHTML = '';
     
     if (!details || details.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">Tidak ada rincian indikator untuk periode ini.</td></tr>';
         if (tfoot) tfoot.innerHTML = '';
         return;
     }
@@ -530,12 +530,8 @@ function updateKpiTable(details) {
         const totalNilaiAspek = parseFloat(totalAspek?.score) || 0;
         const totalBobotAspek = parseFloat(totalAspek?.bobot) || 0;
         const totalKontribusiAspek = parseFloat(totalAspek?.kontribusi) || 0;
-        
-        const statusAspek = getOverallStatus(totalNilaiAspek);
-        const statusClassAspek = getStatusClass(statusAspek);
-        const progressValueAspek = Math.min(totalNilaiAspek, 100);
 
-        // Header Aspek - tanda di sebelah progress
+        // Header Aspek - dropdown di kolom kontribusi
         tbody.innerHTML += `
             <tr class="aspek-header" data-aspek="${aspekCount}">
                 <td>
@@ -543,20 +539,14 @@ function updateKpiTable(details) {
                 </td>
                 <td class="fw-bold">${totalBobotAspek.toFixed(1)}%</td>
                 <td class="fw-bold">${totalNilaiAspek.toFixed(2)}</td>
-                <td class="fw-bold">${totalKontribusiAspek.toFixed(2)}</td>
-                <td><span class="kpi-badge ${statusClassAspek}">${statusAspek}</span></td>
-                <td>
+                <td class="fw-bold">
                     <div class="d-flex align-items-center gap-2">
-                        <div class="flex-grow-1">
-                            <div class="progress kpi-progress">
-                                <div class="progress-bar" role="progressbar" style="width: ${progressValueAspek}%" 
-                                     aria-valuenow="${progressValueAspek}" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div class="progress-percentage">${progressValueAspek.toFixed(1)}%</div>
-                        </div>
+                        <span>${totalKontribusiAspek.toFixed(2)}</span>
+                        ${subAspeks.length > 0 ? `
                         <button class="btn btn-sm toggle-subaspek" data-aspek="${aspekCount}">
                             <i class="icofont-caret-down" id="icon-${aspekCount}"></i>
                         </button>
+                        ` : ''}
                     </div>
                 </td>
             </tr>
@@ -567,15 +557,6 @@ function updateKpiTable(details) {
             const nilai = parseFloat(subAspek.score) || 0;
             const bobot = parseFloat(subAspek.bobot) || 0;
             const kontribusi = parseFloat(subAspek.kontribusi) || 0;
-            
-            let nilaiUntukStatus = nilai;
-            if (nilai <= 10) {
-                nilaiUntukStatus = nilai * 10;
-            }
-            
-            const status = getOverallStatus(nilaiUntukStatus);
-            const statusClass = getStatusClass(status);
-            const progressValue = Math.min(nilaiUntukStatus, 100);
 
             tbody.innerHTML += `
                 <tr class="subaspek-row" id="subaspek-${aspekCount}-${index}" style="display: none;">
@@ -585,15 +566,7 @@ function updateKpiTable(details) {
                     </td>
                     <td>${bobot.toFixed(1)}%</td>
                     <td>${nilai.toFixed(2)}</td>
-                    <td>${kontribusi.toFixed(2)}</td>
-                    <td><span class="kpi-badge ${statusClass}">${status}</span></td>
-                    <td>
-                        <div class="progress kpi-progress">
-                            <div class="progress-bar bg-secondary" role="progressbar" style="width: ${progressValue}%" 
-                                 aria-valuenow="${progressValue}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                        <div class="progress-percentage">${progressValue.toFixed(1)}%</div>
-                    </td>
+                    <td class="ps-4">${kontribusi.toFixed(2)}</td>
                 </tr>
             `;
         });
@@ -627,8 +600,6 @@ function updateKpiTable(details) {
 
     // TOTAL KESELURUHAN
     const totalNilaiAkhir = totalKontribusiAllAspek * 10;
-    const overallStatus = getOverallStatus(totalNilaiAkhir);
-    const overallStatusClass = getStatusClass(overallStatus);
     
     if (tfoot) {
         tfoot.innerHTML = `
@@ -637,14 +608,6 @@ function updateKpiTable(details) {
                 <th>${totalBobotAllAspek.toFixed(1)}%</th>
                 <th>${totalNilaiAkhir.toFixed(2)}</th>
                 <th>${totalKontribusiAllAspek.toFixed(2)}</th>
-                <th><span class="kpi-badge ${overallStatusClass}">${overallStatus}</span></th>
-                <th>
-                    <div class="progress kpi-progress">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: ${totalNilaiAkhir}%" 
-                             aria-valuenow="${totalNilaiAkhir}" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="progress-percentage">${totalNilaiAkhir.toFixed(1)}%</div>
-                </th>
             </tr>`;
     }
 }

@@ -262,6 +262,11 @@
               <input type="tel" class="form-control" id="telpKaryawan" required>
             </div>
             <div class="col-md-6 mb-3">
+                <label class="form-label">Tanggal Masuk</label>
+                <input type="date" class="form-control" id="tanggalMasukKaryawan" value="{{ date('Y-m-d') }}">
+                <small class="text-muted">Kosongkan untuk menggunakan tanggal hari ini</small>
+            </div>
+            <div class="col-md-6 mb-3">
               <label class="form-label">Email</label>
               <input type="email" class="form-control" id="emailKaryawan" required>
             </div>
@@ -420,6 +425,7 @@
             </div>
 
             <!-- Status & Divisi -->
+            <div class="row">
             <div class="col-md-6 mb-3">
               <label class="form-label">Status</label>
               <select class="form-select" id="editStatus" required>
@@ -427,6 +433,11 @@
                 <option value="Non-Aktif">Non-Aktif</option>
                 <option value="Cuti">Cuti</option>
               </select>
+            </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Tanggal Masuk</label>
+                    <input type="date" class="form-control" id="editTanggalMasuk">
+                </div>
             </div>
             
             <div class="col-md-6 mb-3">
@@ -656,8 +667,15 @@
             data: 'user.email'
           },
           { 
-            data: 'created_at',
-            render: d => new Date(d).toLocaleDateString('id-ID'),
+            data: 'tanggal_masuk',
+            render: function(d) {
+                // Jika tanggal_masuk ada, pakai itu, jika tidak pakai created_at
+                if (d) {
+                    return new Date(d).toLocaleDateString('id-ID');
+                }
+                // Fallback ke created_at untuk data lama
+                return new Date(this.created_at).toLocaleDateString('id-ID');
+            },
             className: 'text-center'
           },
           { 
@@ -853,7 +871,8 @@
         gender: $('#genderKaryawan').val(),
         no_telp: $('#telpKaryawan').val().trim(),
         email: $('#emailKaryawan').val().trim(),
-        status: 'Aktif'
+        status: 'Aktif',
+        tanggal_masuk: $('#tanggalMasukKaryawan').val()
       };
 
       // Validasi form
@@ -874,7 +893,8 @@
           no_telp: formData.no_telp,
           email: formData.email,
           role_id: formData.jabatan_id,
-          status: formData.status
+          status: formData.status,
+          tanggal_masuk: formData.tanggal_masuk
         };
 
         // Tampilkan loading
@@ -914,6 +934,13 @@
       $('#editStatus').val(rowData.status || 'Aktif');
       $('#editTelp').val(rowData.no_telp);
       $('#editEmail').val(rowData.user.email);
+
+      if (rowData.tanggal_masuk) {
+          const tanggalMasuk = new Date(rowData.tanggal_masuk);
+          $('#editTanggalMasuk').val(tanggalMasuk.toISOString().split('T')[0]);
+      } else {
+          $('#editTanggalMasuk').val('');
+      }
 
       // Set divisi dan jabatan
       const currentDivisi = rowData.roles?.[0]?.division_id;
@@ -997,7 +1024,8 @@
         no_telp: $('#editTelp').val().trim(),
         email: $('#editEmail').val().trim(),
         gender: $('#editGender').val(),
-        status: $('#editStatus').val()
+        status: $('#editStatus').val(),
+        tanggal_masuk: $('#editTanggalMasuk').val()
       };
 
       // Validasi form
@@ -1096,7 +1124,11 @@
         $('#detailJabatan').text('-');
       }
 
-      $('#detailJoinDate').text(formatDate(rowData.created_at));
+      $('#detailJoinDate').text(
+          rowData.tanggal_masuk 
+              ? formatDate(rowData.tanggal_masuk) 
+              : formatDate(rowData.created_at)
+      );
 
       // Set foto
       let photoUrl;

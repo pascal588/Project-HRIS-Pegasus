@@ -148,28 +148,31 @@
 
   <!-- Modal Tambah/Edit Divisi -->
   <div class="modal fade" id="addDivisiModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true">
-    <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold" id="addDivisiModalLabel">Tambah Divisi</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="idDivisiInput" class="form-label">ID Divisi</label>
-            <input type="text" class="form-control" id="idDivisiInput" placeholder="ID Divisi" required />
+      <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title fw-bold" id="addDivisiModalLabel">Tambah Divisi</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                  <!-- GANTI ID DIVISI INPUT MENJADI KODE DIVISI -->
+                  <div class="mb-3">
+                      <label for="kodeDivisiInput" class="form-label">Kode Divisi</label>
+                      <input type="text" class="form-control" id="kodeDivisiInput" 
+                            placeholder="Contoh: HRD, IT, FIN001, MKT-2024" required />
+                      <small class="text-muted">Bisa huruf, angka, atau kombinasi</small>
+                  </div>
+                  <div class="mb-3">
+                      <label for="namaDivisi" class="form-label">Nama Divisi</label>
+                      <input type="text" class="form-control" id="namaDivisi" placeholder="Nama Divisi" required />
+                  </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                  <button type="button" class="btn btn-primary" id="saveDivisiBtn">Simpan</button>
+              </div>
           </div>
-          <div class="mb-3">
-            <label for="namaDivisi" class="form-label">Nama Divisi</label>
-            <input type="text" class="form-control" id="namaDivisi" placeholder="Nama Divisi" required />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button type="button" class="btn btn-primary" id="saveDivisiBtn">Simpan</button>
-        </div>
       </div>
-    </div>
   </div>
 
   <!-- Modal Kelola Kepala Divisi -->
@@ -287,36 +290,43 @@
         }
       },
       columns: [
-        { data: null, render: (data, type, row, meta) => meta.row + 1 },
-        { data: "id_divisi" },
-        { data: "nama_divisi" },
-        { data: "jumlah_karyawan", defaultContent: "0" },
-        { 
-          data: "kepala_divisi", 
-          render: function(data, type, row) {
+    { data: null, render: (data, type, row, meta) => meta.row + 1 },
+    { data: "kode_divisi" },
+    { data: "nama_divisi" },
+    { data: "jumlah_karyawan", defaultContent: "0" },
+    { 
+        data: "kepala_divisi", 
+        render: function(data, type, row) {
             return data && data !== '-' ? `${data} <span class="head-badge">Kepala</span>` : '-';
-          }
-        },
-        {
-          data: null,
-          className: "text-center",
-          render: function(data, type, row) {
-            return `
-              <div class="action-buttons">
-                <button class="btn btn-outline-info btn-edit" data-id="${data.id_divisi}" data-nama="${data.nama_divisi}">
-                  <i class="icofont-edit"></i>
-                </button>
-                <button class="btn btn-outline-success btn-manage-head" data-id="${data.id_divisi}" data-nama="${data.nama_divisi}">
-                  <i class="icofont-users"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-delete" data-id="${data.id_divisi}">
-                  <i class="icofont-ui-delete"></i>
-                </button>
-              </div>
-            `;
-          }
         }
-      ],
+    },
+    {
+        data: null,
+        className: "text-center",
+        render: function(data, type, row) {
+            // PASTIKAN ambil id (bukan id_divisi) dari response
+            return `
+                <div class="action-buttons">
+                    <button class="btn btn-outline-info btn-edit" 
+                            data-id="${data.id}" 
+                            data-kode="${data.kode_divisi}"
+                            data-nama="${data.nama_divisi}">
+                        <i class="icofont-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-success btn-manage-head" 
+                            data-id="${data.id}"
+                            data-nama="${data.nama_divisi}">
+                        <i class="icofont-users"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-delete" 
+                            data-id="${data.id}">
+                        <i class="icofont-ui-delete"></i>
+                    </button>
+                </div>
+            `;
+        }
+    }
+],
       columnDefs: [{
         targets: -1,
         orderable: false,
@@ -326,30 +336,31 @@
 
     // Event listener untuk tombol tambah
     document.getElementById("addDivisiBtn").addEventListener("click", function() {
-      editId = null;
-      document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
-      document.getElementById("idDivisiInput").value = "";
-      document.getElementById("namaDivisi").value = "";
-      
-      new bootstrap.Modal(document.getElementById('addDivisiModal')).show();
+        editId = null;
+        document.getElementById("addDivisiModalLabel").innerText = "Tambah Divisi";
+        document.getElementById("kodeDivisiInput").value = "";
+        document.getElementById("namaDivisi").value = "";
+        
+        new bootstrap.Modal(document.getElementById('addDivisiModal')).show();
     });
 
     // Event delegation untuk tombol edit
     document.addEventListener("click", function(e) {
-      if (e.target.closest(".btn-edit")) {
+    if (e.target.closest(".btn-edit")) {
         const button = e.target.closest(".btn-edit");
         editId = button.getAttribute("data-id");
+        const kodeDivisi = button.getAttribute("data-kode"); // AMBIL KODE
         const divisionName = button.getAttribute("data-nama");
         
         document.getElementById("addDivisiModalLabel").innerText = "Edit Divisi";
-        document.getElementById("idDivisiInput").value = editId;
+        document.getElementById("kodeDivisiInput").value = kodeDivisi; // SET KODE
         document.getElementById("namaDivisi").value = divisionName;
         
         new bootstrap.Modal(document.getElementById('addDivisiModal')).show();
-      }
-      
-      // Tombol kelola kepala divisi
-      if (e.target.closest(".btn-manage-head")) {
+    }
+    
+    // Tombol kelola kepala divisi - TETAP SAMA
+    if (e.target.closest(".btn-manage-head")) {
         const button = e.target.closest(".btn-manage-head");
         currentDivisionId = button.getAttribute("data-id");
         const divisionName = button.getAttribute("data-nama");
@@ -360,8 +371,8 @@
         // Load data karyawan divisi
         loadDivisionEmployees(currentDivisionId);
         
-        new bootstrap.Modal(document.getElementById('manageHeadModal')).show();
-      }
+            new bootstrap.Modal(document.getElementById('manageHeadModal')).show();
+        }
     });
 
     // Fungsi untuk memuat karyawan divisi
@@ -559,79 +570,122 @@
 
     // Fungsi untuk menghapus divisi
     function deleteDivision(divisionId) {
-      fetch(`/api/divisions/${divisionId}`, {
-        method: "DELETE",
-        headers: {
-          "Accept": "application/json",
-          "X-CSRF-TOKEN": "{{ csrf_token() }}"
-        }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok: ' + response.statusText);
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (data.message) {
-          table.ajax.reload();
-          showAlert('success', 'Berhasil', 'Divisi berhasil dihapus');
-        } else {
-          showAlert('error', 'Gagal', 'Terjadi kesalahan saat menghapus data');
-        }
-      })
-      .catch(error => {
-        console.error("Error:", error);
-        showAlert('error', 'Error', 'Terjadi kesalahan saat menghapus data: ' + error.message);
-      });
+        fetch(`/api/divisions/${divisionId}`, {
+            method: "DELETE",
+            headers: {
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.message) {
+                table.ajax.reload();
+                showAlert('success', 'Berhasil', 'Divisi berhasil dihapus');
+            } else {
+                showAlert('error', 'Gagal', 'Terjadi kesalahan saat menghapus data');
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showAlert('error', 'Error', 'Terjadi kesalahan saat menghapus data: ' + error.message);
+        });
     }
 
     // Simpan data divisi
     document.getElementById("saveDivisiBtn").addEventListener("click", function() {
-      const idDivisi = document.getElementById("idDivisiInput").value;
-      const namaDivisi = document.getElementById("namaDivisi").value;
+        const kodeDivisi = document.getElementById("kodeDivisiInput").value.trim();
+        const namaDivisi = document.getElementById("namaDivisi").value.trim();
 
-      if (!idDivisi || !namaDivisi) {
-        showAlert('warning', 'Peringatan', 'ID dan Nama divisi wajib diisi!');
-        return;
-      }
-
-      const payload = {
-        id_divisi: idDivisi,
-        nama_divisi: namaDivisi
-      };
-
-      const method = editId ? "PUT" : "POST";
-      const url = editId ? `/api/divisions/${editId}` : "/api/divisions";
-
-      fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "X-CSRF-TOKEN": "{{ csrf_token() }}"
-        },
-        body: JSON.stringify(payload)
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok: ' + response.statusText);
+        if (!kodeDivisi || !namaDivisi) {
+            showAlert('warning', 'Peringatan', 'Kode dan Nama divisi wajib diisi!');
+            return;
         }
-        return response.json();
-      })
-      .then(data => {
-        if (data.success || data.message) {
-          table.ajax.reload();
-          bootstrap.Modal.getInstance(document.getElementById('addDivisiModal')).hide();
-          showAlert('success', 'Berhasil', editId ? "Divisi berhasil diperbarui" : "Divisi berhasil ditambahkan");
+
+        // PAYLOAD
+        const payload = {
+            kode_divisi: kodeDivisi,
+            nama_divisi: namaDivisi
+        };
+
+        console.log("Edit Mode:", editId); // Debug
+
+        let method, url;
+        
+        if (editId && editId !== 'undefined') {
+            // EDIT MODE
+            method = "PUT";
+            url = `/api/divisions/${editId}`;
+            
+            console.log("URL Edit:", url); // Debug
         } else {
-          showAlert('error', 'Gagal', 'Terjadi kesalahan saat menyimpan data');
+            // CREATE MODE
+            method = "POST";
+            url = "/api/divisions";
+            
+            console.log("URL Create:", url); // Debug
         }
-      })
-      .catch(error => {
-        console.error("Error:", error);
-        showAlert('error', 'Error', 'Terjadi kesalahan saat menyimpan data: ' + error.message);
-      });
+
+        // Tampilkan loading
+        const saveBtn = document.getElementById("saveDivisiBtn");
+        const originalText = saveBtn.innerHTML;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Menyimpan...';
+        saveBtn.disabled = true;
+
+        fetch(url, {
+            method: method,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.message || 'Network response was not ok: ' + response.statusText);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Response:", data); // Debug
+            
+            if (data.success) {
+                // Reload tabel
+                table.ajax.reload(null, false);
+                
+                // Tutup modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addDivisiModal'));
+                modal.hide();
+                
+                // Reset editId
+                editId = null;
+                
+                // Reset form
+                document.getElementById("kodeDivisiInput").value = "";
+                document.getElementById("namaDivisi").value = "";
+                
+                showAlert('success', 'Berhasil', data.message || (method === "PUT" ? "Divisi berhasil diperbarui" : "Divisi berhasil ditambahkan"));
+            } else {
+                throw new Error(data.message || 'Terjadi kesalahan');
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showAlert('error', 'Gagal', error.message || 'Terjadi kesalahan saat menyimpan data');
+        })
+        .finally(() => {
+            // Reset button
+            saveBtn.innerHTML = originalText;
+            saveBtn.disabled = false;
+        });
     });
 
     // Hapus modal konfirmasi hapus yang tidak digunakan lagi

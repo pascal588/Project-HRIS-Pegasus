@@ -22,7 +22,12 @@ class Employee extends Model
         'no_telp',
         'gender',
         'foto',
-        'status'
+        'status',
+        'tanggal_masuk'
+    ];
+
+    protected $dates = [
+        'tanggal_masuk'
     ];
 
     //relasi ke users
@@ -84,8 +89,13 @@ public function getNamaDivisiAttribute()
     return $this->divisi ? $this->divisi->nama_divisi : 'Tidak Ada Divisi';
 }
 
-public function getJabatanAttribute()
-{
-    return $this->roles->first()->nama_jabatan ?? 'Tidak Ada Jabatan';
-}
+    public function getJabatanAttribute()
+    {
+        return $this->roles->first()->nama_jabatan ?? 'Tidak Ada Jabatan';
+    }
+
+    public function getTanggalMasukFormattedAttribute()
+    {
+        return $this->tanggal_masuk ? \Carbon\Carbon::parse($this->tanggal_masuk)->format('d/m/Y') : null;
+    }
 }

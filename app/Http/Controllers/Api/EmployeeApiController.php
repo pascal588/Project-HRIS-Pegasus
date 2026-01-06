@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class EmployeeApiController extends Controller
 {
-    // GET /api/employees
     function index()
     { 
         $employees = Employee::with(['user', 'roles.division'])->get();
@@ -25,6 +24,12 @@ class EmployeeApiController extends Controller
             } else {
                 $employee->foto_url = asset('assets/images/default-avatar.png');
             }
+            
+            // Pastikan tanggal_masuk ada di response
+            if (!$employee->tanggal_masuk) {
+                $employee->tanggal_masuk = $employee->created_at;
+            }
+            
             return $employee;
         });
 
@@ -63,6 +68,7 @@ class EmployeeApiController extends Controller
             'no_telp' => 'required|string|max:15',
             'gender' => 'required',
             'email' => 'required|email|unique:users,email',
+            'tanggal_masuk' => 'nullable|date'
         ]);
 
         $employee = DB::transaction(function () use ($request) {
@@ -80,6 +86,7 @@ class EmployeeApiController extends Controller
                 'no_telp' => $request->no_telp,
                 'gender' => $request->gender,
                 'status' => 'Aktif', // default status
+                'tanggal_masuk' => $request->tanggal_masuk ?: now (),
             ]);
 
             // cari role default "Karyawan"
@@ -97,6 +104,8 @@ class EmployeeApiController extends Controller
                     }
                 }
             }
+
+            return $employee;
         });
 
         return response()->json([
@@ -114,8 +123,8 @@ class EmployeeApiController extends Controller
             'no_telp' => 'required|string|max:15',
             'gender' => 'required',
             'email' => 'required|email|unique:users,email,' . $employee->user_id,
-            'status' => 'required|in:Aktif,Non-Aktif,Cuti'
-            // Hapus validasi role_ids karena tidak dikirim dari form edit biasa
+            'status' => 'required|in:Aktif,Non-Aktif,Cuti',
+            'tanggal_masuk' => 'nullable|date'
         ]);
 
         DB::transaction(function () use ($request, $employee) {
@@ -123,7 +132,8 @@ class EmployeeApiController extends Controller
                 'nama' => $request->nama,
                 'no_telp' => $request->no_telp,
                 'gender' => $request->gender,
-                'status' => $request->status, // PASTIKAN INI ADA
+                'status' => $request->status,
+                'tanggal_masuk' => $request->tanggal_masuk,
             ]);
 
             $employee->user->update([

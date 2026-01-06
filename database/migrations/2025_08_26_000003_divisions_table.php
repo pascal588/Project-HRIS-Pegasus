@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('divisions', function (Blueprint $table) {
-            $table->unsignedBigInteger('id_divisi')->primary();
+            $table->bigIncrements('id_divisi');
+            $table->string('kode_divisi', 20)->unique()->nullable();
             $table->string('nama_divisi', 45);
             $table->timestamps();
             $table->softDeletes();

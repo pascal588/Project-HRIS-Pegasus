@@ -160,9 +160,6 @@ class RoleApiController extends Controller
         }
     }
 
-    /**
-     * PUT /api/roles/{id} - Update role
-     */
     public function update(Request $request, $id): JsonResponse
     {
         try {
@@ -171,7 +168,7 @@ class RoleApiController extends Controller
             $validator = Validator::make($request->all(), [
                 'nama_jabatan' => 'required|string|max:50',
                 'division_id' => 'required|exists:divisions,id_divisi',
-                'status' => 'required|in:Aktif,Non-Aktif'
+                'status' => 'sometimes|in:Aktif,Non-Aktif' // Ubah dari required ke sometimes
             ]);
 
             if ($validator->fails()) {
@@ -197,12 +194,17 @@ class RoleApiController extends Controller
 
             DB::beginTransaction();
 
-            // Update role
-            $role->update([
+            // Update role - jika status tidak dikirim, gunakan nilai lama
+            $updateData = [
                 'nama_jabatan' => $request->nama_jabatan,
                 'division_id' => $request->division_id,
-                'status' => $request->status
-            ]);
+            ];
+            
+            if ($request->has('status')) {
+                $updateData['status'] = $request->status;
+            }
+
+            $role->update($updateData);
 
             // Load updated data dengan relationships
             $role->load(['division:id_divisi,nama_divisi']);

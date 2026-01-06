@@ -12,72 +12,70 @@ use Illuminate\Support\Facades\Log; // Tambahkan ini
 
 class DivisionController extends Controller
 {
-// GET semua divisi
-public function index()
-{
-    $divisions = Division::with('roles.employees')->get();
+    public function index()
+    {
+        $divisions = Division::with(['roles.employees', 'roles' => function($query) {
+            $query->where('nama_jabatan', 'Kepala Divisi');
+        }])->get();
 
-    $data = $divisions->map(function($division) {
-        // Hitung jumlah karyawan UNIK per divisi (bukan total roles)
-        $employeeIds = collect();
-        
-        foreach ($division->roles as $role) {
-            foreach ($role->employees as $employee) {
-                $employeeIds->push($employee->id_karyawan);
-            }
-        }
-        
-        $jumlah_karyawan = $employeeIds->unique()->count();
+        $data = $divisions->map(function($division) {
+            // Hitung jumlah karyawan UNIK per divisi
+            $employeeCount = Employee::select(DB::raw('COUNT(DISTINCT employees.id_karyawan) as count'))
+                ->join('roles_has_employees', 'employees.id_karyawan', '=', 'roles_has_employees.employee_id')
+                ->join('roles', 'roles_has_employees.role_id', '=', 'roles.id_jabatan')
+                ->where('roles.division_id', $division->id_divisi)
+                ->value('count') ?? 0;
 
-        // Kepala divisi bisa ambil dari role tertentu, misal 'Kepala Divisi'
-        $kepala = $division->roles->flatMap(fn($role) => $role->employees)
-                    ->firstWhere('pivot.role_id', $division->roles->where('nama_jabatan','Kepala Divisi')->first()?->id_jabatan);
+            // Cari kepala divisi
+            $kepala = $division->roles->flatMap(fn($role) => $role->employees)->first();
+            $kepala_nama = $kepala?->nama ?? '-';
 
-        $kepala_nama = $kepala?->nama ?? '-';
-
-        return [
-            'id_divisi' => $division->id_divisi,
-            'nama_divisi' => $division->nama_divisi, 
-            'jumlah_karyawan' => $jumlah_karyawan, // Gunakan count yang benar
-            'kepala_divisi' => $kepala_nama
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'data' => $data
-    ]);
-}
-
-// POST tambah divisi
-public function store(Request $request)
-{
-    $request->validate([
-        'id_divisi' => 'required|integer|unique:divisions,id_divisi',
-        'nama_divisi' => 'required|string|max:45',
-    ]);
-
-    try {
-        $division = Division::create([
-            'id_divisi' => $request->id_divisi,
-            'nama_divisi' => $request->nama_divisi,
-        ]);
+            return [
+                'id' => $division->id_divisi, // PASTIKAN ini id_divisi
+                'id_divisi' => $division->id_divisi, // TAMBAHKAN field ini untuk kejelasan
+                'kode_divisi' => $division->kode_divisi,
+                'nama_divisi' => $division->nama_divisi, 
+                'jumlah_karyawan' => $employeeCount,
+                'kepala_divisi' => $kepala_nama
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Divisi berhasil ditambahkan',
-            'data' => $division
-        ], 201);
-        
-    } catch (\Exception $e) {
-        Log::error('Error creating division: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal menambahkan divisi: ' . $e->getMessage()
-        ], 500);
+            'data' => $data
+        ]);
     }
-}
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'kode_divisi' => 'required|string|max:20|unique:divisions,kode_divisi',
+            'nama_divisi' => 'required|string|max:45',
+        ]);
+
+        try {
+            // ID DIVISI AUTO GENERATE, tidak perlu diinput user
+            $division = Division::create([
+                'kode_divisi' => $request->kode_divisi,
+                'nama_divisi' => $request->nama_divisi,
+                // id_divisi otomatis dari auto-increment
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Divisi berhasil ditambahkan',
+                'data' => $division
+            ], 201);
+            
+        } catch (\Exception $e) {
+            Log::error('Error creating division: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan divisi: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     // GET detail divisi
     public function show($id)
@@ -86,22 +84,23 @@ public function store(Request $request)
         return response()->json($division);
     }
 
-    // PUT update divisi (id_divisi bisa ikut diubah)
     public function update(Request $request, $id)
     {
         $division = Division::findOrFail($id);
 
         $request->validate([
-            'id_divisi' => 'required|integer|unique:divisions,id_divisi,' . $division->id_divisi . ',id_divisi',
+            'kode_divisi' => 'required|string|max:20|unique:divisions,kode_divisi,' . $division->id_divisi . ',id_divisi',
             'nama_divisi' => 'required|string|max:45',
         ]);
 
         $division->update([
-            'id_divisi' => $request->id_divisi,
+            'kode_divisi' => $request->kode_divisi,
             'nama_divisi' => $request->nama_divisi,
+            // id_divisi TIDAK DIUPDATE (auto-increment tetap sama)
         ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Divisi berhasil diperbarui',
             'data' => $division
         ]);

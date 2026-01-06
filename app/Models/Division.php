@@ -12,10 +12,12 @@ class Division extends Model
 
     protected $table = 'divisions';      // nama tabel
     protected $primaryKey = 'id_divisi'; // primary key
+    protected $keyType = 'int';
+    public $incrementing = true;
 
     protected $fillable = [
         'nama_divisi',
-        'id_divisi'
+        'kode_divisi'
     ];
 
     public function roles()

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('gender', ['Pria', 'Wanita']);
             $table->string('foto', 255)->nullable();
             $table->enum('status', ['Aktif', 'Non-Aktif', 'Cuti'])->default('Aktif');
+            $table->date('tanggal_masuk')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
